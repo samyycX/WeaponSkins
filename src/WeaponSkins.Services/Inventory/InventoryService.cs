@@ -1,8 +1,11 @@
 using Microsoft.Extensions.Logging;
+
 using SwiftlyS2.Shared;
 using SwiftlyS2.Shared.Events;
 
-namespace WeaponSkins;
+using WeaponSkins.Shared;
+
+namespace WeaponSkins.Services;
 
 public class InventoryService
 {
@@ -13,7 +16,10 @@ public class InventoryService
 
     private Dictionary<ulong /* steamid */, CCSPlayerInventory /* inventory */> SubscribedInventories = new();
 
-    public InventoryService(ISwiftlyCore core, NativeService nativeService, DataService dataService, ILogger<InventoryService> logger)
+    public InventoryService(ISwiftlyCore core,
+        NativeService nativeService,
+        DataService dataService,
+        ILogger<InventoryService> logger)
     {
         Core = core;
         NativeService = nativeService;
@@ -30,13 +36,11 @@ public class InventoryService
         return SubscribedInventories[steamid];
     }
 
-    private void OnSOCacheSubscribed(CCSPlayerInventory inventory, SOID_t soid)
+    private void OnSOCacheSubscribed(CCSPlayerInventory inventory,
+        SOID_t soid)
     {
         Logger.LogInformation($"SOCacheSubscribed: {soid.SteamID}");
         SubscribedInventories[soid.SteamID] = inventory;
-        Core.Scheduler.Delay(5, () => {
-          UpdateSkin(soid.SteamID);
-        });
     }
 
     private void OnClientDisconnected(IOnClientDisconnectedEvent @event)
@@ -46,31 +50,35 @@ public class InventoryService
         {
             return;
         }
+
         SubscribedInventories.Remove(player.SteamID);
     }
 
-    public void UpdateSkin(ulong steamid)
+    public void UpdateWeaponSkins(ulong steamid,
+        IEnumerable<WeaponSkinData> skins)
     {
-      Logger.LogInformation($"UpdateSkin: {steamid}");
-      if (SubscribedInventories.TryGetValue(steamid, out var inventory))
-      {
         Logger.LogInformation($"UpdateSkin: {steamid}");
-        if (DataService.WeaponDataService.TryGetSkins(steamid, out var skins))
+        if (SubscribedInventories.TryGetValue(steamid, out var inventory))
         {
-          Logger.LogInformation($"UpdateSkin: {skins.Count()}");
-          foreach (var skin in skins)
-          {
-            inventory.UpdateWeaponSkin(skin);
-          }
+            Logger.LogInformation($"UpdateSkin: {steamid}");
+            foreach (var skin in skins)
+            {
+                inventory.UpdateWeaponSkin(skin);
+            }
         }
-        if (DataService.KnifeDataService.TryGetKnives(steamid, out var knives))
+    }
+
+    public void UpdateKnifeSkins(ulong steamid,
+        IEnumerable<KnifeSkinData> knives)
+    {
+        Logger.LogInformation($"UpdateSkin: {steamid}");
+        if (SubscribedInventories.TryGetValue(steamid, out var inventory))
         {
-          Logger.LogInformation($"UpdateSkin: {knives.Count()}");
-          foreach (var knife in knives)
-          {
-            inventory.UpdateKnifeSkin(knife);
-          }
+            Logger.LogInformation($"UpdateSkin: {steamid}");
+            foreach (var knife in knives)
+            {
+                inventory.UpdateKnifeSkin(knife);
+            }
         }
-      }
     }
 }

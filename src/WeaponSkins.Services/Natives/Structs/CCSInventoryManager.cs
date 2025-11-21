@@ -25,8 +25,9 @@ public struct CCSInventoryManager : INativeHandle
         var start = defaultLoadoutsStart;
         return Enumerable.Range(0, (int)loadout_slot_t.LOADOUT_SLOT_COUNT).Select(slot =>
         {
-            // TODO: use helper to get CEconItemView size
-            return ((loadout_slot_t)slot, Helper.AsSchema<CEconItemView>(start + ((int)team * (int)loadout_slot_t.LOADOUT_SLOT_COUNT + slot) * 680));
+            return ((loadout_slot_t)slot,
+                Helper.AsSchema<CEconItemView>(start + ((int)team * (int)loadout_slot_t.LOADOUT_SLOT_COUNT + slot) *
+                    Helper.GetSchemaSize<CEconItemView>()));
         });
     }
 }

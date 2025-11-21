@@ -8,7 +8,7 @@ public enum EconItemQuality : byte
     Vintage = 2,
     Unusual = 3, // Knife star
     Community = 5,
-    Developer = 6,  
+    Developer = 6,
     SelfMade = 7,
     Customized = 8,
     Strange = 9, // StatTrak
@@ -17,6 +17,4 @@ public enum EconItemQuality : byte
     Tournament = 12, // Souvenir
     Highlight = 13,
     Volatile = 14,
-    
-
 }

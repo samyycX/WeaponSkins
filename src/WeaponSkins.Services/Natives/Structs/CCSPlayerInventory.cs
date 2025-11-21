@@ -1,8 +1,10 @@
 using System.Runtime.CompilerServices;
+
 using SwiftlyS2.Shared.Natives;
 using SwiftlyS2.Shared.Players;
 using SwiftlyS2.Shared.SchemaDefinitions;
 using SwiftlyS2.Shared.SteamAPI;
+
 using WeaponSkins.Shared;
 
 namespace WeaponSkins;
@@ -22,14 +24,17 @@ public class CCSPlayerInventory : INativeHandle
         NativeService = nativeService;
     }
 
-    public CGCClientSharedObjectCache SOCache => new CGCClientSharedObjectCache(Address.Read<nint>(NativeService.CCSPlayerInventory_m_pSOCacheOffset), NativeService);
+    public CGCClientSharedObjectCache SOCache =>
+        new CGCClientSharedObjectCache(Address.Read<nint>(NativeService.CCSPlayerInventory_m_pSOCacheOffset),
+            NativeService);
 
     public void SODestroyed(ulong steamid, CEconItem item)
     {
         var soid = new SOID_t(steamid);
         unsafe
         {
-            NativeService.CPlayerInventory_SODestroyed.Call(Address, &soid, item.Address, 4 /* eSOCacheEvent_Incremental */);
+            NativeService.CPlayerInventory_SODestroyed.Call(Address, &soid, item.Address,
+                4 /* eSOCacheEvent_Incremental */);
         }
     }
 
@@ -38,7 +43,8 @@ public class CCSPlayerInventory : INativeHandle
         var soid = new SOID_t(steamid);
         unsafe
         {
-            NativeService.CPlayerInventory_SOCreated.Call(Address, &soid, item.Address, 4 /* eSOCacheEvent_Incremental */);
+            NativeService.CPlayerInventory_SOCreated.Call(Address, &soid, item.Address,
+                4 /* eSOCacheEvent_Incremental */);
         }
     }
 
@@ -47,7 +53,8 @@ public class CCSPlayerInventory : INativeHandle
         var soid = new SOID_t(steamid);
         unsafe
         {
-            NativeService.CPlayerInventory_SOUpdated.Call(Address, &soid, item.Address, 4 /* eSOCacheEvent_Incremental */);
+            NativeService.CPlayerInventory_SOUpdated.Call(Address, &soid, item.Address,
+                4 /* eSOCacheEvent_Incremental */);
         }
     }
 
@@ -60,18 +67,21 @@ public class CCSPlayerInventory : INativeHandle
             {
                 return null;
             }
+
             return new CEconItem(ptr);
         }
     }
 
-    public ref CUtlVector<PointerTo<CEconItemView>> Items => ref Address.AsRef<CUtlVector<PointerTo<CEconItemView>>>(NativeService.CCSPlayerInventory_m_ItemsOffset);
+    public ref CUtlVector<PointerTo<CEconItemView>> Items =>
+        ref Address.AsRef<CUtlVector<PointerTo<CEconItemView>>>(NativeService.CCSPlayerInventory_m_ItemsOffset);
 
-    public ref CCSPlayerInventory_Loadouts Loadouts => ref Address.AsRef<CCSPlayerInventory_Loadouts>(NativeService.CCSPlayerInventory_LoadoutsOffset);
+    public ref CCSPlayerInventory_Loadouts Loadouts =>
+        ref Address.AsRef<CCSPlayerInventory_Loadouts>(NativeService.CCSPlayerInventory_LoadoutsOffset);
 
     private bool TryGetLoadoutItem(Team team, ushort definitionIndex, out (Team team, loadout_slot_t slot) indices)
     {
         indices = default;
-        for(var slot = 0; slot < (int)loadout_slot_t.LOADOUT_SLOT_COUNT; slot++)
+        for (var slot = 0; slot < (int)loadout_slot_t.LOADOUT_SLOT_COUNT; slot++)
         {
             if (Loadouts[team, slot].DefinitionIndex == definitionIndex)
             {
@@ -82,6 +92,7 @@ public class CCSPlayerInventory : INativeHandle
                 return true;
             }
         }
+
         // itemid ==0, defindex == 65535, meaning the loadout slot is default weapon and default skin
         // so we search in default loadouts.
         foreach (var (slot, itemView) in NativeService.CCSInventoryManager.GetDefaultLoadouts(team))
@@ -92,6 +103,7 @@ public class CCSPlayerInventory : INativeHandle
                 return true;
             }
         }
+
         // absent in loadout
         return false;
     }
@@ -110,6 +122,7 @@ public class CCSPlayerInventory : INativeHandle
     {
         return GetHighestItemID() + 0x0000000100000000;
     }
+
     private uint GetNewInventoryPosition()
     {
         return GetHighestInventoryPosition() + 1;
@@ -134,8 +147,11 @@ public class CCSPlayerInventory : INativeHandle
                 itemID = 0;
                 return false;
             }
+
             return true;
-        } else {
+        }
+        else
+        {
             return false;
         }
     }
@@ -163,11 +179,13 @@ public class CCSPlayerInventory : INativeHandle
             if (TryGetItemID(skinData.Team, skinData.DefinitionIndex, out var itemID))
             {
                 Console.WriteLine("UpdateWeaponSkin: Item ID found");
-                var oldItem = GetEconItemByItemID(itemID); // this should never be null, since item id is already in loadouts
+                var oldItem =
+                    GetEconItemByItemID(itemID); // this should never be null, since item id is already in loadouts
                 if (oldItem == null)
                 {
                     throw new Exception($"GetEconItemByItemID returned null for item id {itemID}");
                 }
+
                 Console.WriteLine("UpdateWeaponSkin: Item found");
                 item.AccountID = oldItem.AccountID;
                 item.ItemID = oldItem.ItemID;
@@ -195,6 +213,7 @@ public class CCSPlayerInventory : INativeHandle
                 Console.WriteLine("UpdateWeaponSkin: New item ID set");
                 UpdateLoadoutItem(skinData.Team, skinData.DefinitionIndex, item.ItemID);
             }
+
             Console.WriteLine("UpdateWeaponSkin: Applying skin data");
 
             item.Apply(skinData);

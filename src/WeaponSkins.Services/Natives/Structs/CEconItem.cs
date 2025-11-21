@@ -1,6 +1,8 @@
 using System.Runtime.InteropServices;
+
 using SwiftlyS2.Shared.Natives;
 using SwiftlyS2.Shared.SchemaDefinitions;
+
 using WeaponSkins.Shared;
 
 namespace WeaponSkins;
@@ -8,24 +10,17 @@ namespace WeaponSkins;
 [StructLayout(LayoutKind.Explicit, Size = 72)]
 public ref struct CEconItemStruct
 {
+    [FieldOffset(0x10)] public ulong ItemID;
 
-    [FieldOffset(0x10)]
-    public ulong ItemID;
+    [FieldOffset(0x20)] public nint pCustomData;
 
-    [FieldOffset(0x20)]
-    public nint pCustomData;
+    [FieldOffset(0x28)] public uint AccountID;
 
-    [FieldOffset(0x28)]
-    public uint AccountID;
+    [FieldOffset(0x2C)] public uint InventoryPosition; // Backpack slot
 
-    [FieldOffset(0x2C)]
-    public uint InventoryPosition; // Backpack slot
+    [FieldOffset(0x30)] public ushort DefinitionIndex;
 
-    [FieldOffset(0x30)]
-    public ushort DefinitionIndex;
-
-    [FieldOffset(0x32)]
-    private ushort _packedBits;
+    [FieldOffset(0x32)] private ushort _packedBits;
 
     private const int ORIGIN_SHIFT = 0;
     private const ushort ORIGIN_MASK = (ushort)((1 << 5) - 1); // 0b1_1111
@@ -48,7 +43,8 @@ public ref struct CEconItemStruct
         set
         {
             if (value > ORIGIN_MASK) throw new ArgumentOutOfRangeException(nameof(value), "Origin out of 5 bit range.");
-            _packedBits = (ushort)((_packedBits & ~(ORIGIN_MASK << ORIGIN_SHIFT)) | ((value & ORIGIN_MASK) << ORIGIN_SHIFT));
+            _packedBits = (ushort)((_packedBits & ~(ORIGIN_MASK << ORIGIN_SHIFT)) |
+                                   ((value & ORIGIN_MASK) << ORIGIN_SHIFT));
         }
     }
 
@@ -57,8 +53,10 @@ public ref struct CEconItemStruct
         get => (ushort)((_packedBits >> QUALITY_SHIFT) & QUALITY_MASK);
         set
         {
-            if (value > QUALITY_MASK) throw new ArgumentOutOfRangeException(nameof(value), "Quality out of 4bit range.");
-            _packedBits = (ushort)((_packedBits & ~(QUALITY_MASK << QUALITY_SHIFT)) | ((value & QUALITY_MASK) << QUALITY_SHIFT));
+            if (value > QUALITY_MASK)
+                throw new ArgumentOutOfRangeException(nameof(value), "Quality out of 4bit range.");
+            _packedBits = (ushort)((_packedBits & ~(QUALITY_MASK << QUALITY_SHIFT)) |
+                                   ((value & QUALITY_MASK) << QUALITY_SHIFT));
         }
     }
 
@@ -68,7 +66,8 @@ public ref struct CEconItemStruct
         set
         {
             if (value > LEVEL_MASK) throw new ArgumentOutOfRangeException(nameof(value), "Level out of 2 bit range.");
-            _packedBits = (ushort)((_packedBits & ~(LEVEL_MASK << LEVEL_SHIFT)) | ((value & LEVEL_MASK) << LEVEL_SHIFT));
+            _packedBits =
+                (ushort)((_packedBits & ~(LEVEL_MASK << LEVEL_SHIFT)) | ((value & LEVEL_MASK) << LEVEL_SHIFT));
         }
     }
 
@@ -78,7 +77,8 @@ public ref struct CEconItemStruct
         set
         {
             if (value > RARITY_MASK) throw new ArgumentOutOfRangeException(nameof(value), "Rarity out of 4 bit range.");
-            _packedBits = (ushort)((_packedBits & ~(RARITY_MASK << RARITY_SHIFT)) | ((value & RARITY_MASK) << RARITY_SHIFT));
+            _packedBits = (ushort)((_packedBits & ~(RARITY_MASK << RARITY_SHIFT)) |
+                                   ((value & RARITY_MASK) << RARITY_SHIFT));
         }
     }
 
@@ -93,8 +93,6 @@ public ref struct CEconItemStruct
                 _packedBits = (ushort)(_packedBits & ~(INUSE_MASK << INUSE_SHIFT));
         }
     }
-
-
 }
 
 public class CEconItem : INativeHandle
@@ -127,6 +125,7 @@ public class CEconItem : INativeHandle
         {
             pCustomData = CustomAttributeData.Create().Address;
         }
+
         var customData = new CustomAttributeData(pCustomData);
         configure(customData);
         pCustomData = customData.Address; // handle realloc
@@ -134,7 +133,7 @@ public class CEconItem : INativeHandle
 
     public void Apply(WeaponSkinData data)
     {
-        Console.WriteLine("Apply: {0}", data.ToString());
+        Console.WriteLine("Apply: {0}", data);
         DefinitionIndex = data.DefinitionIndex;
         Quality = data.Quality;
         Console.WriteLine("Apply: DefinitionIndex set");
@@ -149,38 +148,51 @@ public class CEconItem : INativeHandle
 
             if (data.Sticker0 != null)
             {
-                customData.SetSticker0(data.Sticker0.Id, data.Sticker0.Wear, data.Sticker0.Scale, data.Sticker0.Rotation, data.Sticker0.OffsetX, data.Sticker0.OffsetY, data.Sticker0.Schema);
+                customData.SetSticker0(data.Sticker0.Id, data.Sticker0.Wear, data.Sticker0.Scale,
+                    data.Sticker0.Rotation, data.Sticker0.OffsetX, data.Sticker0.OffsetY, data.Sticker0.Schema);
             }
+
             if (data.Sticker1 != null)
             {
-                customData.SetSticker1(data.Sticker1.Id, data.Sticker1.Wear, data.Sticker1.Scale, data.Sticker1.Rotation, data.Sticker1.OffsetX, data.Sticker1.OffsetY, data.Sticker1.Schema);
+                customData.SetSticker1(data.Sticker1.Id, data.Sticker1.Wear, data.Sticker1.Scale,
+                    data.Sticker1.Rotation, data.Sticker1.OffsetX, data.Sticker1.OffsetY, data.Sticker1.Schema);
             }
+
             if (data.Sticker2 != null)
             {
-                customData.SetSticker2(data.Sticker2.Id, data.Sticker2.Wear, data.Sticker2.Scale, data.Sticker2.Rotation, data.Sticker2.OffsetX, data.Sticker2.OffsetY, data.Sticker2.Schema);
+                customData.SetSticker2(data.Sticker2.Id, data.Sticker2.Wear, data.Sticker2.Scale,
+                    data.Sticker2.Rotation, data.Sticker2.OffsetX, data.Sticker2.OffsetY, data.Sticker2.Schema);
             }
+
             if (data.Sticker3 != null)
             {
-                customData.SetSticker3(data.Sticker3.Id, data.Sticker3.Wear, data.Sticker3.Scale, data.Sticker3.Rotation, data.Sticker3.OffsetX, data.Sticker3.OffsetY, data.Sticker3.Schema);
+                customData.SetSticker3(data.Sticker3.Id, data.Sticker3.Wear, data.Sticker3.Scale,
+                    data.Sticker3.Rotation, data.Sticker3.OffsetX, data.Sticker3.OffsetY, data.Sticker3.Schema);
             }
+
             if (data.Sticker4 != null)
             {
-                customData.SetSticker4(data.Sticker4.Id, data.Sticker4.Wear, data.Sticker4.Scale, data.Sticker4.Rotation, data.Sticker4.OffsetX, data.Sticker4.OffsetY, data.Sticker4.Schema);
+                customData.SetSticker4(data.Sticker4.Id, data.Sticker4.Wear, data.Sticker4.Scale,
+                    data.Sticker4.Rotation, data.Sticker4.OffsetX, data.Sticker4.OffsetY, data.Sticker4.Schema);
             }
+
             if (data.Sticker5 != null)
             {
-                customData.SetSticker5(data.Sticker5.Id, data.Sticker5.Wear, data.Sticker5.Scale, data.Sticker5.Rotation, data.Sticker5.OffsetX, data.Sticker5.OffsetY, data.Sticker5.Schema);
+                customData.SetSticker5(data.Sticker5.Id, data.Sticker5.Wear, data.Sticker5.Scale,
+                    data.Sticker5.Rotation, data.Sticker5.OffsetX, data.Sticker5.OffsetY, data.Sticker5.Schema);
             }
+
             if (data.Keychain0 != null)
             {
-                customData.SetKeychain0(data.Keychain0.Id, data.Keychain0.OffsetX, data.Keychain0.OffsetY, data.Keychain0.OffsetZ, data.Keychain0.Seed);
+                customData.SetKeychain0(data.Keychain0.Id, data.Keychain0.OffsetX, data.Keychain0.OffsetY,
+                    data.Keychain0.OffsetZ, data.Keychain0.Seed);
             }
         });
     }
 
     public void Apply(KnifeSkinData data)
     {
-        Console.WriteLine("Apply: {0}", data.ToString());
+        Console.WriteLine("Apply: {0}", data);
         DefinitionIndex = data.DefinitionIndex;
         Quality = data.Quality;
         ConfigureAttributes(customData =>

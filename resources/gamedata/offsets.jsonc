@@ -46,5 +46,9 @@
   "CAttribute_String::New": {
     "windows": 2,
     "linux": 3
+  },
+  "CCSPlayerController_InventoryServices::m_pInventory": {
+    "windows": 112,
+    "linux": 112
   }
 }

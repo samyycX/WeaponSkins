@@ -2,6 +2,7 @@ using Microsoft.Extensions.Logging;
 
 using SwiftlyS2.Shared;
 using SwiftlyS2.Shared.Events;
+using SwiftlyS2.Shared.SchemaDefinitions;
 
 using WeaponSkins.Shared;
 
@@ -80,5 +81,11 @@ public class InventoryService
                 inventory.UpdateKnifeSkin(knife);
             }
         }
+    }
+
+    public void InitializeInventory(CCSPlayerController_InventoryServices service)
+    {
+        var inventory = new CCSPlayerInventory(service.Address + NativeService.CCSPlayerController_InventoryServices_m_pInventoryOffset, NativeService);
+        SubscribedInventories[inventory.SteamID] = inventory;
     }
 }

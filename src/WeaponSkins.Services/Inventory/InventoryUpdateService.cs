@@ -1,7 +1,6 @@
 using Microsoft.Extensions.Logging;
 
 using SwiftlyS2.Shared;
-using SwiftlyS2.Shared.SchemaDefinitions;
 
 using WeaponSkins.Extensions;
 using WeaponSkins.Shared;
@@ -33,14 +32,28 @@ public class InventoryUpdateService
         Logger = logger;
 
         NativeService.OnSOCacheSubscribed += OnSOCacheSubscribed;
+
+        foreach (var player in Core.PlayerManager.GetAllPlayers())
+        {
+            if (player.Controller is { IsValid: true, InventoryServices.IsValid: true } controller)
+            {
+                InventoryService.InitializeInventory(controller.InventoryServices!);
+                Update(InventoryService.Get(player.SteamID));
+            }
+        }
     }
 
     private void OnSOCacheSubscribed(CCSPlayerInventory inventory,
         SOID_t soid)
     {
+        Update(inventory);
+    }
+
+    private void Update(CCSPlayerInventory inventory)
+    {
         Core.Scheduler.NextWorldUpdate(() =>
         {
-            if (DataService.WeaponDataService.TryGetSkins(soid.SteamID, out var skins))
+            if (DataService.WeaponDataService.TryGetSkins(inventory.SteamID, out var skins))
             {
                 foreach (var skin in skins)
                 {
@@ -48,7 +61,7 @@ public class InventoryUpdateService
                 }
             }
 
-            if (DataService.KnifeDataService.TryGetKnives(soid.SteamID, out var knives))
+            if (DataService.KnifeDataService.TryGetKnives(inventory.SteamID, out var knives))
             {
                 foreach (var knife in knives)
                 {
@@ -76,6 +89,7 @@ public class InventoryUpdateService
 
             if (PlayerService.TryGetPlayer(steamID, out var player))
             {
+                Logger.LogInformation($"Updating skins for player {player}. IsAlive: {player.IsAlive()}");
                 if (player.IsAlive())
                 {
                     foreach (var skin in updatedSkins)

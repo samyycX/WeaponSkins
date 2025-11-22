@@ -11,6 +11,7 @@ using SwiftlyS2.Shared.Commands;
 
 using ValveKeyValue;
 
+using WeaponSkins.Services;
 using WeaponSkins.Shared;
 
 namespace WeaponSkins;
@@ -28,29 +29,8 @@ public partial class WeaponSkins : BasePlugin
     [Command("test")]
     public void TestCommand(ICommandContext args)
     {
-        var api = _provider.GetRequiredService<WeaponSkinAPI>();
-
-        api.UpdateWeaponSkins([
-            new WeaponSkinData
-            {
-                SteamID = 76561199171006920,
-                Team = Team.T,
-                DefinitionIndex = 4,
-                Paintkit = 801,
-                PaintkitSeed = 1,
-                PaintkitWear = 1f,
-                Sticker2 = new()
-                {
-                    Id = 1877,
-                    Wear = 0.1f,
-                    Scale = 1.0f,
-                    Rotation = 0.0f,
-                    OffsetX = 0.01f,
-                    OffsetY = 0.01f,
-                    Schema = 3
-                }
-            }
-        ]);
+        var menu = _provider.GetRequiredService<MenuService>();
+        menu.TestMenu(args.Sender);
     }
 
     public override void Load(bool hotReload)
@@ -62,7 +42,8 @@ public partial class WeaponSkins : BasePlugin
             .AddInventoryService()
             .AddPlayerService()
             .AddApi()
-            .AddEconParserService()
+            .AddEconService()
+            .AddMenuService()
             .BuildServiceProvider();
 
         _provider
@@ -71,7 +52,8 @@ public partial class WeaponSkins : BasePlugin
             .UseInventoryService()
             .UsePlayerService()
             .UseApi()
-            .UseEconParserService();
+            .UseEconService()
+            .UseMenuService();
 
         var dataService = _provider.GetRequiredService<DataService>();
         dataService.KnifeDataService.StoreKnife(new KnifeSkinData

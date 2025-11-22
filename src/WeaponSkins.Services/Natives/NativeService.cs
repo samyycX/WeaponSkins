@@ -65,6 +65,7 @@ public class NativeService
     public required int CGCClientSharedObjectCache_m_OwnerOffset { get; init; }
     public required int CCSPlayerInventory_m_pSOCacheOffset { get; init; }
     public required int CCSPlayerInventory_m_ItemsOffset { get; init; }
+    public required int CCSPlayerController_InventoryServices_m_pInventoryOffset { get; init; }
     public required CCSInventoryManager CCSInventoryManager { get; init; }
 
 
@@ -128,6 +129,7 @@ public class NativeService
         CCSInventoryManager_m_DefaultLoadoutsOffset = Core.GameData.GetOffset("CCSInventoryManager::m_DefaultLoadouts");
         CCSPlayerInventory_m_ItemsOffset = Core.GameData.GetOffset("CCSPlayerInventory::m_Items");
         CCSPlayerInventory_m_pSOCacheOffset = Core.GameData.GetOffset("CCSPlayerInventory::m_pSOCache");
+        CCSPlayerController_InventoryServices_m_pInventoryOffset = Core.GameData.GetOffset("CCSPlayerController_InventoryServices::m_pInventory");
         CGCClientSharedObjectCache_m_OwnerOffset =
             Core.GameData.GetOffset("GCSDK::CGCClientSharedObjectCache::m_Owner");
         var xrefCCSInventoryManager = Core.GameData.GetSignature("CCSInventoryManager_xref");

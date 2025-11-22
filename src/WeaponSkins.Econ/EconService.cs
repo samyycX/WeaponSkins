@@ -11,26 +11,40 @@ using ValveKeyValue;
 
 namespace WeaponSkins.Econ;
 
-public class EconParserService
+public class EconService
 {
     private ISwiftlyCore Core { get; init; }
     private KVObject Root { get; set; }
-    private ILogger<EconParserService> Logger { get; init; }
+    private ILogger<EconService> Logger { get; init; }
 
-    private Dictionary<string /* Name */, ItemDefinition> Items { get; set; } = new();
-    private List<string> NamedWeapons { get; set; } = new();
-    private Dictionary<string /* Name */, RarityDefinition> Rarities { get; } = new();
-    private Dictionary<string /* Name */, ColorDefinition> Colors { get; } = new();
-    private Dictionary<string /* Name */, PaintkitDefinition> Paintkits { get; } = new();
-    private Dictionary<string /* Name */, List<PaintkitDefinition>> WeaponToPaintkits { get; } = new();
-    private Dictionary<string /* Collection */, List<StickerDefinition>> Stickers { get; } = new();
-    private Dictionary<string /* Name */, KeychainDefinition> Keychains { get; } = new();
+    public Dictionary<string /* Name */, ItemDefinition> Items { get; set; } = new(StringComparer.OrdinalIgnoreCase);
+    public List<string> NamedWeapons { get; set; } = new();
+    public Dictionary<string /* Name */, RarityDefinition> Rarities { get; } = new(StringComparer.OrdinalIgnoreCase);
+    public Dictionary<string /* Name */, ColorDefinition> Colors { get; } = new(StringComparer.OrdinalIgnoreCase);
+    public Dictionary<string /* Name */, PaintkitDefinition> Paintkits { get; } = new(StringComparer.OrdinalIgnoreCase);
+
+    public Dictionary<string /* Name */, List<PaintkitDefinition>> WeaponToPaintkits { get; } =
+        new(StringComparer.OrdinalIgnoreCase);
+
+    public Dictionary<string /* Collection */, List<StickerDefinition>> Stickers { get; } =
+        new(StringComparer.OrdinalIgnoreCase);
+
+    public Dictionary<string /* Name */, KeychainDefinition> Keychains { get; } = new(StringComparer.OrdinalIgnoreCase);
 
     private Dictionary<string /* Language */, Dictionary<string /* Key */, string /* Value */>> Languages { get; } =
-        new();
+        new(StringComparer.OrdinalIgnoreCase);
 
-    public EconParserService(ISwiftlyCore core,
-        ILogger<EconParserService> logger)
+    private Dictionary<string, string> _RemappedRarityColor = new()
+    {
+        ["desc_legendary"] = "#eb4b4b",
+        ["desc_mythical"] = "#d32ce6",
+        ["desc_rare"] = "#8847ff",
+        ["desc_uncommon"] = "#4b69ff",
+        ["desc_common"] = "#5e98d9",
+    };
+
+    public EconService(ISwiftlyCore core,
+        ILogger<EconService> logger)
     {
         Core = core;
         Logger = logger;
@@ -101,6 +115,14 @@ public class EconParserService
         // }
 
         var dataDirectory = Core.PluginDataDirectory;
+
+        // File.WriteAllText(Path.Combine(dataDirectory, "languages.json"),
+        //     JsonSerializer.Serialize(Languages, new JsonSerializerOptions
+        //     {
+        //         WriteIndented = true,
+        //         Encoder =
+        //             JavaScriptEncoder.UnsafeRelaxedJsonEscaping
+        //     }));
 
         File.WriteAllText(Path.Combine(dataDirectory, "weapon_to_paintkits.json"),
             JsonSerializer.Serialize(WeaponToPaintkits, new JsonSerializerOptions
@@ -219,7 +241,7 @@ public class EconParserService
 
                     var key = itemName.Replace("#", "");
 
-                    var localizedNames = new Dictionary<string, string>();
+                    var localizedNames = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
                     foreach (var (languageName, tokens) in Languages)
                     {
                         if (tokens.TryGetValue(key, out var value))
@@ -254,6 +276,10 @@ public class EconParserService
                     {
                         Name = color.Name, HexColor = color.Value["hex_color"].EToString()
                     };
+                    if (_RemappedRarityColor.TryGetValue(definition.Name, out var remappedColor))
+                    {
+                        definition.HexColor = remappedColor;
+                    }
                     Colors[definition.Name] = definition;
                 }
             }
@@ -295,7 +321,7 @@ public class EconParserService
             // content = Encoding.Latin1.GetString(bytes);
             var reader = new StringReader(content);
             var languageName = languagePath.Split('/').Last().Split('\\').Last().Split('.').First().Split("_").Last();
-            Languages[languageName] = new();
+            Languages[languageName] = new(StringComparer.OrdinalIgnoreCase);
 
             bool started = false;
             while (reader.ReadLine() is { } line)
@@ -356,13 +382,26 @@ public class EconParserService
                     }
 
                     var tag = paintkit.Value["description_tag"].EToString();
-                    var key = tag.Replace("#", "");
-                    var localizedNames = new Dictionary<string, string>();
+                    var key = tag.Replace("#", "").Trim();
+                    var localizedNames = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+                    var notFoundLanguages = new List<string>();
                     foreach (var (languageName, tokens) in Languages)
                     {
                         if (tokens.TryGetValue(key, out var value))
                         {
                             localizedNames[languageName] = value;
+                        }
+                        else
+                        {
+                            notFoundLanguages.Add(languageName);
+                        }
+                    }
+
+                    if (localizedNames.ContainsKey("english"))
+                    {
+                        foreach (var notfoundLanguage in notFoundLanguages)
+                        {
+                            localizedNames[notfoundLanguage] = localizedNames["english"];
                         }
                     }
 
@@ -456,7 +495,7 @@ public class EconParserService
                 var materialName = $"{collectionName}/{itemName}";
                 if (items.TryGetValue(materialName, out var item))
                 {
-                    var localizedNames = new Dictionary<string, string>();
+                    var localizedNames = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
                     var key = item.Value["item_name"].EToString().Replace("#", "");
                     foreach (var (languageName, tokens) in Languages)
                     {
@@ -499,7 +538,7 @@ public class EconParserService
                     RarityDefinition rarity =
                         rarityName == null ? Rarities["default"] : Rarities[rarityName.EToString()];
 
-                    var localizedNames = new Dictionary<string, string>();
+                    var localizedNames = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
                     var key = keychain.Value["loc_name"].EToString().Replace("#", "");
                     foreach (var (languageName, tokens) in Languages)
                     {

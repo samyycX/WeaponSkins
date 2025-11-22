@@ -13,7 +13,7 @@ public class PlayerService
   {
     Core = core;
 
-    Core.Event.OnClientConnected += (@event) => {
+    Core.Event.OnClientSteamAuthorize += (@event) => {
       var player = Core.PlayerManager.GetPlayer(@event.PlayerId);
       if (player == null)
       {
@@ -30,6 +30,11 @@ public class PlayerService
       }
       Players.Remove(player.SteamID);
     };
+
+    foreach(var player in Core.PlayerManager.GetAllPlayers())
+    {
+        Players[player.SteamID] = player;
+    }
   }
 
   public bool TryGetPlayer(ulong steamID, [MaybeNullWhen(false)] out IPlayer player)

@@ -101,7 +101,7 @@ public class InventoryUpdateService
                             {
                                 Core.Scheduler.NextTick(() =>
                                 {
-                                    player.RegiveWeapon(weapon.Value);
+                                    player.RegiveWeapon(weapon.Value, skin.DefinitionIndex);
                                 });
                             }
                         }

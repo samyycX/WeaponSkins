@@ -15,9 +15,10 @@ public static class PlayerExtensions
     }
 
     public static void RegiveWeapon(this IPlayer player,
-        CBasePlayerWeapon weapon)
+        CBasePlayerWeapon weapon, ushort newIndex)
     {
-        var name = weapon.DesignerName;
+        var name = Core.Helpers.GetClassnameByDefinitionIndex(newIndex)!;
+        Console.WriteLine(name);
         var clip1 = weapon.Clip1;
         var reservedAmmo = weapon.ReserveAmmo[0];
         player.PlayerPawn!.WeaponServices!.RemoveWeapon(weapon);
@@ -30,6 +31,6 @@ public static class PlayerExtensions
         ushort defIndex)
     {
         player.PlayerPawn!.WeaponServices!.RemoveWeaponBySlot(gear_slot_t.GEAR_SLOT_KNIFE);
-        player.PlayerPawn!.ItemServices!.GiveItem(Core.Helpers.GetClassnameByDefinitionIndex(defIndex)!);
+        player.PlayerPawn!.ItemServices!.GiveItem("weapon_knife");
     }
 }

@@ -6,7 +6,9 @@ using SwiftlyS2.Shared.Plugins;
 using SwiftlyS2.Shared;
 using SwiftlyS2.Shared.Players;
 using SwiftlyS2.Shared.Commands;
+using SwiftlyS2.Shared.SteamAPI;
 
+using WeaponSkins.Injections;
 using WeaponSkins.Services;
 using WeaponSkins.Shared;
 
@@ -40,6 +42,10 @@ public partial class WeaponSkins : BasePlugin
             .AddApi()
             .AddEconService()
             .AddMenuService()
+            .AddDatabaseService()
+            .AddStickerFixService()
+            .AddStattrakService()
+            .AddLocalizationService()
             .BuildServiceProvider();
 
         _provider
@@ -49,38 +55,12 @@ public partial class WeaponSkins : BasePlugin
             .UsePlayerService()
             .UseApi()
             .UseEconService()
-            .UseMenuService();
+            .UseMenuService()
+            .UseDatabaseService()
+            .UseStickerFixService()
+            .UseStattrakService()
+            .UseLocalizationService();
 
-        var dataService = _provider.GetRequiredService<DataService>();
-        dataService.KnifeDataService.StoreKnife(new KnifeSkinData
-        {
-            SteamID = 76561199171006920,
-            Team = Team.T,
-            DefinitionIndex = 506,
-            Paintkit = 800,
-            PaintkitSeed = 1,
-            PaintkitWear = 1.0f
-        });
-
-        dataService.WeaponDataService.StoreSkin(new WeaponSkinData
-        {
-            SteamID = 76561199171006920,
-            Team = Team.T,
-            DefinitionIndex = 4,
-            Paintkit = 801,
-            PaintkitSeed = 1,
-            PaintkitWear = 1.0f,
-            Sticker2 = new()
-            {
-                Id = 1876,
-                Wear = 0.1f,
-                Scale = 1.0f,
-                Rotation = 0.0f,
-                OffsetX = 0.01f,
-                OffsetY = 0.01f,
-                Schema = 1
-            }
-        });
     }
 
     public override void Unload()

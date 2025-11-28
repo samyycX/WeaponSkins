@@ -1,3 +1,7 @@
 {
-  "hello": "world"
+  "menu.title": "Weapon Skins",
+  "menu.skins.title": "Skins",
+  "menu.knifes.title": "Knifes",
+  "menu.gloves.title": "Gloves",
+  "menu.stickers.title": "Stickers"
 }

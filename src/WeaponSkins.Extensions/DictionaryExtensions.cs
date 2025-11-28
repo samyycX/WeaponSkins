@@ -10,6 +10,8 @@ internal static class DictionaryExtensions
     {
         if (dictionary.TryGetValue(key, out var existingValue))
         {
+            Console.WriteLine("OLD: "+existingValue);
+            Console.WriteLine("NEW: "+value);
             if (existingValue.Equals(value))
             {
                 return false;

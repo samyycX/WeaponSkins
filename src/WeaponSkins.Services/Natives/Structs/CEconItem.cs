@@ -146,7 +146,12 @@ public class CEconItem : INativeHandle
             Console.WriteLine("Apply: Setting paintkit wear");
             customData.SetPaintkitWear(data.PaintkitWear);
 
-            customData.SetCustomName("123");
+            customData.SetStattrak(data.StattrakCount);
+
+            if (data.Nametag != null)
+            {
+                customData.SetCustomName(data.Nametag);
+            }
 
             if (data.Sticker0 != null)
             {
@@ -199,6 +204,12 @@ public class CEconItem : INativeHandle
         Quality = data.Quality;
         ConfigureAttributes(customData =>
         {
+            customData.SetStattrak(data.StattrakCount);
+
+            if (data.Nametag != null)
+            {
+                customData.SetCustomName(data.Nametag);
+            }
             Console.WriteLine("Apply: Setting paintkit");
             customData.SetPaintkit(data.Paintkit);
             Console.WriteLine("Apply: Setting paintkit seed");

@@ -39,6 +39,12 @@ public class InventoryService
         return SubscribedInventories[steamid];
     }
 
+    public bool TryGet(ulong steamid,
+        [MaybeNullWhen(false)] out CCSPlayerInventory inventory)
+    {
+        return SubscribedInventories.TryGetValue(steamid, out inventory);
+    }
+
     private void OnSOCacheSubscribed(CCSPlayerInventory inventory,
         SOID_t soid)
     {

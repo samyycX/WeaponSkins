@@ -1,4 +1,6 @@
 using System.Diagnostics;
+using System.Security.Cryptography;
+using System.Text;
 using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Text.RegularExpressions;
@@ -41,6 +43,8 @@ public class EconService
     private Dictionary<string /* Language */, Dictionary<string /* Key */, string /* Value */>> Languages { get; } =
         new(StringComparer.OrdinalIgnoreCase);
 
+    private const int SchemaVersion = 1;
+
     public EconService(ISwiftlyCore core,
         ILogger<EconService> logger)
     {
@@ -48,6 +52,33 @@ public class EconService
         Logger = logger;
 
         var items = Core.GameFileSystem.ReadFile("scripts/items/items_game.txt", "GAME");
+        var version = GetVersion(items);
+        if (File.Exists(Path.Combine(Core.PluginDataDirectory, "version.lock")))
+        {
+            var lockVersion = JsonSerializer.Deserialize<EconVersion>(File.ReadAllText(Path.Combine(Core.PluginDataDirectory, "version.lock")));
+            if (lockVersion?.EconDataVersion == version && lockVersion.SchemaVersion == SchemaVersion)
+            {
+                Logger.LogInformation("Econ data is up to date, skipping parsing...");
+                // TODO read from json
+                Items = JsonSerializer.Deserialize<Dictionary<string, ItemDefinition>>(
+                    File.ReadAllText(Path.Combine(Core.PluginDataDirectory, "items.json")))!;
+                WeaponToPaintkits =
+                    JsonSerializer.Deserialize<Dictionary<string, List<PaintkitDefinition>>>(
+                        File.ReadAllText(Path.Combine(Core.PluginDataDirectory, "weapon_to_paintkits.json")))!;
+                StickerCollections =
+                    JsonSerializer.Deserialize<Dictionary<string, StickerCollectionDefinition>>(
+                        File.ReadAllText(Path.Combine(Core.PluginDataDirectory, "sticker_collections.json")))!;
+                Keychains = JsonSerializer.Deserialize<Dictionary<string, KeychainDefinition>>(
+                    File.ReadAllText(Path.Combine(Core.PluginDataDirectory, "keychains.json")))!;
+                return;
+            }
+        }
+
+        Dump(items);
+    }
+
+    private void Dump(string items)
+    {
         var stream = new MemoryStream(items.Select(c => (byte)c).ToArray());
         var kv = KVSerializer.Create(KVSerializationFormat.KeyValues1Text);
         Root = kv.Deserialize(stream);
@@ -101,43 +132,19 @@ public class EconService
         Logger.LogInformation($"Parsed {Keychains.Count} keychains in {watch.ElapsedMilliseconds}ms.");
         watch.Restart();
 
+        var version = new EconVersion
+        {
+            EconDataVersion = GetVersion(items),
+            SchemaVersion = SchemaVersion
+        };
+
+        File.WriteAllText(Path.Combine(Core.PluginDataDirectory, "version.lock"), JsonSerializer.Serialize(version));
+
         Logger.LogInformation($"Finished parsing data in {totalWatch.ElapsedMilliseconds}ms.");
 
         Core.Profiler.RecordTime("ParseEcon", totalWatch.ElapsedMilliseconds);
 
-        // foreach (var (name, rarity) in Rarities)
-        // {
-        //     Console.WriteLine($"Rarity: {name}, Id: {rarity.Id}, Color: {rarity.Color}");
-        // }
-
-        // foreach (var (name, paintkit) in Paintkits)
-        // {
-        //     Console.WriteLine($"Paintkit: {name}, Value: {paintkit}");
-        // }
-
-        // foreach (var (name, paintkits) in WeaponToPaintkits)
-        // {
-        //     Console.WriteLine($"Weapon: {name}, Paintkits: {string.Join(", ", paintkits)}");
-        // }
-
-        // foreach (var (language, tokens) in Languages)
-        // {
-        //     Console.WriteLine($"Language: {language}");
-        //     foreach (var (key, value) in tokens)
-        //     {
-        //         Console.WriteLine($"  {key}: {value}");
-        //     }
-        // }
-
         var dataDirectory = Core.PluginDataDirectory;
-
-        // File.WriteAllText(Path.Combine(dataDirectory, "languages.json"),
-        //     JsonSerializer.Serialize(Languages, new JsonSerializerOptions
-        //     {
-        //         WriteIndented = true,
-        //         Encoder =
-        //             JavaScriptEncoder.UnsafeRelaxedJsonEscaping
-        //     }));
 
         var options = new JsonSerializerOptions
         {
@@ -152,14 +159,12 @@ public class EconService
         File.WriteAllText(Path.Combine(dataDirectory, "items.json"),
             JsonSerializer.Serialize(Items, options));
 
-        File.WriteAllText(Path.Combine(dataDirectory, "stickers.json"),
-            JsonSerializer.Serialize(Stickers, options));
-
         File.WriteAllText(Path.Combine(dataDirectory, "sticker_collections.json"),
             JsonSerializer.Serialize(StickerCollections, options));
 
         File.WriteAllText(Path.Combine(dataDirectory, "keychains.json"),
             JsonSerializer.Serialize(Keychains, options));
+        
         Languages.Clear();
     }
 
@@ -170,6 +175,7 @@ public class EconService
         {
             return Rarities[rarityName];
         }
+
         return Rarities.FirstOrDefault(r => r.Value.Id == original + 1).Value;
     }
 
@@ -203,6 +209,13 @@ public class EconService
         }
 
         return localizedNames;
+    }
+
+    private string GetVersion(string content)
+    {
+        using var sha256 = SHA256.Create();
+        var hash = sha256.ComputeHash(Encoding.UTF8.GetBytes(content));
+        return BitConverter.ToString(hash).Replace("-", "").ToLowerInvariant();
     }
 
     public void ParseWeapons()
@@ -421,7 +434,7 @@ public class EconService
                 "crate_signature_pack_eslcologne2015_group_4_rare",
                 "crate_signature_pack_eslcologne2015_group_4_legendary"
             ],
-            ["crate_signature_pack_cluj2015_group_1"] = 
+            ["crate_signature_pack_cluj2015_group_1"] =
             [
                 "crate_signature_pack_cluj2015_group_1_rare",
                 "crate_signature_pack_cluj2015_group_1_legendary"

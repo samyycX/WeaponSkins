@@ -14,7 +14,10 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="BidirectionalDict" Version="1.2.0" />
+    <PackageReference Include="FluentMigrator" Version="7.1.0" />
+    <PackageReference Include="FluentMigrator.Runner" Version="7.1.0" />
+    <PackageReference Include="FreeSql" Version="3.5.303" />
+    <PackageReference Include="FreeSql.Provider.MySql" Version="3.5.303" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.0" ExcludeAssets="runtime" PrivateAssets="all" />
     <PackageReference Include="Microsoft.Extensions.Configuration" Version="10.0.0" ExcludeAssets="runtime" PrivateAssets="all" />
     <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="10.0.0" ExcludeAssets="runtime" PrivateAssets="all" />

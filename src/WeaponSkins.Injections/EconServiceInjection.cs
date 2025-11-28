@@ -2,7 +2,7 @@ using Microsoft.Extensions.DependencyInjection;
 
 using WeaponSkins.Econ;
 
-namespace WeaponSkins;
+namespace WeaponSkins.Injections;
 
 public static class EconServiceInjection
 {

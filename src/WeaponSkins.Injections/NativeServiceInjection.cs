@@ -1,6 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 
-namespace WeaponSkins;
+namespace WeaponSkins.Injections;
 
 public static class NativeServiceInjection
 {

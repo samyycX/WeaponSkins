@@ -14,6 +14,9 @@ public record WeaponSkinData
     public int PaintkitSeed { get; set; } = 0;
     public float PaintkitWear { get; set; } = 0.0f;
 
+    public string? Nametag { get; set; } = null;
+    public int StattrakCount { get; set; } = 0;
+
     public StickerData? Sticker0 { get; set; } = null;
     public StickerData? Sticker1 { get; set; } = null;
     public StickerData? Sticker2 { get; set; } = null;

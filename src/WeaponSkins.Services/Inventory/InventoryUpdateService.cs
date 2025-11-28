@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Logging;
 
 using SwiftlyS2.Shared;
+using SwiftlyS2.Shared.Players;
 using SwiftlyS2.Shared.SchemaDefinitions;
 
 using WeaponSkins.Extensions;
@@ -15,6 +16,7 @@ public class InventoryUpdateService
     private DataService DataService { get; init; }
     private PlayerService PlayerService { get; init; }
     private NativeService NativeService { get; init; }
+    private StickerFixService StickerFixService { get; init; }
     private ILogger<InventoryUpdateService> Logger { get; init; }
 
     public InventoryUpdateService(ISwiftlyCore core,
@@ -22,6 +24,7 @@ public class InventoryUpdateService
         DataService dataService,
         PlayerService playerService,
         NativeService nativeService,
+        StickerFixService stickerFixService,
         ILogger<InventoryUpdateService> logger)
     {
         Core = core;
@@ -30,6 +33,7 @@ public class InventoryUpdateService
 
         PlayerService = playerService;
         NativeService = nativeService;
+        StickerFixService = stickerFixService;
         Logger = logger;
 
         NativeService.OnSOCacheSubscribed += OnSOCacheSubscribed;
@@ -54,32 +58,30 @@ public class InventoryUpdateService
 
     private void Update(CCSPlayerInventory inventory)
     {
-        Core.Scheduler.NextWorldUpdate(() =>
+        if (DataService.WeaponDataService.TryGetSkins(inventory.SteamID, out var skins))
         {
-            if (DataService.WeaponDataService.TryGetSkins(inventory.SteamID, out var skins))
+            foreach (var skin in skins)
             {
-                foreach (var skin in skins)
-                {
-                    inventory.UpdateWeaponSkin(skin);
-                }
+                StickerFixService.FixSticker(skin);
+                inventory.UpdateWeaponSkin(skin);
             }
+        }
 
-            if (DataService.KnifeDataService.TryGetKnives(inventory.SteamID, out var knives))
+        if (DataService.KnifeDataService.TryGetKnives(inventory.SteamID, out var knives))
+        {
+            foreach (var knife in knives)
             {
-                foreach (var knife in knives)
-                {
-                    inventory.UpdateKnifeSkin(knife);
-                }
+                inventory.UpdateKnifeSkin(knife);
             }
+        }
 
-            if (DataService.GloveDataService.TryGetGloves(inventory.SteamID, out var gloves))
+        if (DataService.GloveDataService.TryGetGloves(inventory.SteamID, out var gloves))
+        {
+            foreach (var glove in gloves)
             {
-                foreach (var glove in gloves)
-                {
-                    inventory.UpdateGloveSkin(glove);
-                }
+                inventory.UpdateGloveSkin(glove);
             }
-        });
+        }
     }
 
     public void UpdateWeaponSkins(IEnumerable<WeaponSkinData> skins)
@@ -110,10 +112,10 @@ public class InventoryUpdateService
                             if (weapon.Value!.AttributeManager.Item.ItemDefinitionIndex == skin.DefinitionIndex &&
                                 player.Controller.Team == skin.Team)
                             {
-                                Core.Scheduler.NextTick(() =>
-                                {
-                                    player.RegiveWeapon(weapon.Value, skin.DefinitionIndex);
-                                });
+                                    Core.Scheduler.NextWorldUpdate(() =>
+                                    {
+                                        player.RegiveWeapon(weapon.Value, skin.DefinitionIndex);
+                                    });
                             }
                         }
                     }
@@ -145,7 +147,7 @@ public class InventoryUpdateService
                     {
                         if (player.Controller.Team == knife.Team)
                         {
-                            Core.Scheduler.NextTick(() =>
+                            Core.Scheduler.NextWorldUpdate(() =>
                             {
                                 player.RegiveKnife(knife.DefinitionIndex);
                             });

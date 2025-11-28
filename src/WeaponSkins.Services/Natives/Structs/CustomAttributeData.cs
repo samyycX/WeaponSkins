@@ -95,6 +95,12 @@ public class CustomAttributeData : INativeHandle
         });
     }
 
+    public void SetStattrak(int count)
+    {
+        SetKillEater(count);
+        SetKillEaterScoreType(0);
+    }
+
     public void SetCustomName(string name)
     {
         var str = StaticNativeService.Service.CreateAttributeString();

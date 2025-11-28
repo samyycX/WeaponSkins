@@ -9,6 +9,9 @@ public record KnifeSkinData
     public required ushort DefinitionIndex { get; init; }
 
     public EconItemQuality Quality { get; set; } = EconItemQuality.Normal;
+    public string? Nametag { get; set; } = null;
+    public int StattrakCount { get; set; } = 0;
+
     public int Paintkit { get; set; } = 0;
     public int PaintkitSeed { get; set; } = 0;
     public float PaintkitWear { get; set; } = 0.0f;

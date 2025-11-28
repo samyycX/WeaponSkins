@@ -11,13 +11,18 @@ public struct CGCClientSharedObjectCache(nint address) : INativeHandle
 
     public void AddObject(CEconItem item)
     {
+        if (!IsValid) throw new InvalidOperationException("Invalid cache");
         NativeService.SOCache_AddObject.Call(Address, item.Address);
     }
 
     public void RemoveObject(CEconItem item)
     {
+        if (!IsValid) throw new InvalidOperationException("Invalid cache");
         NativeService.SOCache_RemoveObject.Call(Address, item.Address);
     }
 
-    public SOID_t Owner => Address.AsRef<SOID_t>(NativeService.CGCClientSharedObjectCache_m_OwnerOffset);
+    public SOID_t Owner =>
+        !IsValid
+            ? throw new InvalidOperationException("Invalid cache")
+            : Address.AsRef<SOID_t>(NativeService.CGCClientSharedObjectCache_m_OwnerOffset);
 }

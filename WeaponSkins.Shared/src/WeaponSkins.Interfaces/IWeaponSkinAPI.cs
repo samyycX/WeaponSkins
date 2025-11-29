@@ -1,48 +1,43 @@
+using System.Diagnostics.CodeAnalysis;
+
 using SwiftlyS2.Shared.Players;
 
 namespace WeaponSkins.Shared;
 
 public interface IWeaponSkinAPI
 {
-    void SetWeaponSkins(IEnumerable<WeaponSkinData> skins);
+    void SetWeaponSkins(IEnumerable<WeaponSkinData> skins, bool permanent = false);
 
-    void SetWeaponSkinsWithoutStattrak(IEnumerable<WeaponSkinData> skins);
+    void SetKnifeSkins(IEnumerable<KnifeSkinData> knives, bool permanent = false);
 
-    void SetKnifeSkins(IEnumerable<KnifeSkinData> knives);
-
-    void SetGloveSkins(IEnumerable<GloveData> gloves);
-
-    void SetWeaponPaintsWithoutStattrakPermanently(IEnumerable<WeaponSkinData> skins);
-
-    void SetWeaponSkinsPermanently(IEnumerable<WeaponSkinData> skins);
-
-    void SetKnifeSkinsPermanently(IEnumerable<KnifeSkinData> knives);
-
-    void SetGloveSkinsPermanently(IEnumerable<GloveData> gloves);
+    void SetGloveSkins(IEnumerable<GloveData> gloves, bool permanent = false);
 
     void UpdateWeaponSkin(ulong steamid,
         Team team,
         ushort definitionIndex,
-        Action<WeaponSkinData> action);
+        Action<WeaponSkinData> action,
+        bool permanent = false);
 
     void UpdateKnifeSkin(ulong steamid,
         Team team,
-        Action<KnifeSkinData> action);
+        Action<KnifeSkinData> action,
+        bool permanent = false);
 
     void UpdateGloveSkin(ulong steamid,
         Team team,
-        Action<GloveData> action);
-
-    void UpdateWeaponSkinPermanently(ulong steamid,
+        Action<GloveData> action,
+        bool permanent = false);
+    
+    bool TryGetWeaponSkin(ulong steamid,
         Team team,
         ushort definitionIndex,
-        Action<WeaponSkinData> action);
+        [MaybeNullWhen(false)] out WeaponSkinData skin);
 
-    void UpdateKnifeSkinPermanently(ulong steamid,
+    bool TryGetKnifeSkin(ulong steamid,
         Team team,
-        Action<KnifeSkinData> action);
+        [MaybeNullWhen(false)] out KnifeSkinData knife);
 
-    void UpdateGloveSkinPermanently(ulong steamid,
+    bool TryGetGloveSkin(ulong steamid,
         Team team,
-        Action<GloveData> action);
+        [MaybeNullWhen(false)] out GloveData glove);
 }

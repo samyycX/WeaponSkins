@@ -55,7 +55,13 @@ public class EconService
         var version = GetVersion(items);
         if (File.Exists(Path.Combine(Core.PluginDataDirectory, "version.lock")))
         {
-            var lockVersion = JsonSerializer.Deserialize<EconVersion>(File.ReadAllText(Path.Combine(Core.PluginDataDirectory, "version.lock")));
+            GC.Collect();
+            GC.WaitForPendingFinalizers();
+            GC.Collect();
+            var startMemory = GC.GetTotalMemory(true);
+            var lockVersion =
+                JsonSerializer.Deserialize<EconVersion>(
+                    File.ReadAllText(Path.Combine(Core.PluginDataDirectory, "version.lock")));
             if (lockVersion?.EconDataVersion == version && lockVersion.SchemaVersion == SchemaVersion)
             {
                 Logger.LogInformation("Econ data is up to date, skipping parsing...");
@@ -70,6 +76,12 @@ public class EconService
                         File.ReadAllText(Path.Combine(Core.PluginDataDirectory, "sticker_collections.json")))!;
                 Keychains = JsonSerializer.Deserialize<Dictionary<string, KeychainDefinition>>(
                     File.ReadAllText(Path.Combine(Core.PluginDataDirectory, "keychains.json")))!;
+
+                GC.Collect();
+                GC.WaitForPendingFinalizers();
+                GC.Collect();
+                var endMemory = GC.GetTotalMemory(true);
+                Logger.LogInformation($"Memory usage: {endMemory - startMemory} bytes");
                 return;
             }
         }
@@ -79,6 +91,11 @@ public class EconService
 
     private void Dump(string items)
     {
+
+        GC.Collect();
+        GC.WaitForPendingFinalizers();
+        GC.Collect();
+        var startMemory = GC.GetTotalMemory(true);
         var stream = new MemoryStream(items.Select(c => (byte)c).ToArray());
         var kv = KVSerializer.Create(KVSerializationFormat.KeyValues1Text);
         Root = kv.Deserialize(stream);
@@ -132,11 +149,7 @@ public class EconService
         Logger.LogInformation($"Parsed {Keychains.Count} keychains in {watch.ElapsedMilliseconds}ms.");
         watch.Restart();
 
-        var version = new EconVersion
-        {
-            EconDataVersion = GetVersion(items),
-            SchemaVersion = SchemaVersion
-        };
+        var version = new EconVersion { EconDataVersion = GetVersion(items), SchemaVersion = SchemaVersion };
 
         File.WriteAllText(Path.Combine(Core.PluginDataDirectory, "version.lock"), JsonSerializer.Serialize(version));
 
@@ -164,8 +177,18 @@ public class EconService
 
         File.WriteAllText(Path.Combine(dataDirectory, "keychains.json"),
             JsonSerializer.Serialize(Keychains, options));
-        
+
+        Stickers.Clear();
+        ClientLootLists.Clear();
+        Rarities.Clear();
+        Colors.Clear();
+        Paintkits.Clear();
         Languages.Clear();
+        GC.Collect();
+        GC.WaitForPendingFinalizers();
+        GC.Collect();
+        var endMemory = GC.GetTotalMemory(true);
+        Logger.LogInformation($"Memory usage: {endMemory - startMemory} bytes");
     }
 
     private RarityDefinition RemapItemRarity(string rarityName)

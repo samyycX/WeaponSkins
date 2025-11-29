@@ -23,7 +23,8 @@ public class WeaponDataService
     {
         var playerInventory = _playerSkins.GetOrAdd(skin.SteamID, _ => new());
         var teamSkins = playerInventory.GetOrAdd(skin.Team, _ => new());
-        return teamSkins.UpdateOrAdd(skin.DefinitionIndex, skin);
+        var result = teamSkins.UpdateOrAdd(skin.DefinitionIndex, skin);
+        return result;
     }
 
     public bool TryGetSkin(ulong steamId,

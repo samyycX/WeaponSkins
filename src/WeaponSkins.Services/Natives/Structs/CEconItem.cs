@@ -146,7 +146,10 @@ public class CEconItem : INativeHandle
             Console.WriteLine("Apply: Setting paintkit wear");
             customData.SetPaintkitWear(data.PaintkitWear);
 
-            customData.SetStattrak(data.StattrakCount);
+            if (data.Quality == EconItemQuality.StatTrak)
+            {
+                customData.SetStattrak(data.StattrakCount);
+            }
 
             if (data.Nametag != null)
             {

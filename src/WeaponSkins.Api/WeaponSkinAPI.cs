@@ -26,126 +26,129 @@ public class WeaponSkinAPI : IWeaponSkinAPI
         DatabaseService = databaseService;
     }
 
-    public void SetWeaponSkins(IEnumerable<WeaponSkinData> skins)
+    public void SetWeaponSkins(IEnumerable<WeaponSkinData> skins,
+        bool permanent = false)
     {
         InventoryUpdateService.UpdateWeaponSkins(skins);
-    }
-
-    public void SetWeaponSkinsWithoutStattrak(IEnumerable<WeaponSkinData> skins)
-    {
-        foreach (var skin in skins)
+        if (permanent)
         {
-            if (DataService.WeaponDataService.TryGetSkin(skin.SteamID, skin.Team, skin.DefinitionIndex,
-                    out var existingSkin))
-            {
-                skin.StattrakCount = existingSkin.StattrakCount;
-            }
+            var _ = Task.Run(async () => await DatabaseService.StoreSkins(skins));
         }
-
-        SetWeaponSkins(skins);
     }
 
-    public void SetKnifeSkins(IEnumerable<KnifeSkinData> knives)
+    public void SetKnifeSkins(IEnumerable<KnifeSkinData> knives,
+        bool permanent = false)
     {
         InventoryUpdateService.UpdateKnifeSkins(knives);
+        if (permanent)
+        {
+            var _ = Task.Run(async () => await DatabaseService.StoreKnifes(knives));
+        }
     }
 
-    public void SetGloveSkins(IEnumerable<GloveData> gloves)
+    public void SetGloveSkins(IEnumerable<GloveData> gloves,
+        bool permanent = false)
     {
         InventoryUpdateService.UpdateGloveSkins(gloves);
+        if (permanent)
+        {
+            var _ = Task.Run(async () => await DatabaseService.StoreGloves(gloves));
+        }
     }
 
     public void UpdateWeaponSkin(ulong steamid,
         Team team,
         ushort definitionIndex,
-        Action<WeaponSkinData> action)
+        Action<WeaponSkinData> action,
+        bool permanent = false)
     {
-        if (DataService.WeaponDataService.TryGetSkin(steamid, team, definitionIndex, out var skin))
+        if (!DataService.WeaponDataService.TryGetSkin(steamid, team, definitionIndex, out var skin))
         {
-            action(skin);
-            SetWeaponSkins([skin]);
+            skin = new WeaponSkinData { SteamID = steamid, Team = team, DefinitionIndex = definitionIndex };
         }
+
+        var newSkin = skin.DeepClone();
+        action(newSkin);
+        SetWeaponSkins([newSkin], permanent);
     }
 
     public void UpdateKnifeSkin(ulong steamid,
         Team team,
-        Action<KnifeSkinData> action)
+        Action<KnifeSkinData> action,
+        bool permanent = false)
     {
-        if (DataService.KnifeDataService.TryGetKnife(steamid, team, out var knife))
+        if (!DataService.KnifeDataService.TryGetKnife(steamid, team, out var knife))
         {
-            action(knife);
-            SetKnifeSkins([knife]);
+            knife = new KnifeSkinData { SteamID = steamid, Team = team, DefinitionIndex = 0 };
         }
+
+        var newKnife = knife.DeepClone();
+        action(newKnife);
+        if (newKnife.DefinitionIndex == 0)
+        {
+            return;
+        }
+
+        SetKnifeSkins([newKnife], permanent);
     }
 
     public void UpdateGloveSkin(ulong steamid,
         Team team,
-        Action<GloveData> action)
+        Action<GloveData> action,
+        bool permanent = false)
     {
-        if (DataService.GloveDataService.TryGetGlove(steamid, team, out var glove))
+        if (!DataService.GloveDataService.TryGetGlove(steamid, team, out var glove))
         {
-            action(glove);
-            SetGloveSkins([glove]);
+            glove = new GloveData { SteamID = steamid, Team = team, DefinitionIndex = 0 };
         }
+
+        var newGlove = glove.DeepClone();
+        action(newGlove);
+        if (newGlove.DefinitionIndex == 0)
+        {
+            return;
+        }
+
+        SetGloveSkins([newGlove], permanent);
     }
 
-    public void SetWeaponPaintsWithoutStattrakPermanently(IEnumerable<WeaponSkinData> skins)
-    {
-        SetWeaponSkinsWithoutStattrak(skins);
-        var _ = Task.Run(async () => await DatabaseService.StoreSkins(skins));
-    }
-
-    public void SetWeaponSkinsPermanently(IEnumerable<WeaponSkinData> skins)
-    {
-        InventoryUpdateService.UpdateWeaponSkins(skins);
-        var _ = Task.Run(async () => await DatabaseService.StoreSkins(skins));
-    }
-
-    public void SetKnifeSkinsPermanently(IEnumerable<KnifeSkinData> knives)
-    {
-        InventoryUpdateService.UpdateKnifeSkins(knives);
-        var _ = Task.Run(async () => await DatabaseService.StoreKnifes(knives));
-    }
-
-    public void SetGloveSkinsPermanently(IEnumerable<GloveData> gloves)
-    {
-        InventoryUpdateService.UpdateGloveSkins(gloves);
-        var _ = Task.Run(async () => await DatabaseService.StoreGloves(gloves));
-    }
-
-    public void UpdateWeaponSkinPermanently(ulong steamid,
+    public bool TryGetWeaponSkin(ulong steamid,
         Team team,
         ushort definitionIndex,
-        Action<WeaponSkinData> action)
+        [MaybeNullWhen(false)] out WeaponSkinData skin)
     {
-        if (DataService.WeaponDataService.TryGetSkin(steamid, team, definitionIndex, out var skin))
+        if (DataService.WeaponDataService.TryGetSkin(steamid, team, definitionIndex, out skin))
         {
-            action(skin);
-            SetWeaponSkinsPermanently([skin]);
+            skin = skin.DeepClone();
+            return true;
         }
+
+        return false;
     }
 
-    public void UpdateKnifeSkinPermanently(ulong steamid,
+    public bool TryGetKnifeSkin(ulong steamid,
         Team team,
-        Action<KnifeSkinData> action)
+        [MaybeNullWhen(false)] out KnifeSkinData knife)
     {
-        UpdateKnifeSkin(steamid, team, action);
-        if (DataService.KnifeDataService.TryGetKnife(steamid, team, out var knife))
+        if (DataService.KnifeDataService.TryGetKnife(steamid, team, out knife))
         {
-            action(knife);
-            SetKnifeSkinsPermanently([knife]);
+            knife = knife.DeepClone();
+            return true;
         }
+
+        return false;
     }
 
-    public void UpdateGloveSkinPermanently(ulong steamid,
+    public bool TryGetGloveSkin(ulong steamid,
         Team team,
-        Action<GloveData> action)
+        [MaybeNullWhen(false)] out GloveData glove)
     {
-        UpdateGloveSkin(steamid, team, action);
-        if (DataService.GloveDataService.TryGetGlove(steamid, team, out var glove))
+        if (DataService.GloveDataService.TryGetGlove(steamid, team, out glove))
         {
-            action(glove);
-            SetGloveSkinsPermanently([glove]);
+            glove = glove.DeepClone();
+            return true;
         }
+
+        return false;
     }
 }

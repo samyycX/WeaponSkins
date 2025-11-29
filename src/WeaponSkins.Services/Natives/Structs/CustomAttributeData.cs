@@ -135,6 +135,7 @@ public class CustomAttributeData : INativeHandle
         {
             AttributeDefinitionIndex = AttributeDefinitionIndex.STICKER_SLOT_0_ROTATION, FloatData = rotation
         });
+        if (schema == 1337) return;
         UpdateAttribute(new Attribute
         {
             AttributeDefinitionIndex = AttributeDefinitionIndex.STICKER_SLOT_0_OFFSET_X, FloatData = offsetX
@@ -173,6 +174,7 @@ public class CustomAttributeData : INativeHandle
         {
             AttributeDefinitionIndex = AttributeDefinitionIndex.STICKER_SLOT_1_ROTATION, FloatData = rotation
         });
+        if (schema == 1337) return;
         UpdateAttribute(new Attribute
         {
             AttributeDefinitionIndex = AttributeDefinitionIndex.STICKER_SLOT_1_OFFSET_X, FloatData = offsetX
@@ -211,6 +213,7 @@ public class CustomAttributeData : INativeHandle
         {
             AttributeDefinitionIndex = AttributeDefinitionIndex.STICKER_SLOT_2_ROTATION, FloatData = rotation
         });
+        if (schema == 1337) return;
         UpdateAttribute(new Attribute
         {
             AttributeDefinitionIndex = AttributeDefinitionIndex.STICKER_SLOT_2_OFFSET_X, FloatData = offsetX
@@ -249,6 +252,7 @@ public class CustomAttributeData : INativeHandle
         {
             AttributeDefinitionIndex = AttributeDefinitionIndex.STICKER_SLOT_3_ROTATION, FloatData = rotation
         });
+        if (schema == 1337) return;
         UpdateAttribute(new Attribute
         {
             AttributeDefinitionIndex = AttributeDefinitionIndex.STICKER_SLOT_3_OFFSET_X, FloatData = offsetX
@@ -287,6 +291,7 @@ public class CustomAttributeData : INativeHandle
         {
             AttributeDefinitionIndex = AttributeDefinitionIndex.STICKER_SLOT_4_ROTATION, FloatData = rotation
         });
+        if (schema == 1337) return;
         UpdateAttribute(new Attribute
         {
             AttributeDefinitionIndex = AttributeDefinitionIndex.STICKER_SLOT_4_OFFSET_X, FloatData = offsetX
@@ -325,6 +330,7 @@ public class CustomAttributeData : INativeHandle
         {
             AttributeDefinitionIndex = AttributeDefinitionIndex.STICKER_SLOT_5_ROTATION, FloatData = rotation
         });
+        if (schema == 1337) return;
         UpdateAttribute(new Attribute
         {
             AttributeDefinitionIndex = AttributeDefinitionIndex.STICKER_SLOT_5_OFFSET_X, FloatData = offsetX

@@ -24,13 +24,6 @@ public partial class WeaponSkins : BasePlugin
     {
     }
 
-    [Command("test")]
-    public void TestCommand(ICommandContext args)
-    {
-        var menu = _provider.GetRequiredService<MenuService>();
-        menu.TestMenu(args.Sender);
-    }
-
     public override void Load(bool hotReload)
     {
         _provider = new ServiceCollection()
@@ -46,6 +39,7 @@ public partial class WeaponSkins : BasePlugin
             .AddStickerFixService()
             .AddStattrakService()
             .AddLocalizationService()
+            .AddCommandService()
             .BuildServiceProvider();
 
         _provider
@@ -59,8 +53,8 @@ public partial class WeaponSkins : BasePlugin
             .UseDatabaseService()
             .UseStickerFixService()
             .UseStattrakService()
-            .UseLocalizationService();
-
+            .UseLocalizationService()
+            .UseCommandService();
     }
 
     public override void Unload()

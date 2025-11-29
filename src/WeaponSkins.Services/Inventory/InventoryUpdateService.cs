@@ -90,6 +90,7 @@ public class InventoryUpdateService
 
         foreach (var skin in skins)
         {
+            StickerFixService.FixSticker(skin);
             if (DataService.WeaponDataService.StoreSkin(skin))
             {
                 updatedSkinMaps.GetOrAdd(skin.SteamID, () => new()).Add(skin);
@@ -183,6 +184,7 @@ public class InventoryUpdateService
                         {
                             Core.Scheduler.NextWorldUpdate(() =>
                             {
+                                Console.WriteLine("UpdateGloveSkins!!: Updating glove: {0}", glove.ToString());
                                 var model = player.PlayerPawn!.CBodyComponent!.SceneNode.GetSkeletonInstance()
                                     .ModelState
                                     .ModelName;

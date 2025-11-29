@@ -14,7 +14,7 @@ using WeaponSkins.Shared;
 
 namespace WeaponSkins;
 
-[PluginMetadata(Id = "WeaponSkins", Version = "0.1.0", Name = "WeaponSkins", Author = "samyyc",
+[PluginMetadata(Id = "WeaponSkins", Version = "0.0.1", Name = "WeaponSkins", Author = "samyyc",
     Description = "No description.")]
 public partial class WeaponSkins : BasePlugin
 {
@@ -27,7 +27,7 @@ public partial class WeaponSkins : BasePlugin
     public override void Load(bool hotReload)
     {
         StickerFixService.Initialize();
-        
+
         _provider = new ServiceCollection()
             .AddSwiftly(Core)
             .AddDataService()

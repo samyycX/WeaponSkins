@@ -183,8 +183,10 @@ public class CCSPlayerInventory : INativeHandle
         // do nothing
     }
 
-    public void UpdateWeaponSkin(WeaponSkinData skinData)
+    public void UpdateWeaponSkin(WeaponSkinData data)
     {
+        var skinData = data.DeepClone();
+        StickerFixService.FixSticker(skinData);
         Core.Scheduler.NextWorldUpdate(() =>
         {
             Console.WriteLine("UpdateWeaponSkin: {0}", skinData.ToString());

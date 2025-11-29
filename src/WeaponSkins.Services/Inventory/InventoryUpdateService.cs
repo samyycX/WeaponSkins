@@ -16,7 +16,6 @@ public class InventoryUpdateService
     private DataService DataService { get; init; }
     private PlayerService PlayerService { get; init; }
     private NativeService NativeService { get; init; }
-    private StickerFixService StickerFixService { get; init; }
     private ILogger<InventoryUpdateService> Logger { get; init; }
 
     public InventoryUpdateService(ISwiftlyCore core,
@@ -24,7 +23,6 @@ public class InventoryUpdateService
         DataService dataService,
         PlayerService playerService,
         NativeService nativeService,
-        StickerFixService stickerFixService,
         ILogger<InventoryUpdateService> logger)
     {
         Core = core;
@@ -33,7 +31,6 @@ public class InventoryUpdateService
 
         PlayerService = playerService;
         NativeService = nativeService;
-        StickerFixService = stickerFixService;
         Logger = logger;
 
         NativeService.OnSOCacheSubscribed += OnSOCacheSubscribed;
@@ -62,7 +59,6 @@ public class InventoryUpdateService
         {
             foreach (var skin in skins)
             {
-                StickerFixService.FixSticker(skin);
                 inventory.UpdateWeaponSkin(skin);
             }
         }
@@ -90,7 +86,6 @@ public class InventoryUpdateService
 
         foreach (var skin in skins)
         {
-            StickerFixService.FixSticker(skin);
             if (DataService.WeaponDataService.StoreSkin(skin))
             {
                 updatedSkinMaps.GetOrAdd(skin.SteamID, () => new()).Add(skin);

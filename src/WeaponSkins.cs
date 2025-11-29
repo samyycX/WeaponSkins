@@ -26,6 +26,8 @@ public partial class WeaponSkins : BasePlugin
 
     public override void Load(bool hotReload)
     {
+        StickerFixService.Initialize();
+        
         _provider = new ServiceCollection()
             .AddSwiftly(Core)
             .AddDataService()
@@ -36,7 +38,6 @@ public partial class WeaponSkins : BasePlugin
             .AddEconService()
             .AddMenuService()
             .AddDatabaseService()
-            .AddStickerFixService()
             .AddStattrakService()
             .AddLocalizationService()
             .AddCommandService()
@@ -51,7 +52,6 @@ public partial class WeaponSkins : BasePlugin
             .UseEconService()
             .UseMenuService()
             .UseDatabaseService()
-            .UseStickerFixService()
             .UseStattrakService()
             .UseLocalizationService()
             .UseCommandService();

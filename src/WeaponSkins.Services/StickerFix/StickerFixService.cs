@@ -4,15 +4,15 @@ using WeaponSkins.Shared;
 
 namespace WeaponSkins;
 
-public class StickerFixService
+public static class StickerFixService
 {
-    private Dictionary<ulong /* steamid */, Dictionary<int /* key hash */, int /* sticker hash */>> _stickerHashes = new();
-    private ISwiftlyCore Core { get; init; }
+    private static Dictionary<ulong /* steamid */, Dictionary<int /* key hash */, int /* sticker hash */>> _stickerHashes = new();
 
-    public StickerFixService(ISwiftlyCore core)
+    [SwiftlyInject]
+    private static ISwiftlyCore Core { get; set; } = null!;
+
+    public static void Initialize()
     {
-        Core = core;
-
         foreach(var player in Core.PlayerManager.GetAllPlayers())
         {
             _stickerHashes[player.SteamID] = new();
@@ -31,7 +31,7 @@ public class StickerFixService
         };
     }
 
-    public void FixSticker(WeaponSkinData skin)
+    public static void FixSticker(WeaponSkinData skin)
     {
         var newStickerHash = CalculateStickerHash(skin);
         Console.WriteLine("FixSticker: New sticker hash: {0}", newStickerHash);
@@ -44,6 +44,7 @@ public class StickerFixService
                 {
                     if (stickerHash != newStickerHash)
                     {
+                        Console.WriteLine("FixSticker: Sticker wear: {0}", skin.PaintkitWear);
                         skin.PaintkitWear += 0.001f;
                         continue;
                     }

@@ -8,6 +8,6 @@ public record ClientLootListDefinition
 
 public record ClientLootItemDefinition
 {
-    public required string Name { get; set; } //  item name
-    public required string BelongingItemName { get; set; } // weapon_ak47, ... etc
+    public required string Name { get; set; }
+    public required string BelongingItemName { get; set; }
 }

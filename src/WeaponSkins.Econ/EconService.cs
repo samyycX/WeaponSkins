@@ -11,6 +11,8 @@ using SwiftlyS2.Shared;
 
 using ValveKeyValue;
 
+using WeaponSkins.Shared;
+
 namespace WeaponSkins.Econ;
 
 public class EconService
@@ -21,8 +23,7 @@ public class EconService
 
     public Dictionary<string /* Name */, ItemDefinition> Items { get; set; } = new(StringComparer.OrdinalIgnoreCase);
 
-    public Dictionary<string /* Name */, ClientLootListDefinition> ClientLootLists { get; set; } =
-        new(StringComparer.OrdinalIgnoreCase);
+    public Dictionary<string /* Name */, ClientLootListDefinition> ClientLootLists { get; set; } = new(StringComparer.OrdinalIgnoreCase);
 
     public List<string> NamedWeapons { get; set; } = new();
     public Dictionary<string /* Name */, RarityDefinition> Rarities { get; } = new(StringComparer.OrdinalIgnoreCase);

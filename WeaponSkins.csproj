@@ -28,7 +28,7 @@
     <Reference Include="SwiftlyS2.CS2">
       <HintPath>$(MSBuildThisFileDirectory)SwiftlyS2.CS2.dll</HintPath>
     </Reference>
-    <ProjectReference Include="..\WeaponSkins.Shared\WeaponSkins.Shared.csproj" />
+    <ProjectReference Include="WeaponSkins.Shared\WeaponSkins.Shared.csproj" />
   </ItemGroup>
 
   <ItemGroup>
@@ -39,6 +39,7 @@
 
   <ItemGroup>
     <Compile Remove="examples\**\*.cs" />
+    <Compile Remove="WeaponSkins.Shared\**\*.cs" />
   </ItemGroup>
 
   <Target Name="CreateZip" AfterTargets="Publish">

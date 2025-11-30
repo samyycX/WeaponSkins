@@ -1,4 +1,5 @@
 using System.Diagnostics.CodeAnalysis;
+using System.Collections.Generic;
 
 using SwiftlyS2.Shared.Players;
 
@@ -6,6 +7,26 @@ namespace WeaponSkins.Shared;
 
 public interface IWeaponSkinAPI
 {
+    /// <summary>
+    /// All item definitions indexed by name.
+    /// </summary>
+    IReadOnlyDictionary<string, ItemDefinition> Items { get; }
+
+    /// <summary>
+    /// Paintkits grouped by weapon name.
+    /// </summary>
+    IReadOnlyDictionary<string, IReadOnlyList<PaintkitDefinition>> WeaponToPaintkits { get; }
+
+    /// <summary>
+    /// All sticker collections indexed by name.
+    /// </summary>
+    IReadOnlyDictionary<string, StickerCollectionDefinition> StickerCollections { get; }
+
+    /// <summary>
+    /// All keychain definitions indexed by name.
+    /// </summary>
+    IReadOnlyDictionary<string, KeychainDefinition> Keychains { get; }
+
     void SetWeaponSkins(IEnumerable<WeaponSkinData> skins,
         bool permanent = false);
 

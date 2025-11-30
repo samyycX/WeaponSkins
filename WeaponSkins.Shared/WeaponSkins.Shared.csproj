@@ -2,8 +2,15 @@
 
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
+    <LangVersion>14</LangVersion>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
   </PropertyGroup>
+
+  <ItemGroup>
+    <Reference Include="SwiftlyS2.CS2">
+      <HintPath>$(MSBuildThisFileDirectory)..\SwiftlyS2.CS2.dll</HintPath>
+    </Reference>
+  </ItemGroup>
 
 </Project>

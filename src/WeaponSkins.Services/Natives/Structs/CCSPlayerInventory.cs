@@ -126,12 +126,12 @@ public class CCSPlayerInventory : INativeHandle
 
     private ulong GetHighestItemID()
     {
-        return Items.Select(item => item.Value.ItemID).Where(IsValidItemID).Max();
+        return Items.Select(item => item.Value.ItemID).Where(IsValidItemID).DefaultIfEmpty(0UL).Max();
     }
 
     private uint GetHighestInventoryPosition()
     {
-        return Items.Max(item => item.Value.InventoryPosition);
+        return Items.Select(item => item.Value.InventoryPosition).DefaultIfEmpty(0U).Max();
     }
 
     private ulong GetNewItemID()

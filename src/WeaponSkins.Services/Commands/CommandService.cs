@@ -25,7 +25,6 @@ public partial class CommandService
     public void RegisterCommands()
     {
         Core.Command.RegisterCommand("ws", CommandSkin);
-        Core.Command.RegisterCommand("ws2", CommandSkin2);
     }
 
     private void CommandSkin(ICommandContext context)
@@ -37,11 +36,5 @@ public partial class CommandService
         }
 
         MenuService.OpenMainMenu(context.Sender!);
-    }
-    private void CommandSkin2(ICommandContext context)
-    {
-        var convar = Core.ConVar.Find<bool>("sv_cheats");
-        var b = convar!.HasDefaultValue;
-        Console.WriteLine("123");
     }
 }

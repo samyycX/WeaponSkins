@@ -36,33 +36,21 @@ public class CCSPlayerInventory : INativeHandle
         CEconItem item)
     {
         var soid = new SOID_t(steamid);
-        unsafe
-        {
-            NativeService.CPlayerInventory_SODestroyed.CallOriginal(Address, &soid, item.Address,
-                4 /* eSOCacheEvent_Incremental */);
-        }
+        NativeService.SODestroyed(this, soid, item);
     }
 
     public void SOCreated(ulong steamid,
         CEconItem item)
     {
         var soid = new SOID_t(steamid);
-        unsafe
-        {
-            NativeService.CPlayerInventory_SOCreated.CallOriginal(Address, &soid, item.Address,
-                4 /* eSOCacheEvent_Incremental */);
-        }
+        NativeService.SOCreated(this, soid, item);
     }
 
     public void SOUpdated(ulong steamid,
         CEconItem item)
     {
         var soid = new SOID_t(steamid);
-        unsafe
-        {
-            NativeService.CPlayerInventory_SOUpdated.CallOriginal(Address, &soid, item.Address,
-                4 /* eSOCacheEvent_Incremental */);
-        }
+        NativeService.SOUpdated(this, soid, item);
     }
 
     public bool TryGetEconItemByItemID(ulong itemid,

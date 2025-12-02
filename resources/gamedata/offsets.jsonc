@@ -2,12 +2,12 @@
   // cstrike15_src
   "GCSDK::CGCClientSharedObjectCache::AddObject": {
     "windows": 2,
-    "linux": 2
+    "linux": 3
   },
   // cstrike15_src, not the clean one
   "GCSDK::CGCClientSharedObjectCache::RemoveObject": {
     "windows": 4,
-    "linux": 4
+    "linux": 5
   },
   // cstrike15_src, found by the virtual function GetOwner
   "GCSDK::CGCClientSharedObjectCache::m_Owner": {

@@ -16,6 +16,7 @@ public class NativeService
 {
     private ISwiftlyCore Core { get; init; }
     private ILogger<NativeService> Logger { get; init; }
+    private bool IsWindows => OperatingSystem.IsWindows();
 
     public unsafe delegate nint CreateCEconItemDelegate();
 
@@ -30,8 +31,20 @@ public class NativeService
         nint pSharedObj,
         int eventType);
 
+    public unsafe delegate void SOCreatedDelegate_Linux(nint pInventory,
+        ulong soid1,
+        ulong soid2,
+        nint pSharedObj,
+        int eventType);
+
     public unsafe delegate void SOUpdatedDelegate(nint pInventory,
         SOID_t* pSOID,
+        nint pSharedObj,
+        int eventType);
+
+    public unsafe delegate void SOUpdatedDelegate_Linux(nint pInventory,
+        ulong soid1,
+        ulong soid2,
         nint pSharedObj,
         int eventType);
 
@@ -40,8 +53,19 @@ public class NativeService
         nint pSharedObj,
         int eventType);
 
+    public unsafe delegate void SODestroyedDelegate_Linux(nint pInventory,
+        ulong soid1,
+        ulong soid2,
+        nint pSharedObj,
+        int eventType);
+
     public unsafe delegate nint SOCacheSubscribedDelegate(nint pInventory,
         SOID_t* pSOID,
+        nint pSOCache);
+
+    public unsafe delegate nint SOCacheSubscribedDelegate_Linux(nint pInventory,
+        ulong soid1,
+        ulong soid2,
         nint pSOCache);
 
     public delegate nint GetEconItemByItemIDDelegate(nint pInventory,
@@ -51,7 +75,8 @@ public class NativeService
         int team,
         int slot);
 
-    public delegate nint UpdateItemViewDelegate(nint itemView, nint unk);
+    public delegate nint UpdateItemViewDelegate(nint itemView,
+        nint unk);
 
     public delegate nint CAttribute_String_NewDelegate(nint pAttributeString,
         nint pArena);
@@ -60,10 +85,20 @@ public class NativeService
     public required IUnmanagedFunction<AddObjectDelegate> SOCache_AddObject { get; init; }
     public required IUnmanagedFunction<RemoveObjectDelegate> SOCache_RemoveObject { get; init; }
     public required IUnmanagedFunction<SOCreatedDelegate> CPlayerInventory_SOCreated { get; init; }
+    public required IUnmanagedFunction<SOCreatedDelegate_Linux> CPlayerInventory_SOCreated_Linux { get; init; }
     public required IUnmanagedFunction<SOUpdatedDelegate> CPlayerInventory_SOUpdated { get; init; }
+    public required IUnmanagedFunction<SOUpdatedDelegate_Linux> CPlayerInventory_SOUpdated_Linux { get; init; }
     public required IUnmanagedFunction<SODestroyedDelegate> CPlayerInventory_SODestroyed { get; init; }
-    public required IUnmanagedFunction<GetItemInLoadoutDelegate> CPlayerInventory_GetItemInLoadout { get; init; }
+    public required IUnmanagedFunction<SODestroyedDelegate_Linux> CPlayerInventory_SODestroyed_Linux { get; init; }
     public required IUnmanagedFunction<SOCacheSubscribedDelegate> CPlayerInventory_SOCacheSubscribed { get; init; }
+
+    public required IUnmanagedFunction<SOCacheSubscribedDelegate_Linux> CPlayerInventory_SOCacheSubscribed_Linux
+    {
+        get;
+        init;
+    }
+
+    public required IUnmanagedFunction<GetItemInLoadoutDelegate> CPlayerInventory_GetItemInLoadout { get; init; }
     public required IUnmanagedFunction<GetEconItemByItemIDDelegate> GetEconItemByItemID { get; init; }
     public required IUnmanagedFunction<CAttribute_String_NewDelegate> CAttribute_String_New { get; init; }
     public required IUnmanagedFunction<UpdateItemViewDelegate> UpdateItemView { get; init; }
@@ -99,25 +134,46 @@ public class NativeService
 
         var playerInventoryVtable = Core.Memory.GetVTableAddress("server", "CCSPlayerInventory")!.Value;
 
-        CPlayerInventory_SOCreated = Core.Memory.GetUnmanagedFunctionByVTable<SOCreatedDelegate>(
-            playerInventoryVtable,
-            Core.GameData.GetOffset("CPlayerInventory::SOCreated")
-        );
+        if (IsWindows)
+        {
+            CPlayerInventory_SOCreated = Core.Memory.GetUnmanagedFunctionByVTable<SOCreatedDelegate>(
+                playerInventoryVtable,
+                Core.GameData.GetOffset("CPlayerInventory::SOCreated")
+            );
+            CPlayerInventory_SOUpdated = Core.Memory.GetUnmanagedFunctionByVTable<SOUpdatedDelegate>(
+                playerInventoryVtable,
+                Core.GameData.GetOffset("CPlayerInventory::SOUpdated")
+            );
+            CPlayerInventory_SODestroyed = Core.Memory.GetUnmanagedFunctionByVTable<SODestroyedDelegate>(
+                playerInventoryVtable,
+                Core.GameData.GetOffset("CPlayerInventory::SODestroyed")
+            );
+            CPlayerInventory_SOCacheSubscribed = Core.Memory.GetUnmanagedFunctionByVTable<SOCacheSubscribedDelegate>(
+                playerInventoryVtable,
+                Core.GameData.GetOffset("CPlayerInventory::SOCacheSubscribed")
+            );
+        }
+        else
+        {
+            CPlayerInventory_SOCreated_Linux = Core.Memory.GetUnmanagedFunctionByVTable<SOCreatedDelegate_Linux>(
+                playerInventoryVtable,
+                Core.GameData.GetOffset("CPlayerInventory::SOCreated")
+            );
+            CPlayerInventory_SOUpdated_Linux = Core.Memory.GetUnmanagedFunctionByVTable<SOUpdatedDelegate_Linux>(
+                playerInventoryVtable,
+                Core.GameData.GetOffset("CPlayerInventory::SOUpdated")
+            );
+            CPlayerInventory_SODestroyed_Linux = Core.Memory.GetUnmanagedFunctionByVTable<SODestroyedDelegate_Linux>(
+                playerInventoryVtable,
+                Core.GameData.GetOffset("CPlayerInventory::SODestroyed")
+            );
+            CPlayerInventory_SOCacheSubscribed_Linux =
+                Core.Memory.GetUnmanagedFunctionByVTable<SOCacheSubscribedDelegate_Linux>(
+                    playerInventoryVtable,
+                    Core.GameData.GetOffset("CPlayerInventory::SOCacheSubscribed")
+                );
+        }
 
-        CPlayerInventory_SOUpdated = Core.Memory.GetUnmanagedFunctionByVTable<SOUpdatedDelegate>(
-            playerInventoryVtable,
-            Core.GameData.GetOffset("CPlayerInventory::SOUpdated")
-        );
-
-        CPlayerInventory_SODestroyed = Core.Memory.GetUnmanagedFunctionByVTable<SODestroyedDelegate>(
-            playerInventoryVtable,
-            Core.GameData.GetOffset("CPlayerInventory::SODestroyed")
-        );
-
-        CPlayerInventory_SOCacheSubscribed = Core.Memory.GetUnmanagedFunctionByVTable<SOCacheSubscribedDelegate>(
-            playerInventoryVtable,
-            Core.GameData.GetOffset("CPlayerInventory::SOCacheSubscribed")
-        );
 
         CPlayerInventory_GetItemInLoadout = Core.Memory.GetUnmanagedFunctionByVTable<GetItemInLoadoutDelegate>(
             playerInventoryVtable,
@@ -146,24 +202,53 @@ public class NativeService
         CCSInventoryManager_m_DefaultLoadoutsOffset = Core.GameData.GetOffset("CCSInventoryManager::m_DefaultLoadouts");
         CCSPlayerInventory_m_ItemsOffset = Core.GameData.GetOffset("CCSPlayerInventory::m_Items");
         CCSPlayerInventory_m_pSOCacheOffset = Core.GameData.GetOffset("CCSPlayerInventory::m_pSOCache");
-        CCSPlayerController_InventoryServices_m_pInventoryOffset = Core.GameData.GetOffset("CCSPlayerController_InventoryServices::m_pInventory");
+        CCSPlayerController_InventoryServices_m_pInventoryOffset =
+            Core.GameData.GetOffset("CCSPlayerController_InventoryServices::m_pInventory");
         CGCClientSharedObjectCache_m_OwnerOffset =
             Core.GameData.GetOffset("GCSDK::CGCClientSharedObjectCache::m_Owner");
         var xrefCCSInventoryManager = Core.GameData.GetSignature("CCSInventoryManager_xref");
         CCSInventoryManager = new CCSInventoryManager(Core.Memory.ResolveXrefAddress(xrefCCSInventoryManager)!);
-        CPlayerInventory_SOCacheSubscribed.AddHook(next =>
+
+        if (IsWindows)
         {
-            unsafe
+            CPlayerInventory_SOCacheSubscribed.AddHook(next =>
+            {
+                unsafe
+                {
+                    return (pInventory,
+                        pSOID,
+                        pSOCache) =>
+                    {
+                        try
+                        {
+                            var ret = next()(pInventory, pSOID, pSOCache);
+                            var inventory = new CCSPlayerInventory(pInventory);
+                            OnSOCacheSubscribed?.Invoke(inventory, *pSOID);
+                            return ret;
+                        }
+                        catch (Exception e)
+                        {
+                            Logger.LogError(e, "Error in SOCacheSubscribed");
+                            return 0;
+                        }
+                    };
+                }
+            });
+        }
+        else
+        {
+            CPlayerInventory_SOCacheSubscribed_Linux.AddHook(next =>
             {
                 return (pInventory,
-                    pSOID,
+                    soid1,
+                    soid2,
                     pSOCache) =>
                 {
                     try
                     {
-                        var ret = next()(pInventory, pSOID, pSOCache);
+                        var ret = next()(pInventory, soid1, soid2, pSOCache);
                         var inventory = new CCSPlayerInventory(pInventory);
-                        OnSOCacheSubscribed?.Invoke(inventory, *pSOID);
+                        OnSOCacheSubscribed?.Invoke(inventory, new SOID_t(soid1, soid2));
                         return ret;
                     }
                     catch (Exception e)
@@ -172,8 +257,9 @@ public class NativeService
                         return 0;
                     }
                 };
-            }
-        });
+            });
+        }
+
 
         StaticNativeService.Service = this;
     }
@@ -189,5 +275,59 @@ public class NativeService
 
         var ret = CAttribute_String_New.Call(0, 0);
         return Helper.AsProtobuf<CAttribute_String>(ret, false);
+    }
+
+    public void SOCreated(CCSPlayerInventory inventory,
+        SOID_t soid,
+        CEconItem item)
+    {
+        unsafe
+        {
+            if (IsWindows)
+            {
+                CPlayerInventory_SOCreated.CallOriginal(inventory.Address, &soid, item.Address, 4);
+            }
+            else
+            {
+                CPlayerInventory_SOCreated_Linux.CallOriginal(inventory.Address, soid.Part1, soid.Part2, item.Address,
+                    4);
+            }
+        }
+    }
+
+    public void SOUpdated(CCSPlayerInventory inventory,
+        SOID_t soid,
+        CEconItem item)
+    {
+        unsafe
+        {
+            if (IsWindows)
+            {
+                CPlayerInventory_SOUpdated.CallOriginal(inventory.Address, &soid, item.Address, 4);
+            }
+            else
+            {
+                CPlayerInventory_SOUpdated_Linux.CallOriginal(inventory.Address, soid.Part1, soid.Part2, item.Address,
+                    4);
+            }
+        }
+    }
+
+    public void SODestroyed(CCSPlayerInventory inventory,
+        SOID_t soid,
+        CEconItem item)
+    {
+        unsafe
+        {
+            if (IsWindows)
+            {
+                CPlayerInventory_SODestroyed.CallOriginal(inventory.Address, &soid, item.Address, 4);
+            }
+            else
+            {
+                CPlayerInventory_SODestroyed_Linux.CallOriginal(inventory.Address, soid.Part1, soid.Part2, item.Address,
+                    4);
+            }
+        }
     }
 }

@@ -17,9 +17,11 @@ public class WeaponSkinAPI : IWeaponSkinAPI
     private DatabaseService DatabaseService { get; init; }
     private EconService EconService { get; init; }
 
+    private readonly Lazy<IReadOnlyDictionary<string, IReadOnlyList<PaintkitDefinition>>> _lazyWeaponToPaintkits;
+
     public IReadOnlyDictionary<string, ItemDefinition> Items => EconService.Items;
 
-    public IReadOnlyDictionary<string, IReadOnlyList<PaintkitDefinition>> WeaponToPaintkits => EconService.WeaponToPaintkits.ToDictionary(kvp => kvp.Key, kvp => (IReadOnlyList<PaintkitDefinition>)kvp.Value);
+    public IReadOnlyDictionary<string, IReadOnlyList<PaintkitDefinition>> WeaponToPaintkits => _lazyWeaponToPaintkits.Value;
 
     public IReadOnlyDictionary<string, StickerCollectionDefinition> StickerCollections => EconService.StickerCollections;
 
@@ -36,6 +38,11 @@ public class WeaponSkinAPI : IWeaponSkinAPI
         DataService = dataService;
         DatabaseService = databaseService;
         EconService = econService;
+
+        _lazyWeaponToPaintkits = new Lazy<IReadOnlyDictionary<string, IReadOnlyList<PaintkitDefinition>>>(() =>
+        {
+            return EconService.WeaponToPaintkits.ToDictionary(kvp => kvp.Key, kvp => (IReadOnlyList<PaintkitDefinition>)kvp.Value);
+        });
     }
 
     public void SetWeaponSkins(IEnumerable<WeaponSkinData> skins,

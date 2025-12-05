@@ -20,8 +20,8 @@ using WeaponSkins.Shared;
 
 namespace WeaponSkins;
 
-[PluginMetadata(Id = "WeaponSkins", Version = "0.0.4", Name = "WeaponSkins", Author = "samyyc",
-    Description = "No description.")]
+[PluginMetadata(Id = "WeaponSkins", Version = "0.1.0", Name = "WeaponSkins", Author = "samyyc & ELDment",
+    Description = "A swiftlys2 plugin to change player's skins.")]
 public partial class WeaponSkins : BasePlugin
 {
     private ServiceProvider _provider;

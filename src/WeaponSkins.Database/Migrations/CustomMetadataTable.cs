@@ -9,7 +9,7 @@ public class CustomMetadataTable : IVersionTableMetaData
     public string AppliedOnColumnName => "applied_on";
     public string DescriptionColumnName => "description";
     public string UniqueIndexName => "ix_version";
-    public string SchemaName => "weaponskins";
+    public string SchemaName => string.Empty;
     public bool OwnsSchema => true;
     public bool CreateWithPrimaryKey => false;
 }

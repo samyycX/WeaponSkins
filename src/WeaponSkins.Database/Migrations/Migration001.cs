@@ -26,11 +26,6 @@ public class Migration001 : Migration
                 .WithColumn("weapon_sticker_4").AsString(128).NotNullable().WithDefaultValue("0;0;0;0;0;0;0")
                 .WithColumn("weapon_sticker_5").AsString(128).NotNullable().WithDefaultValue("0;0;0;0;0;0;0")
                 .WithColumn("weapon_keychain").AsString(128).NotNullable().WithDefaultValue("0;0;0;0;0");
-
-
-            Create.UniqueConstraint("steamid")
-                .OnTable("wp_player_skins")
-                .Columns("steamid", "weapon_team", "weapon_defindex");
         }
 
         if (!Schema.Table("wp_player_knife").Exists())
@@ -40,9 +35,6 @@ public class Migration001 : Migration
                 .WithColumn("weapon_team").AsInt16().NotNullable()
                 .WithColumn("knife").AsString(64).NotNullable();
 
-            Create.UniqueConstraint("steamid")
-                .OnTable("wp_player_knife")
-                .Columns("steamid", "weapon_team");
         }
 
         if (!Schema.Table("wp_player_gloves").Exists())
@@ -52,9 +44,6 @@ public class Migration001 : Migration
                 .WithColumn("weapon_team").AsInt16().NotNullable()
                 .WithColumn("weapon_defindex").AsInt32().NotNullable();
 
-            Create.UniqueConstraint("steamid")
-                .OnTable("wp_player_gloves")
-                .Columns("steamid", "weapon_team");
         }
     }
 

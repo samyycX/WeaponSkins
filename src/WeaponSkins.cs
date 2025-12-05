@@ -8,13 +8,19 @@ using SwiftlyS2.Shared.Players;
 using SwiftlyS2.Shared.Commands;
 using SwiftlyS2.Shared.SteamAPI;
 
+using Tomlyn.Extensions.Configuration;
+
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
+
+using WeaponSkins.Configuration;
 using WeaponSkins.Injections;
 using WeaponSkins.Services;
 using WeaponSkins.Shared;
 
 namespace WeaponSkins;
 
-[PluginMetadata(Id = "WeaponSkins", Version = "0.0.3", Name = "WeaponSkins", Author = "samyyc",
+[PluginMetadata(Id = "WeaponSkins", Version = "0.0.4", Name = "WeaponSkins", Author = "samyyc",
     Description = "No description.")]
 public partial class WeaponSkins : BasePlugin
 {
@@ -28,7 +34,16 @@ public partial class WeaponSkins : BasePlugin
     {
         StickerFixService.Initialize();
 
-        _provider = new ServiceCollection()
+        Core.Configuration
+            .InitializeTomlWithModel<MainConfigModel>("config.toml", "Main")
+            .Configure(builder =>
+            {
+                builder
+                    .AddTomlFile("config.toml", false, true);
+            });
+        Core.Configuration.Manager.RemoveUnderscores();
+
+        var collection = new ServiceCollection()
             .AddSwiftly(Core)
             .AddDataService()
             .AddNativeService()
@@ -37,11 +52,16 @@ public partial class WeaponSkins : BasePlugin
             .AddApi()
             .AddEconService()
             .AddMenuService()
-            .AddDatabaseService()
+            .AddStorageService()
             .AddStattrakService()
             .AddLocalizationService()
-            .AddCommandService()
-            .BuildServiceProvider();
+            .AddCommandService();
+
+        collection
+            .AddOptions<MainConfigModel>()
+            .BindConfiguration("Main");
+        
+        _provider = collection.BuildServiceProvider();
 
         _provider
             .UseDataService()
@@ -51,7 +71,7 @@ public partial class WeaponSkins : BasePlugin
             .UseApi()
             .UseEconService()
             .UseMenuService()
-            .UseDatabaseService()
+            .UseStorageService()
             .UseStattrakService()
             .UseLocalizationService()
             .UseCommandService();

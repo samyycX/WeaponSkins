@@ -77,4 +77,6 @@ public interface IWeaponSkinAPI
     void ResetGloveSkin(ulong steamid,
         Team team,
         bool permanent = false);
+
+    void SetExternalStorageProvider(IStorageProvider provider);
 }

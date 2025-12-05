@@ -6,31 +6,42 @@ using FluentMigrator.Runner.VersionTableInfo;
 
 using FreeSql;
 
+using Microsoft.Data.Sqlite;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
 using SwiftlyS2.Shared;
 
+using WeaponSkins.Shared;
+
 namespace WeaponSkins.Database;
 
-public partial class DatabaseService
+public partial class DatabaseService : IStorageProvider
 {
     private IFreeSql fsql { get; set; }
     private ISwiftlyCore Core { get; set; }
 
+    public string Name => "WeaponSkins.Database";
+
     public DatabaseService(ISwiftlyCore core)
     {
         Core = core;
+    }
 
-        var conn = core.Database.GetConnection("weaponskins");
-        var connString = core.Database.GetConnectionString("weaponskins");
+    public void Start(IDbConnection conn,
+        string connString)
+    {
+        // var conn = core.Database.GetConnection("weaponskins");
+        // var connString = core.Database.GetConnectionString("weaponskins");
         fsql = GetBuilder(connString).Build();
 
         RunMigrations(conn, connString);
+    }
 
-
-        var skins = fsql.Select<SkinModel>().ToList();
-        Console.WriteLine("SKINS: {0}", skins.Count);
+    public void StartSqlite(string path)
+    {
+        fsql = GetSqliteBuilder(path).Build();
+        RunMigrations(new SqliteConnection($"Data Source={path}"), $"sqlite://{path}");
     }
 
     private void RunMigrations(IDbConnection dbConnection,
@@ -48,6 +59,10 @@ public partial class DatabaseService
                 {
                     rb.AddPostgres();
                 }
+                else if (dbConnString.StartsWith("sqlite", StringComparison.OrdinalIgnoreCase))
+                {
+                    rb.AddSQLite();
+                }
                 else throw new Exception("Unsupported database type.");
 
                 rb.WithGlobalConnectionString(dbConnection.ConnectionString).ScanIn(typeof(DatabaseService).Assembly)
@@ -62,6 +77,13 @@ public partial class DatabaseService
         using var scope = serviceProvider.CreateScope();
         var runner = scope.ServiceProvider.GetRequiredService<IMigrationRunner>();
         runner.MigrateUp();
+    }
+
+    private FreeSqlBuilder GetSqliteBuilder(string path)
+    {
+        var builder = new FreeSqlBuilder();
+        builder.UseConnectionString(DataType.Sqlite, $"Data Source={path}");
+        return builder;
     }
 
     private FreeSqlBuilder GetBuilder(string connectionString)
@@ -109,8 +131,6 @@ public partial class DatabaseService
             builder.UseConnectionString(DataType.PostgreSQL, connStr);
         }
 
-        builder
-            .UseMonitorCommand(cmd => Console.WriteLine($"Sql：{cmd.CommandText}"));
         builder.UseAdoConnectionPool(true);
         return builder;
     }

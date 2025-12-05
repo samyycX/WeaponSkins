@@ -34,17 +34,14 @@ public static class StickerFixService
     public static void FixSticker(WeaponSkinData skin)
     {
         var newStickerHash = CalculateStickerHash(skin);
-        Console.WriteLine("FixSticker: New sticker hash: {0}", newStickerHash);
         if (_stickerHashes.TryGetValue(skin.SteamID, out var hashes))
         {
-            Console.WriteLine("FixSticker: Sticker hashes: {0}", string.Join(", ", hashes.Select(h => h.Value.ToString())));
             while (true)
             {
                 if (hashes.TryGetValue(CalculateKeyHash(skin), out var stickerHash))
                 {
                     if (stickerHash != newStickerHash)
                     {
-                        Console.WriteLine("FixSticker: Sticker wear: {0}", skin.PaintkitWear);
                         skin.PaintkitWear += 0.001f;
                         continue;
                     }

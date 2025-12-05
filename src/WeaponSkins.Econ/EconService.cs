@@ -44,7 +44,9 @@ public class EconService
     private Dictionary<string /* Language */, Dictionary<string /* Key */, string /* Value */>> Languages { get; } =
         new(StringComparer.OrdinalIgnoreCase);
 
-    private const int SchemaVersion = 1;
+    private Dictionary<string, string> RevolvingLootLists { get; } = new(StringComparer.OrdinalIgnoreCase);
+
+    private const int SchemaVersion = 2;
 
     public EconService(ISwiftlyCore core,
         ILogger<EconService> logger)
@@ -54,6 +56,7 @@ public class EconService
 
         var items = Core.GameFileSystem.ReadFile("scripts/items/items_game.txt", "GAME");
         var version = GetVersion(items);
+        string[] allowedLanguages = ["english", "schinese"];
         if (File.Exists(Path.Combine(Core.PluginDataDirectory, "version.lock")))
         {
             GC.Collect();
@@ -78,6 +81,7 @@ public class EconService
                 Keychains = JsonSerializer.Deserialize<Dictionary<string, KeychainDefinition>>(
                     File.ReadAllText(Path.Combine(Core.PluginDataDirectory, "keychains.json")))!;
 
+                // TrimLanguages(allowedLanguages);
                 GC.Collect();
                 GC.WaitForPendingFinalizers();
                 GC.Collect();
@@ -88,11 +92,11 @@ public class EconService
         }
 
         Dump(items);
+        // TrimLanguages(allowedLanguages);
     }
 
     private void Dump(string items)
     {
-
         GC.Collect();
         GC.WaitForPendingFinalizers();
         GC.Collect();
@@ -117,6 +121,11 @@ public class EconService
 
         ParseRarities();
         Logger.LogInformation($"Parsed {Rarities.Count} rarities in {watch.ElapsedMilliseconds}ms.");
+        watch.Restart();
+
+        ParseRevolvingLootLists();
+        Logger.LogInformation(
+            $"Parsed {RevolvingLootLists.Count} revolving loot lists in {watch.ElapsedMilliseconds}ms.");
         watch.Restart();
 
         ParseClientLootLists();
@@ -185,6 +194,7 @@ public class EconService
         Colors.Clear();
         Paintkits.Clear();
         Languages.Clear();
+        RevolvingLootLists.Clear();
         GC.Collect();
         GC.WaitForPendingFinalizers();
         GC.Collect();
@@ -216,11 +226,11 @@ public class EconService
         {
             if (tokens.TryGetValue(key, out var value))
             {
-                localizedNames[languageName] = value;
+                localizedNames[string.Intern(languageName)] = value;
             }
             else
             {
-                notFoundLanguages.Add(languageName);
+                notFoundLanguages.Add(string.Intern(languageName));
             }
         }
 
@@ -228,7 +238,7 @@ public class EconService
         {
             foreach (var notfoundLanguage in notFoundLanguages)
             {
-                localizedNames[notfoundLanguage] = localizedNames["english"];
+                localizedNames[string.Intern(notfoundLanguage)] = localizedNames["english"];
             }
         }
 
@@ -240,6 +250,33 @@ public class EconService
         using var sha256 = SHA256.Create();
         var hash = sha256.ComputeHash(Encoding.UTF8.GetBytes(content));
         return BitConverter.ToString(hash).Replace("-", "").ToLowerInvariant();
+    }
+
+    private void TrimLanguages(string[] allowedLanguages)
+    {
+        var allLanguages = Items.First().Value.LocalizedNames.Keys.ToList();
+        var languagesToRemove = allLanguages.Where(language => !allowedLanguages.Contains(language)).ToList();
+
+        foreach (var language in languagesToRemove)
+        {
+            foreach (var (key, value) in WeaponToPaintkits)
+            {
+                value.ForEach(paintkit => paintkit.LocalizedNames.Remove(language));
+            }
+            foreach (var (key, value) in StickerCollections)
+            {
+                value.LocalizedNames.Remove(language);
+                value.Stickers.ForEach(sticker => sticker.LocalizedNames.Remove(language));
+            }
+            foreach (var (key, value) in Items)
+            {
+                value.LocalizedNames.Remove(language);
+            }
+            foreach (var (key, value) in Keychains)
+            {
+                value.LocalizedNames.Remove(language);
+            }
+        }
     }
 
     public void ParseWeapons()
@@ -371,6 +408,20 @@ public class EconService
                         Color = Colors[rarity.Value["color"].EToString()]
                     };
                     Rarities[definition.Name] = definition;
+                }
+            }
+        }
+    }
+
+    public void ParseRevolvingLootLists()
+    {
+        foreach (var keys in Root.Children)
+        {
+            if (keys.Name == "revolving_loot_lists")
+            {
+                foreach (var revolvingLootList in keys.Children)
+                {
+                    RevolvingLootLists[revolvingLootList.Name] = revolvingLootList.Value.EToString();
                 }
             }
         }
@@ -694,14 +745,14 @@ public class EconService
                         var lootListName2 =
                             stickerCollections.GetSubKey("tags")!.GetSubKey("StickerCapsule")!.Value["tag_value"]!
                                 .EToString();
-                        if (!ClientLootLists.TryGetValue(lootListName, out lootList))
-                        {
-                            if (!ClientLootLists.TryGetValue(lootListName2, out lootList))
-                            {
-                                Logger.LogWarning($"Sticker collection {name} not found in ClientLootLists");
-                                continue;
-                            }
+                        if (!ClientLootLists.TryGetValue(lootListName, out lootList)
+                            && !ClientLootLists.TryGetValue(lootListName2, out lootList))
+                        {   
+                            Logger.LogWarning($"Sticker collection {name} not found in ClientLootLists");
+                            continue;
                         }
+
+
 
                         var stickers = new List<StickerDefinition>();
                         foreach (var item in lootList.Items)
@@ -714,6 +765,52 @@ public class EconService
                             Name = name, Index = index, LocalizedNames = localizedNames, Stickers = stickers,
                         };
                         StickerCollections[definition.Name] = definition;
+                    } else if (stickerCollections.HasSubKey("prefab"))
+                    {
+                        var prefab = stickerCollections.Value["prefab"].EToString();
+                        if (!prefab.Contains("_capsule_prefab"))
+                        {
+                            continue;
+                        }
+
+                        if (!stickerCollections.HasSubKey("attributes"))
+                        {
+                            continue;
+                        }
+
+                        var attributes = stickerCollections.GetSubKey("attributes")!;
+                        if (!attributes.HasSubKey("set supply crate series"))
+                        {
+                            continue;
+                        }
+                        var revolvingIndex = attributes.GetSubKey("set supply crate series")!.Value["value"].EToString();
+                        if (RevolvingLootLists.TryGetValue(revolvingIndex, out var revolvingLootListName))
+                        {
+                            if (ClientLootLists.TryGetValue(revolvingLootListName, out var lootList))
+                            {
+                                var name = stickerCollections.Value["name"].EToString();
+                                var index = int.Parse(stickerCollections.Name);
+                                var localizedNames =
+                                    GetLocalizedNames(stickerCollections.Value["item_name"].EToString());
+                                var stickers = new List<StickerDefinition>();
+                                foreach (var item in lootList.Items)
+                                {
+                                    if (item.BelongingItemName != "sticker")
+                                    {
+                                        continue;
+                                    }
+                                    stickers.Add(Stickers[item.Name]);
+                                }
+
+                                var definition = new StickerCollectionDefinition
+                                {
+                                    Name = name, Index = index, LocalizedNames = localizedNames, Stickers = stickers,
+                                };
+                                StickerCollections[definition.Name] = definition;
+
+                            }
+                        }
+
                     }
                 }
             }

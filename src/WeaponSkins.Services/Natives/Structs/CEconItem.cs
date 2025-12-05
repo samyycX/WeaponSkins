@@ -133,17 +133,12 @@ public class CEconItem : INativeHandle
 
     public void Apply(WeaponSkinData data)
     {
-        Console.WriteLine("Apply: {0}", data);
         DefinitionIndex = data.DefinitionIndex;
         Quality = data.Quality;
-        Console.WriteLine("Apply: DefinitionIndex set");
         ConfigureAttributes(customData =>
         {
-            Console.WriteLine("Apply: Setting paintkit");
             customData.SetPaintkit(data.Paintkit);
-            Console.WriteLine("Apply: Setting paintkit seed");
             customData.SetPaintkitSeed(data.PaintkitSeed);
-            Console.WriteLine("Apply: Setting paintkit wear");
             customData.SetPaintkitWear(data.PaintkitWear);
 
             if (data.Quality == EconItemQuality.StatTrak)
@@ -202,7 +197,6 @@ public class CEconItem : INativeHandle
 
     public void Apply(KnifeSkinData data)
     {
-        Console.WriteLine("Apply: {0}", data);
         DefinitionIndex = data.DefinitionIndex;
         Quality = data.Quality;
         ConfigureAttributes(customData =>
@@ -213,18 +207,14 @@ public class CEconItem : INativeHandle
             {
                 customData.SetCustomName(data.Nametag);
             }
-            Console.WriteLine("Apply: Setting paintkit");
             customData.SetPaintkit(data.Paintkit);
-            Console.WriteLine("Apply: Setting paintkit seed");
             customData.SetPaintkitSeed(data.PaintkitSeed);
-            Console.WriteLine("Apply: Setting paintkit wear");
             customData.SetPaintkitWear(data.PaintkitWear);
         });
     }
 
     public void Apply(GloveData data)
     {
-        Console.WriteLine("Apply: {0}", data);
         DefinitionIndex = data.DefinitionIndex;
         ConfigureAttributes(customData =>
         {

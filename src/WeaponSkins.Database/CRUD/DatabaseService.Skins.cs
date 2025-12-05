@@ -6,14 +6,7 @@ namespace WeaponSkins.Database;
 
 public partial class DatabaseService
 {
-    public async Task StoreSkin(WeaponSkinData skin)
-    {
-        await fsql.InsertOrUpdate<SkinModel>()
-            .SetSource(SkinModel.FromDataModel(skin))
-            .ExecuteAffrowsAsync();
-    }
-
-    public async Task StoreSkins(IEnumerable<WeaponSkinData> skins)
+    public async Task StoreSkinsAsync(IEnumerable<WeaponSkinData> skins)
     {
         await fsql.InsertOrUpdate<SkinModel>()
             .SetSource(skins.Select(skin => SkinModel.FromDataModel(skin)))
@@ -32,13 +25,6 @@ public partial class DatabaseService
         return model.ToDataModel();
     }
 
-    public WeaponSkinData? GetSkin(ulong steamId,
-        Team team,
-        ushort definitionIndex)
-    {
-        return GetSkinAsync(steamId, team, definitionIndex).ConfigureAwait(false).GetAwaiter().GetResult();
-    }
-
     public async Task<IEnumerable<WeaponSkinData>> GetSkinsAsync(ulong steamId)
     {
         return await fsql.Select<SkinModel>()
@@ -47,23 +33,13 @@ public partial class DatabaseService
             .ContinueWith(task => task.Result.Select(skin => skin.ToDataModel()));
     }
 
-    public IEnumerable<WeaponSkinData> GetSkins(ulong steamId)
-    {
-        return GetSkinsAsync(steamId).ConfigureAwait(false).GetAwaiter().GetResult();
-    }
-
     public async Task<IEnumerable<WeaponSkinData>> GetAllSkinsAsync()
     {
         return await fsql.Select<SkinModel>().ToListAsync()
             .ContinueWith(task => task.Result.Select(skin => skin.ToDataModel()));
     }
 
-    public IEnumerable<WeaponSkinData> GetAllSkins()
-    {
-        return GetAllSkinsAsync().ConfigureAwait(false).GetAwaiter().GetResult();
-    }
-
-    public async Task RemoveSkin(ulong steamId,
+    public async Task RemoveSkinAsync(ulong steamId,
         Team team,
         ushort definitionIndex)
     {
@@ -73,7 +49,7 @@ public partial class DatabaseService
             .ExecuteAffrowsAsync();
     }
 
-    public async Task RemoveSkins(ulong steamId)
+    public async Task RemoveSkinsAsync(ulong steamId)
     {
         await fsql.Delete<SkinModel>()
             .Where(skin => skin.SteamID == steamId.ToString())

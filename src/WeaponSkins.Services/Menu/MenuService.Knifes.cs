@@ -15,8 +15,6 @@ public partial class MenuService
         {
             if (TryGetKnifeDataInHand(args.Player, out var knifeInHand))
             {
-                Console.WriteLine("OnKnifeSkinOptionClick");
-                Console.WriteLine(knifeInHand.Paintkit);
                 var menu = Core.MenusAPI.GetCurrentMenu(args.Player);
                 menu.MoveToOption(args.Player,
                     menu.Options.FirstOrDefault(o =>

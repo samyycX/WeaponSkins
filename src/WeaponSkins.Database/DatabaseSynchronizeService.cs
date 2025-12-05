@@ -9,14 +9,18 @@ public class DatabaseSynchronizeService
     {
         DatabaseService = databaseService;
         DataService = dataService;
-        
-        Synchronize();
     }
 
-    private void Synchronize()
+    public void Synchronize()
     {
-        DatabaseService.GetAllSkins().ToList().ForEach(skin => DataService.WeaponDataService.StoreSkin(skin));
-        DatabaseService.GetAllKnifes().ToList().ForEach(knife => DataService.KnifeDataService.StoreKnife(knife));
-        DatabaseService.GetAllGloves().ToList().ForEach(glove => DataService.GloveDataService.StoreGlove(glove));
+        Task.Run(async () =>
+        {
+            var skins = await DatabaseService.GetAllSkinsAsync();
+            skins.ToList().ForEach(skin => DataService.WeaponDataService.StoreSkin(skin));
+            var knives = await DatabaseService.GetAllKnifesAsync();
+            knives.ToList().ForEach(knife => DataService.KnifeDataService.StoreKnife(knife));
+            var gloves = await DatabaseService.GetAllGlovesAsync();
+            gloves.ToList().ForEach(glove => DataService.GloveDataService.StoreGlove(glove));
+        });
     }
 }

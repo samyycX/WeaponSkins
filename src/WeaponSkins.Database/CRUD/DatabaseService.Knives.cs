@@ -6,18 +6,7 @@ namespace WeaponSkins.Database;
 
 public partial class DatabaseService
 {
-    public async Task StoreKnife(KnifeSkinData knife)
-    {
-        await fsql.InsertOrUpdate<KnifeModel>()
-            .SetSource(KnifeModel.FromDataModel(knife))
-            .ExecuteAffrowsAsync();
-
-        await fsql.InsertOrUpdate<SkinModel>()
-            .SetSource(SkinModel.FromKnifeDataModel(knife))
-            .ExecuteAffrowsAsync();
-    }
-
-    public async Task StoreKnifes(IEnumerable<KnifeSkinData> knives)
+    public async Task StoreKnifesAsync(IEnumerable<KnifeSkinData> knives)
     {
         await fsql.InsertOrUpdate<KnifeModel>()
             .SetSource(knives.Select(knife => KnifeModel.FromDataModel(knife)))
@@ -53,12 +42,6 @@ public partial class DatabaseService
         return data;
     }
 
-    public KnifeSkinData? GetKnife(ulong steamId,
-        Team team)
-    {
-        return GetKnifeAsync(steamId, team).ConfigureAwait(false).GetAwaiter().GetResult();
-    }
-
     public async Task<IEnumerable<KnifeSkinData>> GetKnifesAsync(ulong steamId)
     {
         var results = await fsql.Select<KnifeModel, SkinModel>()
@@ -91,12 +74,7 @@ public partial class DatabaseService
             }).ToList();
     }
 
-    public IEnumerable<KnifeSkinData> GetKnifes(ulong steamId)
-    {
-        return GetKnifesAsync(steamId).ConfigureAwait(false).GetAwaiter().GetResult();
-    }
-
-    public async Task<List<KnifeSkinData>> GetAllKnifesAsync()
+    public async Task<IEnumerable<KnifeSkinData>> GetAllKnifesAsync()
     {
         var results = await fsql.Select<KnifeModel, SkinModel>()
             .LeftJoin((knife,
@@ -128,12 +106,7 @@ public partial class DatabaseService
             }).ToList();
     }
 
-    public IEnumerable<KnifeSkinData> GetAllKnifes()
-    {
-        return GetAllKnifesAsync().ConfigureAwait(false).GetAwaiter().GetResult();
-    }
-
-    public async Task RemoveKnife(ulong steamId,
+    public async Task RemoveKnifeAsync(ulong steamId,
         Team team)
     {
         await fsql.Delete<KnifeModel>()
@@ -141,7 +114,7 @@ public partial class DatabaseService
             .ExecuteAffrowsAsync();
     }
 
-    public async Task RemoveKnifes(ulong steamId)
+    public async Task RemoveKnifesAsync(ulong steamId)
     {
         await fsql.Delete<KnifeModel>()
             .Where(knife => knife.SteamID == steamId.ToString())

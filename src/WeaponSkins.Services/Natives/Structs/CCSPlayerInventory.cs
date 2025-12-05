@@ -36,33 +36,21 @@ public class CCSPlayerInventory : INativeHandle
         CEconItem item)
     {
         var soid = new SOID_t(steamid);
-        unsafe
-        {
-            NativeService.CPlayerInventory_SODestroyed.CallOriginal(Address, &soid, item.Address,
-                4 /* eSOCacheEvent_Incremental */);
-        }
+        NativeService.SODestroyed(this, soid, item);
     }
 
     public void SOCreated(ulong steamid,
         CEconItem item)
     {
         var soid = new SOID_t(steamid);
-        unsafe
-        {
-            NativeService.CPlayerInventory_SOCreated.CallOriginal(Address, &soid, item.Address,
-                4 /* eSOCacheEvent_Incremental */);
-        }
+        NativeService.SOCreated(this, soid, item);
     }
 
     public void SOUpdated(ulong steamid,
         CEconItem item)
     {
         var soid = new SOID_t(steamid);
-        unsafe
-        {
-            NativeService.CPlayerInventory_SOUpdated.CallOriginal(Address, &soid, item.Address,
-                4 /* eSOCacheEvent_Incremental */);
-        }
+        NativeService.SOUpdated(this, soid, item);
     }
 
     public bool TryGetEconItemByItemID(ulong itemid,
@@ -94,9 +82,6 @@ public class CCSPlayerInventory : INativeHandle
         {
             if (Loadouts[team, slot].DefinitionIndex == definitionIndex)
             {
-                Console.WriteLine("TryGetLoadoutItem: Found item in loadout slot {0}", slot);
-                Console.WriteLine("TryGetLoadoutItem: Definition index {0}", definitionIndex);
-                Console.WriteLine("TryGetLoadoutItem: Loadout item {0}", Loadouts[team, slot].ToString());
                 indices = (team, (loadout_slot_t)slot);
                 return true;
             }
@@ -158,7 +143,6 @@ public class CCSPlayerInventory : INativeHandle
         if (TryGetLoadoutItem(team, definitionIndex, out var indices))
         {
             ref var loadout = ref Loadouts[indices.team, indices.slot];
-            Console.WriteLine("TryGetItemID: Loadout item {0}", loadout.ToString());
             itemID = loadout.ItemId;
             if (!IsValidItemID(itemID))
             {
@@ -328,7 +312,6 @@ public class CCSPlayerInventory : INativeHandle
         {
             ref var loadout = ref Loadouts[team, loadout_slot_t.LOADOUT_SLOT_MELEE];
             loadout = _defaultLoadouts[team, loadout_slot_t.LOADOUT_SLOT_MELEE];
-            Console.WriteLine("ResetKnifeSkin: Reset to {0}", loadout.ToString());
             if (TryGetEconItemByItemID(loadout.ItemId, out var item))
             {
                 SOCreated(SteamID, item);

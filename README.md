@@ -17,6 +17,7 @@
 - Compatible with CounterStrikeSharp WeaponPaints database
 - Long-term stattrak tracking
 - Player-based skin name localization
+- Completely game-based econ data dumping (no network required)
   
 ## Building
 

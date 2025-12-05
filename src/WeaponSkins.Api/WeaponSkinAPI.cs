@@ -14,47 +14,29 @@ public class WeaponSkinAPI : IWeaponSkinAPI
     private InventoryUpdateService InventoryUpdateService { get; init; }
     private InventoryService InventoryService { get; init; }
     private DataService DataService { get; init; }
-<<<<<<< HEAD
-    private DatabaseService DatabaseService { get; init; }
+    private StorageService StorageService { get; init; }
     private EconService EconService { get; init; }
 
-    private readonly Lazy<IReadOnlyDictionary<string, IReadOnlyList<PaintkitDefinition>>> _lazyWeaponToPaintkits;
+    public IReadOnlyDictionary<string, ItemDefinition> Items => EconService.Items.AsReadOnly();
 
-    public IReadOnlyDictionary<string, ItemDefinition> Items => EconService.Items;
+    public IReadOnlyDictionary<string, List<PaintkitDefinition>> WeaponToPaintkits => EconService.WeaponToPaintkits.AsReadOnly();
 
-    public IReadOnlyDictionary<string, IReadOnlyList<PaintkitDefinition>> WeaponToPaintkits => _lazyWeaponToPaintkits.Value;
+    public IReadOnlyDictionary<string, StickerCollectionDefinition> StickerCollections => EconService.StickerCollections.AsReadOnly();
 
-    public IReadOnlyDictionary<string, StickerCollectionDefinition> StickerCollections => EconService.StickerCollections;
-
-    public IReadOnlyDictionary<string, KeychainDefinition> Keychains => EconService.Keychains;
-=======
-    private StorageService StorageService { get; init; }
->>>>>>> main
+    public IReadOnlyDictionary<string, KeychainDefinition> Keychains => EconService.Keychains.AsReadOnly();
 
     public WeaponSkinAPI(InventoryUpdateService inventoryUpdateService,
         InventoryService inventoryService,
         DataService dataService,
-<<<<<<< HEAD
-        DatabaseService databaseService,
-        EconService econService)
-=======
-        StorageService storageService)
->>>>>>> main
+        StorageService storageService,
+        EconService econService
+        )
     {
         InventoryUpdateService = inventoryUpdateService;
         InventoryService = inventoryService;
         DataService = dataService;
-<<<<<<< HEAD
-        DatabaseService = databaseService;
-        EconService = econService;
-
-        _lazyWeaponToPaintkits = new Lazy<IReadOnlyDictionary<string, IReadOnlyList<PaintkitDefinition>>>(() =>
-        {
-            return EconService.WeaponToPaintkits.ToDictionary(kvp => kvp.Key, kvp => (IReadOnlyList<PaintkitDefinition>)kvp.Value);
-        });
-=======
         StorageService = storageService;
->>>>>>> main
+        EconService = econService;
     }
 
     public void SetWeaponSkins(IEnumerable<WeaponSkinData> skins,

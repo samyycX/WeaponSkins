@@ -15,7 +15,7 @@ public interface IWeaponSkinAPI
     /// <summary>
     /// Paintkits grouped by weapon name.
     /// </summary>
-    IReadOnlyDictionary<string, IReadOnlyList<PaintkitDefinition>> WeaponToPaintkits { get; }
+    IReadOnlyDictionary<string, List<PaintkitDefinition>> WeaponToPaintkits { get; }
 
     /// <summary>
     /// All sticker collections indexed by name.

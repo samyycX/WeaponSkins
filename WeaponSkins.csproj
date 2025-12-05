@@ -31,10 +31,7 @@
     <PackageReference Include="Tomlyn" Version="0.19.0" />
     <PackageReference Include="Tomlyn.Extensions.Configuration" Version="1.0.6" />
     <PackageReference Include="ValveKeyValue" Version="0.20.0.417" />
-    <!-- <PackageReference Include="SwiftlyS2.CS2" Version="1.0.1" ExcludeAssets="runtime" PrivateAssets="all" /> -->
-    <Reference Include="SwiftlyS2.CS2">
-      <HintPath>$(MSBuildThisFileDirectory)SwiftlyS2.CS2.dll</HintPath>
-    </Reference>
+    <PackageReference Include="SwiftlyS2.CS2" Version="*-*" ExcludeAssets="runtime" PrivateAssets="all" />
     <ProjectReference Include="WeaponSkins.Shared\WeaponSkins.Shared.csproj" />
   </ItemGroup>
 

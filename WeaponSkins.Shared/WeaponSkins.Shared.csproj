@@ -8,9 +8,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Reference Include="SwiftlyS2.CS2">
-      <HintPath>$(MSBuildThisFileDirectory)..\SwiftlyS2.CS2.dll</HintPath>
-    </Reference>
+    <PackageReference Include="SwiftlyS2.CS2" Version="*-*" ExcludeAssets="runtime" PrivateAssets="all" />
   </ItemGroup>
 
 </Project>

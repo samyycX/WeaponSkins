@@ -72,11 +72,14 @@ public partial class MenuService
 
     public IMenuOption GetGlovePropertiesMenuSubmenuOption(IPlayer player)
     {
+        if (!ItemPermissionService.CanUseGloveSkins(player.SteamID))
+        {
+            return CreateDisabledOption(LocalizationService[player].MenuTitleGloveProperties);
+        }
+
         if (!TryGetGloveDataInHand(player, out var dataInHand))
         {
-            var option = new TextMenuOption(LocalizationService[player].MenuTitleGloveProperties);
-            option.Enabled = false;
-            return option;
+            return CreateDisabledOption(LocalizationService[player].MenuTitleGloveProperties);
         }
 
         return new SubmenuMenuOption(LocalizationService[player].MenuTitleGloveProperties,

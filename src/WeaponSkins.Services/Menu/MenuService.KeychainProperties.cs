@@ -134,6 +134,7 @@ public partial class MenuService
         WeaponSkinData data,
         int slot)
     {
+        if (!ItemPermissionService.CanUseKeychains(player.SteamID)) return null;
         if (!data.HasKeychain(slot)) return null;
         var keychain = data.GetKeychain(slot);
         var keychainName = GetKeychainName(keychain, GetLanguage(player));

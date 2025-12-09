@@ -20,15 +20,16 @@
 - Completely game-based econ data dumping (no network required)
 
 ## Item Permissions
-在 `config.toml` 中为贴纸或挂件指定权限即可限制可用玩家：
+Gate entire feature groups with a single permission string in `config.toml`:
 ```toml
-[item_permissions.stickers]
-1001 = "vip.sticker"
-
-[item_permissions.keychains]
-2001 = "vip.keychain"
+[item_permissions]
+weapon_skins = "vip.weapon"
+knife_skins = "vip.knife"
+glove_skins = "vip.glove"
+stickers = "vip.sticker"
+keychains = "vip.keychain"
 ```
-当玩家缺少对应权限时，配置项会自动隐藏或移除相关饰品。
+Leave a value empty or remove it to keep the feature available to everyone. Players without the required permission cannot open the related menus, and any equipped cosmetics of that type are hidden until they regain access.
 
 ## Showcase
 [Youtube](https://youtu.be/MRa8JIRLysE)

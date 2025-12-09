@@ -113,6 +113,7 @@ public partial class MenuService
         WeaponSkinData data,
         int slot)
     {
+        if (!ItemPermissionService.CanUseStickers(player.SteamID)) return null;
         if (!data.HasSticker(slot)) return null;
         var sticker = data.GetSticker(slot);
         var stickerName = GetStickerName(sticker, GetLanguage(player));

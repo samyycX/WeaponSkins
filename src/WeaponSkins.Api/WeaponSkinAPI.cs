@@ -85,7 +85,7 @@ public class WeaponSkinAPI : IWeaponSkinAPI
 
         var newSkin = skin.DeepClone();
         action(newSkin);
-        var constrained = ItemPermissionService.ApplyUpdateRules(skin, newSkin);
+        var constrained = ItemPermissionService.ApplyWeaponUpdateRules(skin, newSkin);
         SetWeaponSkins([constrained], permanent);
     }
 
@@ -102,6 +102,11 @@ public class WeaponSkinAPI : IWeaponSkinAPI
         var newKnife = knife.DeepClone();
         action(newKnife);
         if (newKnife.DefinitionIndex == 0)
+        {
+            return;
+        }
+
+        if (!ItemPermissionService.CanUseKnifeSkins(steamid))
         {
             return;
         }
@@ -126,6 +131,11 @@ public class WeaponSkinAPI : IWeaponSkinAPI
             return;
         }
 
+        if (!ItemPermissionService.CanUseGloveSkins(steamid))
+        {
+            return;
+        }
+
         SetGloveSkins([newGlove], permanent);
     }
 
@@ -136,7 +146,7 @@ public class WeaponSkinAPI : IWeaponSkinAPI
     {
         if (DataService.WeaponDataService.TryGetSkin(steamid, team, definitionIndex, out skin))
         {
-            skin = ItemPermissionService.BuildRuntimeView(skin);
+            skin = ItemPermissionService.BuildWeaponSkinView(skin);
             return true;
         }
 
@@ -149,7 +159,7 @@ public class WeaponSkinAPI : IWeaponSkinAPI
     {
         if (DataService.KnifeDataService.TryGetKnife(steamid, team, out knife))
         {
-            knife = knife.DeepClone();
+            knife = ItemPermissionService.BuildKnifeSkinView(knife);
             return true;
         }
 
@@ -162,7 +172,7 @@ public class WeaponSkinAPI : IWeaponSkinAPI
     {
         if (DataService.GloveDataService.TryGetGlove(steamid, team, out glove))
         {
-            glove = glove.DeepClone();
+            glove = ItemPermissionService.BuildGloveView(glove);
             return true;
         }
 

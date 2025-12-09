@@ -62,7 +62,7 @@ public class InventoryUpdateService
         {
             foreach (var skin in skins)
             {
-                inventory.UpdateWeaponSkin(ItemPermissionService.BuildRuntimeView(skin));
+                inventory.UpdateWeaponSkin(ItemPermissionService.BuildWeaponSkinView(skin));
             }
         }
 
@@ -70,7 +70,7 @@ public class InventoryUpdateService
         {
             foreach (var knife in knives)
             {
-                inventory.UpdateKnifeSkin(knife);
+                inventory.UpdateKnifeSkin(ItemPermissionService.BuildKnifeSkinView(knife));
             }
         }
 
@@ -78,7 +78,7 @@ public class InventoryUpdateService
         {
             foreach (var glove in gloves)
             {
-                inventory.UpdateGloveSkin(glove);
+                inventory.UpdateGloveSkin(ItemPermissionService.BuildGloveView(glove));
             }
         }
     }
@@ -89,7 +89,7 @@ public class InventoryUpdateService
 
         foreach (var skin in skins)
         {
-            var runtimeSkin = ItemPermissionService.BuildRuntimeView(skin);
+            var runtimeSkin = ItemPermissionService.BuildWeaponSkinView(skin);
             if (DataService.WeaponDataService.StoreSkin(skin) || !runtimeSkin.Equals(skin))
             {
                 updatedSkinMaps.GetOrAdd(skin.SteamID, () => new()).Add(runtimeSkin);
@@ -129,9 +129,10 @@ public class InventoryUpdateService
         Dictionary<ulong, List<KnifeSkinData>> updatedKnifeMaps = new();
         foreach (var knife in knives)
         {
-            if (DataService.KnifeDataService.StoreKnife(knife))
+            var runtimeKnife = ItemPermissionService.BuildKnifeSkinView(knife);
+            if (DataService.KnifeDataService.StoreKnife(knife) || !runtimeKnife.Equals(knife))
             {
-                updatedKnifeMaps.GetOrAdd(knife.SteamID, () => new()).Add(knife);
+                updatedKnifeMaps.GetOrAdd(knife.SteamID, () => new()).Add(runtimeKnife);
             }
         }
 
@@ -163,9 +164,10 @@ public class InventoryUpdateService
         Dictionary<ulong, List<GloveData>> updatedGloveMaps = new();
         foreach (var glove in gloves)
         {
-            if (DataService.GloveDataService.StoreGlove(glove))
+            var runtimeGlove = ItemPermissionService.BuildGloveView(glove);
+            if (DataService.GloveDataService.StoreGlove(glove) || !runtimeGlove.Equals(glove))
             {
-                updatedGloveMaps.GetOrAdd(glove.SteamID, () => new()).Add(glove);
+                updatedGloveMaps.GetOrAdd(glove.SteamID, () => new()).Add(runtimeGlove);
             }
         }
 

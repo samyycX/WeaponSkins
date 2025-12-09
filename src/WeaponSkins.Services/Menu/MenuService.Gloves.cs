@@ -109,6 +109,11 @@ public partial class MenuService
 
     public IMenuOption GetGloveSkinMenuSubmenuOption(IPlayer player)
     {
+        if (!ItemPermissionService.CanUseGloveSkins(player.SteamID))
+        {
+            return CreateDisabledOption(LocalizationService[player].MenuTitleGloves);
+        }
+
         var skinOption = new SubmenuMenuOption(LocalizationService[player].MenuTitleGloves,
             () => Task.FromResult(BuildGloveSkinMenu(player)));
 

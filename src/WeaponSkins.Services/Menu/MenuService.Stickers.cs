@@ -1,5 +1,4 @@
 using System.Diagnostics.CodeAnalysis;
-using System.Linq;
 
 using SwiftlyS2.Core.Menus.OptionsBase;
 using SwiftlyS2.Shared;
@@ -69,23 +68,16 @@ public partial class MenuService
         };
 
         main.AddOption(resetOption);
-        foreach (var (index, stickerCollection) in EconService.StickerCollections)
+        foreach (var (_, stickerCollection) in EconService.StickerCollections)
         {
-            var permittedStickers = stickerCollection.Stickers
-                .Where(sticker => sticker.Index != 0 && ItemPermissionService.CanUseSticker(player.SteamID, sticker.Index))
-                .ToList();
-            if (permittedStickers.Count == 0)
-            {
-                continue;
-            }
-
             main.AddOption(new SubmenuMenuOption(stickerCollection.LocalizedNames[language], () =>
             {
                 var stickerMenu = Core.MenusAPI.CreateBuilder();
                 stickerMenu.Design.SetMenuTitle(stickerCollection.LocalizedNames[language]);
 
-                foreach (var sticker in permittedStickers)
+                foreach (var sticker in stickerCollection.Stickers)
                 {
+                    if (sticker.Index == 0) continue;
                     var option = new ButtonMenuOption(HtmlGradient.GenerateGradientText(
                         sticker.LocalizedNames[language],
                         sticker.Rarity.Color.HexColor));
@@ -138,11 +130,14 @@ public partial class MenuService
 
     public IMenuOption GetStickerMenuSubmenuOption(IPlayer player)
     {
+        if (!ItemPermissionService.CanUseStickers(player.SteamID))
+        {
+            return CreateDisabledOption(LocalizationService[player].MenuTitleStickers);
+        }
+
         if (!TryGetWeaponDataInHand(player, out var dataInHand))
         {
-            var option = new TextMenuOption(LocalizationService[player].MenuTitleStickers);
-            option.Enabled = false;
-            return option;
+            return CreateDisabledOption(LocalizationService[player].MenuTitleStickers);
         }
 
         _stickerOperatingWeaponSkins[player.SteamID] = dataInHand;

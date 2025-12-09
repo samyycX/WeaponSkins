@@ -16,6 +16,7 @@ public class WeaponSkinAPI : IWeaponSkinAPI
     private DataService DataService { get; init; }
     private StorageService StorageService { get; init; }
     private EconService EconService { get; init; }
+    private ItemPermissionService ItemPermissionService { get; init; }
 
     public IReadOnlyDictionary<string, ItemDefinition> Items => EconService.Items.AsReadOnly();
 
@@ -29,7 +30,8 @@ public class WeaponSkinAPI : IWeaponSkinAPI
         InventoryService inventoryService,
         DataService dataService,
         StorageService storageService,
-        EconService econService
+        EconService econService,
+        ItemPermissionService itemPermissionService
         )
     {
         InventoryUpdateService = inventoryUpdateService;
@@ -37,6 +39,7 @@ public class WeaponSkinAPI : IWeaponSkinAPI
         DataService = dataService;
         StorageService = storageService;
         EconService = econService;
+        ItemPermissionService = itemPermissionService;
     }
 
     public void SetWeaponSkins(IEnumerable<WeaponSkinData> skins,
@@ -82,7 +85,8 @@ public class WeaponSkinAPI : IWeaponSkinAPI
 
         var newSkin = skin.DeepClone();
         action(newSkin);
-        SetWeaponSkins([newSkin], permanent);
+        var constrained = ItemPermissionService.ApplyUpdateRules(skin, newSkin);
+        SetWeaponSkins([constrained], permanent);
     }
 
     public void UpdateKnifeSkin(ulong steamid,
@@ -132,7 +136,7 @@ public class WeaponSkinAPI : IWeaponSkinAPI
     {
         if (DataService.WeaponDataService.TryGetSkin(steamid, team, definitionIndex, out skin))
         {
-            skin = skin.DeepClone();
+            skin = ItemPermissionService.BuildRuntimeView(skin);
             return true;
         }
 

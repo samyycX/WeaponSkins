@@ -19,6 +19,17 @@
 - Player-based skin name localization
 - Completely game-based econ data dumping (no network required)
 
+## Item Permissions
+在 `config.toml` 中为贴纸或挂件指定权限即可限制可用玩家：
+```toml
+[item_permissions.stickers]
+1001 = "vip.sticker"
+
+[item_permissions.keychains]
+2001 = "vip.keychain"
+```
+当玩家缺少对应权限时，配置项会自动隐藏或移除相关饰品。
+
 ## Showcase
 [Youtube](https://youtu.be/MRa8JIRLysE)
   

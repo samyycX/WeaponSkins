@@ -55,6 +55,7 @@ public partial class WeaponSkins : BasePlugin
             .AddStorageService()
             .AddStattrakService()
             .AddLocalizationService()
+            .AddItemPermissionService()
             .AddCommandService();
 
         collection
@@ -74,6 +75,7 @@ public partial class WeaponSkins : BasePlugin
             .UseStorageService()
             .UseStattrakService()
             .UseLocalizationService()
+            .UseItemPermissionService()
             .UseCommandService();
     }
 

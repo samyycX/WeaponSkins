@@ -17,13 +17,15 @@ public class InventoryUpdateService
     private PlayerService PlayerService { get; init; }
     private NativeService NativeService { get; init; }
     private ILogger<InventoryUpdateService> Logger { get; init; }
+    private ItemPermissionService ItemPermissionService { get; init; }
 
     public InventoryUpdateService(ISwiftlyCore core,
         InventoryService inventoryService,
         DataService dataService,
         PlayerService playerService,
         NativeService nativeService,
-        ILogger<InventoryUpdateService> logger)
+        ILogger<InventoryUpdateService> logger,
+        ItemPermissionService itemPermissionService)
     {
         Core = core;
         InventoryService = inventoryService;
@@ -32,6 +34,7 @@ public class InventoryUpdateService
         PlayerService = playerService;
         NativeService = nativeService;
         Logger = logger;
+        ItemPermissionService = itemPermissionService;
 
         NativeService.OnSOCacheSubscribed += OnSOCacheSubscribed;
 
@@ -59,7 +62,7 @@ public class InventoryUpdateService
         {
             foreach (var skin in skins)
             {
-                inventory.UpdateWeaponSkin(skin);
+                inventory.UpdateWeaponSkin(ItemPermissionService.BuildRuntimeView(skin));
             }
         }
 
@@ -86,9 +89,10 @@ public class InventoryUpdateService
 
         foreach (var skin in skins)
         {
-            if (DataService.WeaponDataService.StoreSkin(skin))
+            var runtimeSkin = ItemPermissionService.BuildRuntimeView(skin);
+            if (DataService.WeaponDataService.StoreSkin(skin) || !runtimeSkin.Equals(skin))
             {
-                updatedSkinMaps.GetOrAdd(skin.SteamID, () => new()).Add(skin);
+                updatedSkinMaps.GetOrAdd(skin.SteamID, () => new()).Add(runtimeSkin);
             }
         }
 

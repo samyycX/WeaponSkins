@@ -1,4 +1,5 @@
 using System.Diagnostics.CodeAnalysis;
+using System.Linq;
 
 using SwiftlyS2.Core.Menus.OptionsBase;
 using SwiftlyS2.Shared;
@@ -70,14 +71,21 @@ public partial class MenuService
         main.AddOption(resetOption);
         foreach (var (index, stickerCollection) in EconService.StickerCollections)
         {
+            var permittedStickers = stickerCollection.Stickers
+                .Where(sticker => sticker.Index != 0 && ItemPermissionService.CanUseSticker(player.SteamID, sticker.Index))
+                .ToList();
+            if (permittedStickers.Count == 0)
+            {
+                continue;
+            }
+
             main.AddOption(new SubmenuMenuOption(stickerCollection.LocalizedNames[language], () =>
             {
                 var stickerMenu = Core.MenusAPI.CreateBuilder();
                 stickerMenu.Design.SetMenuTitle(stickerCollection.LocalizedNames[language]);
 
-                foreach (var sticker in stickerCollection.Stickers)
+                foreach (var sticker in permittedStickers)
                 {
-                    if (sticker.Index == 0) continue;
                     var option = new ButtonMenuOption(HtmlGradient.GenerateGradientText(
                         sticker.LocalizedNames[language],
                         sticker.Rarity.Color.HexColor));

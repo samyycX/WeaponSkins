@@ -57,6 +57,11 @@ public partial class MenuService
         var sorted = EconService.Keychains.OrderByDescending(k => k.Value.Rarity.Id).ToList();
         foreach (var (index, keychain) in sorted)
         {
+            if (!ItemPermissionService.CanUseKeychain(player.SteamID, keychain.Index))
+            {
+                continue;
+            }
+
             main.Design.SetMenuTitle(keychain.LocalizedNames[language]);
             var option = new ButtonMenuOption(HtmlGradient.GenerateGradientText(keychain.LocalizedNames[language],
                 keychain.Rarity.Color.HexColor));

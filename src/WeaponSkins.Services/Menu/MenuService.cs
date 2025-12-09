@@ -22,18 +22,21 @@ public partial class MenuService
     private WeaponSkinAPI Api { get; init; }
     private EconService EconService { get; init; }
     private LocalizationService LocalizationService { get; init; }
+    private ItemPermissionService ItemPermissionService { get; init; }
 
     public MenuService(ISwiftlyCore core,
         ILogger<MenuService> logger,
         WeaponSkinAPI api,
         EconService econService,
-        LocalizationService localizationService)
+        LocalizationService localizationService,
+        ItemPermissionService itemPermissionService)
     {
         Core = core;
         Logger = logger;
         Api = api;
         EconService = econService;
         LocalizationService = localizationService;
+        ItemPermissionService = itemPermissionService;
     }
 
     public void OpenMainMenu(IPlayer player)

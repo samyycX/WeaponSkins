@@ -34,7 +34,7 @@ public partial class DatabaseService
             data.Paintkit = skinModel.PaintID;
             data.PaintkitWear = skinModel.Wear;
             data.PaintkitSeed = skinModel.Seed;
-            data.Quality = skinModel.Stattrak ? EconItemQuality.StatTrak : EconItemQuality.Normal;
+            data.Quality = skinModel.Stattrak ? EconItemQuality.StatTrak : EconItemQuality.Unusual;
             data.StattrakCount = skinModel.StattrakCount;
             data.Nametag = skinModel.Nametag;
         }
@@ -65,7 +65,7 @@ public partial class DatabaseService
                     data.Paintkit = item.Skin.PaintID;
                     data.PaintkitWear = item.Skin.Wear;
                     data.PaintkitSeed = item.Skin.Seed;
-                    data.Quality = item.Skin.Stattrak ? EconItemQuality.StatTrak : EconItemQuality.Normal;
+                    data.Quality = item.Skin.Stattrak ? EconItemQuality.StatTrak : EconItemQuality.Unusual;
                     data.StattrakCount = item.Skin.StattrakCount;
                     data.Nametag = item.Skin.Nametag;
                 }
@@ -97,7 +97,7 @@ public partial class DatabaseService
                     data.Paintkit = item.Skin.PaintID;
                     data.PaintkitWear = item.Skin.Wear;
                     data.PaintkitSeed = item.Skin.Seed;
-                    data.Quality = item.Skin.Stattrak ? EconItemQuality.StatTrak : EconItemQuality.Normal;
+                    data.Quality = item.Skin.Stattrak ? EconItemQuality.StatTrak : EconItemQuality.Unusual;
                     data.StattrakCount = item.Skin.StattrakCount;
                     data.Nametag = item.Skin.Nametag;
                 }

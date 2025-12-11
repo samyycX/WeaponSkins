@@ -1,3 +1,6 @@
+using System.Diagnostics.CodeAnalysis;
+
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
 using SwiftlyS2.Shared;
@@ -17,7 +20,10 @@ public class ItemPermissionService
     {
         Core = core;
         Config = CloneConfig(options.CurrentValue.ItemPermissions);
-        options.OnChange(model => { Config = CloneConfig(model.ItemPermissions); });
+        options.OnChange(model =>
+        {
+            Config = CloneConfig(model.ItemPermissions);
+        });
     }
 
     private static ItemPermissionConfig CloneConfig(ItemPermissionConfig? source)
@@ -37,19 +43,16 @@ public class ItemPermissionService
         };
     }
 
-    public WeaponSkinData BuildWeaponSkinView(WeaponSkinData data)
+    public bool TryBuildWeaponSkinView(WeaponSkinData data,
+        [MaybeNullWhen(false)] out WeaponSkinData result)
     {
+        result = null;
         if (!CanUseWeaponSkins(data.SteamID))
         {
-            return new WeaponSkinData
-            {
-                SteamID = data.SteamID,
-                Team = data.Team,
-                DefinitionIndex = data.DefinitionIndex
-            };
+            return false;
         }
 
-        var result = data.DeepClone();
+        result = data.DeepClone();
         if (!CanUseStickers(data.SteamID))
         {
             for (var slot = 0; slot < 6; slot++)
@@ -63,37 +66,81 @@ public class ItemPermissionService
             result.Keychain0 = null;
         }
 
-        return result;
+        return true;
     }
 
-    public KnifeSkinData BuildKnifeSkinView(KnifeSkinData data)
+    public bool TryBuildWeaponSkinsView(IEnumerable<WeaponSkinData> data,
+        [MaybeNullWhen(false)] out IEnumerable<WeaponSkinData> result)
+    {
+        var results = new List<WeaponSkinData>();
+        foreach (var skin in data)
+        {
+            if (TryBuildWeaponSkinView(skin, out var skin2))
+            {
+                results.Add(skin2);
+            }
+        }
+
+        result = results;
+        return true;
+    }
+
+    public bool TryBuildKnifeSkinView(KnifeSkinData data,
+        [MaybeNullWhen(false)] out KnifeSkinData result)
     {
         if (!CanUseKnifeSkins(data.SteamID))
         {
-            return new KnifeSkinData
-            {
-                SteamID = data.SteamID,
-                Team = data.Team,
-                DefinitionIndex = 0
-            };
+            result = null;
+            return false;
         }
 
-        return data.DeepClone();
+        result = data.DeepClone();
+        return true;
     }
 
-    public GloveData BuildGloveView(GloveData data)
+    public bool TryBuildKnifeSkinsView(IEnumerable<KnifeSkinData> data,
+        [MaybeNullWhen(false)] out IEnumerable<KnifeSkinData> result)
+    {
+        var results = new List<KnifeSkinData>();
+        foreach (var knife in data)
+        {
+            if (TryBuildKnifeSkinView(knife, out var knife2))
+            {
+                results.Add(knife2);
+            }
+        }
+
+        result = results;
+        return true;
+    }
+
+    public bool TryBuildGloveView(GloveData data,
+        [MaybeNullWhen(false)] out GloveData result)
     {
         if (!CanUseGloveSkins(data.SteamID))
         {
-            return new GloveData
-            {
-                SteamID = data.SteamID,
-                Team = data.Team,
-                DefinitionIndex = 0
-            };
+            result = null;
+            return false;
         }
 
-        return data.DeepClone();
+        result = data.DeepClone();
+        return true;
+    }
+
+    public bool TryBuildGlovesView(IEnumerable<GloveData> data,
+        [MaybeNullWhen(false)] out IEnumerable<GloveData> result)
+    {
+        var results = new List<GloveData>();
+        foreach (var glove in data)
+        {
+            if (TryBuildGloveView(glove, out var glove2))
+            {
+                results.Add(glove2);
+            }
+        }
+
+        result = results;
+        return true;
     }
 
     public WeaponSkinData ApplyWeaponUpdateRules(WeaponSkinData current,
@@ -135,6 +182,6 @@ public class ItemPermissionService
         string? permission)
     {
         if (string.IsNullOrWhiteSpace(permission)) return true;
-        return Core.Permission != null && Core.Permission.HasPermission(steamId, permission);
+        return Core.Permission.PlayerHasPermission(steamId, permission);
     }
 }

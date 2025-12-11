@@ -22,7 +22,7 @@
 ## Item Permissions
 Gate entire feature groups with a single permission string in `config.toml`:
 ```toml
-[item_permissions]
+[Main.item_permissions]
 weapon_skins = "vip.weapon"
 knife_skins = "vip.knife"
 glove_skins = "vip.glove"

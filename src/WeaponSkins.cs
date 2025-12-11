@@ -1,4 +1,5 @@
 using System.IO.MemoryMappedFiles;
+using System.Runtime.InteropServices;
 
 using Microsoft.Extensions.DependencyInjection;
 
@@ -13,6 +14,8 @@ using Tomlyn.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 
+using SwiftlyS2.Shared.Natives;
+
 using WeaponSkins.Configuration;
 using WeaponSkins.Injections;
 using WeaponSkins.Services;
@@ -20,7 +23,7 @@ using WeaponSkins.Shared;
 
 namespace WeaponSkins;
 
-[PluginMetadata(Id = "WeaponSkins", Version = "0.1.0", Name = "WeaponSkins", Author = "samyyc & ELDment",
+[PluginMetadata(Id = "WeaponSkins", Version = "0.1.2", Name = "WeaponSkins", Author = "samyyc & ELDment",
     Description = "A swiftlys2 plugin to change player's skins.")]
 public partial class WeaponSkins : BasePlugin
 {
@@ -41,7 +44,7 @@ public partial class WeaponSkins : BasePlugin
                 builder
                     .AddTomlFile("config.toml", false, true);
             });
-        Core.Configuration.Manager.RemoveUnderscores();
+
 
         var collection = new ServiceCollection()
             .AddSwiftly(Core)

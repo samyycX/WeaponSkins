@@ -179,7 +179,7 @@ public class ItemPermissionService
     public bool CanUseKeychains(ulong steamId) => HasPermission(steamId, Config.Keychains);
 
     private bool HasPermission(ulong steamId,
-        string? permission)
+        string permission)
     {
         if (string.IsNullOrWhiteSpace(permission)) return true;
         return Core.Permission.PlayerHasPermission(steamId, permission);

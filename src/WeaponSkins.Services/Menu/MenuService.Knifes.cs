@@ -103,6 +103,11 @@ public partial class MenuService
 
     public IMenuOption GetKnifeSkinMenuSubmenuOption(IPlayer player)
     {
+        if (!ItemPermissionService.CanUseKnifeSkins(player.SteamID))
+        {
+            return CreateDisabledOption(LocalizationService[player].MenuTitleKnifes);
+        }
+
         var skinOption = new SubmenuMenuOption(LocalizationService[player].MenuTitleKnifes, 
             () => Task.FromResult(BuildKnifeSkinMenu(player)));
         

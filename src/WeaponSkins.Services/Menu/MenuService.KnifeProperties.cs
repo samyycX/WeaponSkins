@@ -154,11 +154,14 @@ public partial class MenuService
 
     public IMenuOption GetKnifePropertiesMenuSubmenuOption(IPlayer player)
     {
+        if (!ItemPermissionService.CanUseKnifeSkins(player.SteamID))
+        {
+            return CreateDisabledOption(LocalizationService[player].MenuTitleKnifeProperties);
+        }
+
         if (!TryGetKnifeDataInHand(player, out var dataInHand))
         {
-            var option = new TextMenuOption(LocalizationService[player].MenuTitleKnifeProperties);
-            option.Enabled = false;
-            return option;
+            return CreateDisabledOption(LocalizationService[player].MenuTitleKnifeProperties);
         }
 
         return new SubmenuMenuOption(LocalizationService[player].MenuTitleKnifeProperties,

@@ -16,27 +16,35 @@ public class WeaponSkinAPI : IWeaponSkinAPI
     private DataService DataService { get; init; }
     private StorageService StorageService { get; init; }
     private EconService EconService { get; init; }
+    private ItemPermissionService ItemPermissionService { get; init; }
+    private WeaponSkinGetterAPI WeaponSkinGetterAPI { get; init; }
 
     public IReadOnlyDictionary<string, ItemDefinition> Items => EconService.Items.AsReadOnly();
 
-    public IReadOnlyDictionary<string, List<PaintkitDefinition>> WeaponToPaintkits => EconService.WeaponToPaintkits.AsReadOnly();
+    public IReadOnlyDictionary<string, List<PaintkitDefinition>> WeaponToPaintkits =>
+        EconService.WeaponToPaintkits.AsReadOnly();
 
-    public IReadOnlyDictionary<string, StickerCollectionDefinition> StickerCollections => EconService.StickerCollections.AsReadOnly();
+    public IReadOnlyDictionary<string, StickerCollectionDefinition> StickerCollections =>
+        EconService.StickerCollections.AsReadOnly();
 
     public IReadOnlyDictionary<string, KeychainDefinition> Keychains => EconService.Keychains.AsReadOnly();
 
     public WeaponSkinAPI(InventoryUpdateService inventoryUpdateService,
+        WeaponSkinGetterAPI weaponSkinGetterAPI,
         InventoryService inventoryService,
         DataService dataService,
         StorageService storageService,
-        EconService econService
-        )
+        EconService econService,
+        ItemPermissionService itemPermissionService
+    )
     {
         InventoryUpdateService = inventoryUpdateService;
         InventoryService = inventoryService;
         DataService = dataService;
         StorageService = storageService;
         EconService = econService;
+        ItemPermissionService = itemPermissionService;
+        WeaponSkinGetterAPI = weaponSkinGetterAPI;
     }
 
     public void SetWeaponSkins(IEnumerable<WeaponSkinData> skins,
@@ -82,7 +90,8 @@ public class WeaponSkinAPI : IWeaponSkinAPI
 
         var newSkin = skin.DeepClone();
         action(newSkin);
-        SetWeaponSkins([newSkin], permanent);
+        var constrained = ItemPermissionService.ApplyWeaponUpdateRules(skin, newSkin);
+        SetWeaponSkins([constrained], permanent);
     }
 
     public void UpdateKnifeSkin(ulong steamid,
@@ -98,6 +107,11 @@ public class WeaponSkinAPI : IWeaponSkinAPI
         var newKnife = knife.DeepClone();
         action(newKnife);
         if (newKnife.DefinitionIndex == 0)
+        {
+            return;
+        }
+
+        if (!ItemPermissionService.CanUseKnifeSkins(steamid))
         {
             return;
         }
@@ -122,48 +136,41 @@ public class WeaponSkinAPI : IWeaponSkinAPI
             return;
         }
 
+        if (!ItemPermissionService.CanUseGloveSkins(steamid))
+        {
+            return;
+        }
+
         SetGloveSkins([newGlove], permanent);
     }
 
     public bool TryGetWeaponSkin(ulong steamid,
         Team team,
         ushort definitionIndex,
-        [MaybeNullWhen(false)] out WeaponSkinData skin)
-    {
-        if (DataService.WeaponDataService.TryGetSkin(steamid, team, definitionIndex, out skin))
-        {
-            skin = skin.DeepClone();
-            return true;
-        }
+        [MaybeNullWhen(false)] out WeaponSkinData skin) =>
+        WeaponSkinGetterAPI.TryGetWeaponSkin(steamid, team, definitionIndex, out skin);
 
-        return false;
-    }
+    public bool TryGetWeaponSkins(ulong steamid,
+        [MaybeNullWhen(false)] out IEnumerable<WeaponSkinData> result) =>
+        WeaponSkinGetterAPI.TryGetWeaponSkins(steamid, out result);
 
     public bool TryGetKnifeSkin(ulong steamid,
         Team team,
-        [MaybeNullWhen(false)] out KnifeSkinData knife)
-    {
-        if (DataService.KnifeDataService.TryGetKnife(steamid, team, out knife))
-        {
-            knife = knife.DeepClone();
-            return true;
-        }
+        [MaybeNullWhen(false)] out KnifeSkinData knife) =>
+        WeaponSkinGetterAPI.TryGetKnifeSkin(steamid, team, out knife);
 
-        return false;
-    }
+    public bool TryGetKnifeSkins(ulong steamid,
+        [MaybeNullWhen(false)] out IEnumerable<KnifeSkinData> result) =>
+        WeaponSkinGetterAPI.TryGetKnifeSkins(steamid, out result);
 
     public bool TryGetGloveSkin(ulong steamid,
         Team team,
-        [MaybeNullWhen(false)] out GloveData glove)
-    {
-        if (DataService.GloveDataService.TryGetGlove(steamid, team, out glove))
-        {
-            glove = glove.DeepClone();
-            return true;
-        }
+        [MaybeNullWhen(false)] out GloveData glove) =>
+        WeaponSkinGetterAPI.TryGetGloveSkin(steamid, team, out glove);
 
-        return false;
-    }
+    public bool TryGetGloveSkins(ulong steamid,
+        [MaybeNullWhen(false)] out IEnumerable<GloveData> result) =>
+        WeaponSkinGetterAPI.TryGetGloveSkins(steamid, out result);
 
     public void ResetWeaponSkin(ulong steamid,
         Team team,

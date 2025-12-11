@@ -111,6 +111,11 @@ public partial class MenuService
 
     public IMenuOption GetWeaponSkinMenuSubmenuOption(IPlayer player)
     {
+        if (!ItemPermissionService.CanUseWeaponSkins(player.SteamID))
+        {
+            return CreateDisabledOption(LocalizationService[player].MenuTitleSkins);
+        }
+
         var skinOption = new SubmenuMenuOption(LocalizationService[player].MenuTitleSkins,
             () => Task.FromResult(BuildWeaponSkinMenu(player)));
 

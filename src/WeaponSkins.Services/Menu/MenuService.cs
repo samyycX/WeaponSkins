@@ -1,3 +1,4 @@
+using System;
 using System.Diagnostics.CodeAnalysis;
 
 using Microsoft.Extensions.Logging;
@@ -22,18 +23,21 @@ public partial class MenuService
     private WeaponSkinAPI Api { get; init; }
     private EconService EconService { get; init; }
     private LocalizationService LocalizationService { get; init; }
+    private ItemPermissionService ItemPermissionService { get; init; }
 
     public MenuService(ISwiftlyCore core,
         ILogger<MenuService> logger,
         WeaponSkinAPI api,
         EconService econService,
-        LocalizationService localizationService)
+        LocalizationService localizationService,
+        ItemPermissionService itemPermissionService)
     {
         Core = core;
         Logger = logger;
         Api = api;
         EconService = econService;
         LocalizationService = localizationService;
+        ItemPermissionService = itemPermissionService;
     }
 
     public void OpenMainMenu(IPlayer player)
@@ -41,17 +45,22 @@ public partial class MenuService
         var main = Core.MenusAPI.CreateBuilder();
         main.Design.SetMenuTitle(LocalizationService[player].MenuTitle);
 
-
-        
-
-        main.AddOption(GetWeaponSkinMenuSubmenuOption(player));
-        main.AddOption(GetKnifeSkinMenuSubmenuOption(player));
-        main.AddOption(GetGloveSkinMenuSubmenuOption(player));
-        main.AddOption(GetStickerMenuSubmenuOption(player));
-        main.AddOption(GetKeychainMenuSubmenuOption(player));
-        main.AddOption(GetSkinPropertiesMenuSubmenuOption(player));
-        main.AddOption(GetKnifePropertiesMenuSubmenuOption(player));
-        main.AddOption(GetGlovePropertiesMenuSubmenuOption(player));
+        AddMenuOption(main, ItemPermissionService.CanUseWeaponSkins(player.SteamID),
+            () => GetWeaponSkinMenuSubmenuOption(player), LocalizationService[player].MenuTitleSkins);
+        AddMenuOption(main, ItemPermissionService.CanUseKnifeSkins(player.SteamID),
+            () => GetKnifeSkinMenuSubmenuOption(player), LocalizationService[player].MenuTitleKnifes);
+        AddMenuOption(main, ItemPermissionService.CanUseGloveSkins(player.SteamID),
+            () => GetGloveSkinMenuSubmenuOption(player), LocalizationService[player].MenuTitleGloves);
+        AddMenuOption(main, ItemPermissionService.CanUseStickers(player.SteamID),
+            () => GetStickerMenuSubmenuOption(player), LocalizationService[player].MenuTitleStickers);
+        AddMenuOption(main, ItemPermissionService.CanUseKeychains(player.SteamID),
+            () => GetKeychainMenuSubmenuOption(player), LocalizationService[player].MenuTitleKeychains);
+        AddMenuOption(main, ItemPermissionService.CanUseWeaponSkins(player.SteamID),
+            () => GetSkinPropertiesMenuSubmenuOption(player), LocalizationService[player].MenuTitleSkinProperties);
+        AddMenuOption(main, ItemPermissionService.CanUseKnifeSkins(player.SteamID),
+            () => GetKnifePropertiesMenuSubmenuOption(player), LocalizationService[player].MenuTitleKnifeProperties);
+        AddMenuOption(main, ItemPermissionService.CanUseGloveSkins(player.SteamID),
+            () => GetGlovePropertiesMenuSubmenuOption(player), LocalizationService[player].MenuTitleGloveProperties);
 
         Core.MenusAPI.OpenMenuForPlayer(player, main.Build());
     }
@@ -148,5 +157,26 @@ public partial class MenuService
         [MaybeNullWhen(false)] out GloveData dataInHand)
     {
         return Api.TryGetGloveSkin(player.SteamID, player.Controller.Team, out dataInHand);
+    }
+
+    private static void AddMenuOption(IMenuBuilderAPI builder,
+        bool enabled,
+        Func<IMenuOption> optionFactory,
+        string title)
+    {
+        if (enabled)
+        {
+            builder.AddOption(optionFactory());
+            return;
+        }
+
+        builder.AddOption(CreateDisabledOption(title));
+    }
+
+    private static TextMenuOption CreateDisabledOption(string title)
+    {
+        var option = new TextMenuOption(title);
+        option.Enabled = false;
+        return option;
     }
 }

@@ -68,7 +68,7 @@ public partial class MenuService
         };
 
         main.AddOption(resetOption);
-        foreach (var (index, stickerCollection) in EconService.StickerCollections)
+        foreach (var (_, stickerCollection) in EconService.StickerCollections)
         {
             main.AddOption(new SubmenuMenuOption(stickerCollection.LocalizedNames[language], () =>
             {
@@ -130,11 +130,14 @@ public partial class MenuService
 
     public IMenuOption GetStickerMenuSubmenuOption(IPlayer player)
     {
+        if (!ItemPermissionService.CanUseStickers(player.SteamID))
+        {
+            return CreateDisabledOption(LocalizationService[player].MenuTitleStickers);
+        }
+
         if (!TryGetWeaponDataInHand(player, out var dataInHand))
         {
-            var option = new TextMenuOption(LocalizationService[player].MenuTitleStickers);
-            option.Enabled = false;
-            return option;
+            return CreateDisabledOption(LocalizationService[player].MenuTitleStickers);
         }
 
         _stickerOperatingWeaponSkins[player.SteamID] = dataInHand;

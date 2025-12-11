@@ -106,11 +106,14 @@ public partial class MenuService
 
     public IMenuOption GetKeychainMenuSubmenuOption(IPlayer player)
     {
+        if (!ItemPermissionService.CanUseKeychains(player.SteamID))
+        {
+            return CreateDisabledOption(LocalizationService[player].MenuTitleKeychains);
+        }
+
         if (!TryGetWeaponDataInHand(player, out var dataInHand))
         {
-            var option = new TextMenuOption(LocalizationService[player].MenuTitleKeychains);
-            option.Enabled = false;
-            return option;
+            return CreateDisabledOption(LocalizationService[player].MenuTitleKeychains);
         }
 
         _keychainOperatingWeaponSkins[player.SteamID] = dataInHand;

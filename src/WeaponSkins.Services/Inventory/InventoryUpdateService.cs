@@ -13,29 +13,31 @@ public class InventoryUpdateService
 {
     private ISwiftlyCore Core { get; init; }
     private InventoryService InventoryService { get; init; }
-    private DataService DataService { get; init; }
     private PlayerService PlayerService { get; init; }
     private NativeService NativeService { get; init; }
     private ILogger<InventoryUpdateService> Logger { get; init; }
     private ItemPermissionService ItemPermissionService { get; init; }
+    private WeaponSkinGetterAPI Api { get; init; }
+    private DataService DataService { get; init; }
 
     public InventoryUpdateService(ISwiftlyCore core,
         InventoryService inventoryService,
-        DataService dataService,
+        WeaponSkinGetterAPI api,
         PlayerService playerService,
         NativeService nativeService,
         ILogger<InventoryUpdateService> logger,
-        ItemPermissionService itemPermissionService)
+        ItemPermissionService itemPermissionService,
+        DataService dataService)
     {
         Core = core;
         InventoryService = inventoryService;
-        DataService = dataService;
+        Api = api;
 
         PlayerService = playerService;
         NativeService = nativeService;
         Logger = logger;
         ItemPermissionService = itemPermissionService;
-
+        DataService = dataService;
         NativeService.OnSOCacheSubscribed += OnSOCacheSubscribed;
 
         foreach (var player in Core.PlayerManager.GetAllPlayers())
@@ -58,27 +60,27 @@ public class InventoryUpdateService
 
     private void Update(CCSPlayerInventory inventory)
     {
-        if (DataService.WeaponDataService.TryGetSkins(inventory.SteamID, out var skins))
+        if (Api.TryGetWeaponSkins(inventory.SteamID, out var skins))
         {
             foreach (var skin in skins)
             {
-                inventory.UpdateWeaponSkin(ItemPermissionService.BuildWeaponSkinView(skin));
+                inventory.UpdateWeaponSkin(skin);
             }
         }
 
-        if (DataService.KnifeDataService.TryGetKnives(inventory.SteamID, out var knives))
+        if (Api.TryGetKnifeSkins(inventory.SteamID, out var knives))
         {
             foreach (var knife in knives)
             {
-                inventory.UpdateKnifeSkin(ItemPermissionService.BuildKnifeSkinView(knife));
+                inventory.UpdateKnifeSkin(knife);
             }
         }
 
-        if (DataService.GloveDataService.TryGetGloves(inventory.SteamID, out var gloves))
+        if (Api.TryGetGloveSkins(inventory.SteamID, out var gloves))
         {
             foreach (var glove in gloves)
             {
-                inventory.UpdateGloveSkin(ItemPermissionService.BuildGloveView(glove));
+                inventory.UpdateGloveSkin(glove);
             }
         }
     }
@@ -89,10 +91,12 @@ public class InventoryUpdateService
 
         foreach (var skin in skins)
         {
-            var runtimeSkin = ItemPermissionService.BuildWeaponSkinView(skin);
-            if (DataService.WeaponDataService.StoreSkin(skin) || !runtimeSkin.Equals(skin))
+            if (ItemPermissionService.TryBuildWeaponSkinView(skin, out var runtimeSkin))
             {
-                updatedSkinMaps.GetOrAdd(skin.SteamID, () => new()).Add(runtimeSkin);
+                if (DataService.WeaponDataService.StoreSkin(skin) || !runtimeSkin.Equals(skin))
+                {
+                    updatedSkinMaps.GetOrAdd(skin.SteamID, () => new()).Add(runtimeSkin);
+                }
             }
         }
 
@@ -129,10 +133,12 @@ public class InventoryUpdateService
         Dictionary<ulong, List<KnifeSkinData>> updatedKnifeMaps = new();
         foreach (var knife in knives)
         {
-            var runtimeKnife = ItemPermissionService.BuildKnifeSkinView(knife);
-            if (DataService.KnifeDataService.StoreKnife(knife) || !runtimeKnife.Equals(knife))
+            if (ItemPermissionService.TryBuildKnifeSkinView(knife, out var runtimeKnife))
             {
-                updatedKnifeMaps.GetOrAdd(knife.SteamID, () => new()).Add(runtimeKnife);
+                if (DataService.KnifeDataService.StoreKnife(knife) || !runtimeKnife.Equals(knife))
+                {
+                    updatedKnifeMaps.GetOrAdd(knife.SteamID, () => new()).Add(runtimeKnife);
+                }
             }
         }
 
@@ -164,10 +170,12 @@ public class InventoryUpdateService
         Dictionary<ulong, List<GloveData>> updatedGloveMaps = new();
         foreach (var glove in gloves)
         {
-            var runtimeGlove = ItemPermissionService.BuildGloveView(glove);
-            if (DataService.GloveDataService.StoreGlove(glove) || !runtimeGlove.Equals(glove))
+            if (ItemPermissionService.TryBuildGloveView(glove, out var runtimeGlove))
             {
-                updatedGloveMaps.GetOrAdd(glove.SteamID, () => new()).Add(runtimeGlove);
+                if (DataService.GloveDataService.StoreGlove(glove) || !runtimeGlove.Equals(glove))
+                {
+                    updatedGloveMaps.GetOrAdd(glove.SteamID, () => new()).Add(runtimeGlove);
+                }
             }
         }
 

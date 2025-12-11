@@ -159,7 +159,7 @@ public partial class MenuService
         return Api.TryGetGloveSkin(player.SteamID, player.Controller.Team, out dataInHand);
     }
 
-    private static void AddMenuOption(IMenuBuilder builder,
+    private static void AddMenuOption(IMenuBuilderAPI builder,
         bool enabled,
         Func<IMenuOption> optionFactory,
         string title)

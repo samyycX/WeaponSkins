@@ -1,6 +1,5 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Collections.Generic;
-
 using SwiftlyS2.Shared.Players;
 
 namespace WeaponSkins.Shared;
@@ -57,13 +56,26 @@ public interface IWeaponSkinAPI
         ushort definitionIndex,
         [MaybeNullWhen(false)] out WeaponSkinData skin);
 
+    bool TryGetWeaponSkins(ulong steamid,
+        [MaybeNullWhen(false)] out IEnumerable<WeaponSkinData> result);
+
     bool TryGetKnifeSkin(ulong steamid,
-        Team team,
-        [MaybeNullWhen(false)] out KnifeSkinData knife);
+    Team team,
+    [MaybeNullWhen(false)] out KnifeSkinData knife);
+
+    bool TryGetKnifeSkins(ulong steamid,
+        [MaybeNullWhen(false)] out IEnumerable<KnifeSkinData> result);
+
+    
 
     bool TryGetGloveSkin(ulong steamid,
         Team team,
         [MaybeNullWhen(false)] out GloveData glove);
+
+    bool TryGetGloveSkins(ulong steamid,
+        [MaybeNullWhen(false)] out IEnumerable<GloveData> result);
+
+    
 
     void ResetWeaponSkin(ulong steamid,
         Team team,

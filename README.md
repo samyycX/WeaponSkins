@@ -22,12 +22,12 @@
 ## Item Permissions
 Gate entire feature groups with a single permission string in `config.toml`:
 ```toml
-[Main.item_permissions]
-weapon_skins = "vip.weapon"
-knife_skins = "vip.knife"
-glove_skins = "vip.glove"
-stickers = "vip.sticker"
-keychains = "vip.keychain"
+[Main.ItemPermissions]
+WeaponSkins = "vip"
+KnifeSkins = "vip"
+GloveSkins = "vip"
+Stickers = "vip"
+Keychains = "vip"
 ```
 Leave a value empty or remove it to keep the feature available to everyone. Players without the required permission cannot open the related menus, and any equipped cosmetics of that type are hidden until they regain access.
 

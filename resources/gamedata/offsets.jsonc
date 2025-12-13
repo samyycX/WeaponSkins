@@ -34,6 +34,11 @@
     "windows": 3,
     "linux": 3
   },
+  // cstrike15_src, GCSDK Listener
+  "CPlayerInventory::SOCacheUnsubscribed": {
+    "windows": 4,
+    "linux": 4
+  },
   // string "item_sub_position2" and "spray0" used in keyvalues
   "CPlayerInventory::GetItemInLoadout": {
     "windows": 8,

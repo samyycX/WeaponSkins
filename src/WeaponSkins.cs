@@ -15,6 +15,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 
 using SwiftlyS2.Shared.Natives;
+using SwiftlyS2.Shared.SchemaDefinitions;
 
 using WeaponSkins.Configuration;
 using WeaponSkins.Injections;
@@ -29,6 +30,8 @@ public partial class WeaponSkins : BasePlugin
 {
     private ServiceProvider _provider;
 
+    private unsafe delegate* unmanaged<void> b;
+
     public WeaponSkins(ISwiftlyCore core) : base(core)
     {
     }
@@ -36,16 +39,6 @@ public partial class WeaponSkins : BasePlugin
     public override void Load(bool hotReload)
     {
         StickerFixService.Initialize();
-
-        Core.Configuration
-            .InitializeTomlWithModel<MainConfigModel>("config.toml", "Main")
-            .Configure(builder =>
-            {
-                builder
-                    .AddTomlFile("config.toml", false, true);
-            });
-
-
         var collection = new ServiceCollection()
             .AddSwiftly(Core)
             .AddDataService()
@@ -60,6 +53,7 @@ public partial class WeaponSkins : BasePlugin
             .AddLocalizationService()
             .AddItemPermissionService()
             .AddCommandService();
+
 
         collection
             .AddOptions<MainConfigModel>()
@@ -80,6 +74,7 @@ public partial class WeaponSkins : BasePlugin
             .UseLocalizationService()
             .UseItemPermissionService()
             .UseCommandService();
+        
     }
 
     public override void Unload()

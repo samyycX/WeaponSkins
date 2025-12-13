@@ -68,6 +68,13 @@ public class NativeService
         ulong soid2,
         nint pSOCache);
 
+    public unsafe delegate nint SOCacheUnsubscribedDelegate(nint pInventory,
+        SOID_t* pSOID);
+
+    public unsafe delegate nint SOCacheUnsubscribedDelegate_Linux(nint pInventory,
+        ulong soid1,
+        ulong soid2);
+
     public delegate nint GetEconItemByItemIDDelegate(nint pInventory,
         ulong itemid);
 
@@ -98,6 +105,14 @@ public class NativeService
         init;
     }
 
+    public required IUnmanagedFunction<SOCacheUnsubscribedDelegate> CPlayerInventory_SOCacheUnsubscribed { get; init; }
+
+    public required IUnmanagedFunction<SOCacheUnsubscribedDelegate_Linux> CPlayerInventory_SOCacheUnsubscribed_Linux
+    {
+        get;
+        init;
+    }
+
     public required IUnmanagedFunction<GetItemInLoadoutDelegate> CPlayerInventory_GetItemInLoadout { get; init; }
     public required IUnmanagedFunction<GetEconItemByItemIDDelegate> GetEconItemByItemID { get; init; }
     public required IUnmanagedFunction<CAttribute_String_NewDelegate> CAttribute_String_New { get; init; }
@@ -113,6 +128,7 @@ public class NativeService
 
 
     public event Action<CCSPlayerInventory, SOID_t>? OnSOCacheSubscribed;
+    public event Action<CCSPlayerInventory, SOID_t>? OnSOCacheUnsubscribed;
 
 
     public NativeService(ISwiftlyCore core,
@@ -152,6 +168,11 @@ public class NativeService
                 playerInventoryVtable,
                 Core.GameData.GetOffset("CPlayerInventory::SOCacheSubscribed")
             );
+            CPlayerInventory_SOCacheUnsubscribed =
+                Core.Memory.GetUnmanagedFunctionByVTable<SOCacheUnsubscribedDelegate>(
+                    playerInventoryVtable,
+                    Core.GameData.GetOffset("CPlayerInventory::SOCacheUnsubscribed")
+                );
         }
         else
         {
@@ -171,6 +192,11 @@ public class NativeService
                 Core.Memory.GetUnmanagedFunctionByVTable<SOCacheSubscribedDelegate_Linux>(
                     playerInventoryVtable,
                     Core.GameData.GetOffset("CPlayerInventory::SOCacheSubscribed")
+                );
+            CPlayerInventory_SOCacheUnsubscribed_Linux =
+                Core.Memory.GetUnmanagedFunctionByVTable<SOCacheUnsubscribedDelegate_Linux>(
+                    playerInventoryVtable,
+                    Core.GameData.GetOffset("CPlayerInventory::SOCacheUnsubscribed")
                 );
         }
 
@@ -234,6 +260,29 @@ public class NativeService
                     };
                 }
             });
+
+            CPlayerInventory_SOCacheUnsubscribed.AddHook(next =>
+            {
+                unsafe
+                {
+                    return (pInventory,
+                        pSOID) =>
+                    {
+                        try
+                        {
+                            var ret = next()(pInventory, pSOID);
+                            var inventory = new CCSPlayerInventory(pInventory);
+                            OnSOCacheUnsubscribed?.Invoke(inventory, *pSOID);
+                            return ret;
+                        }
+                        catch (Exception e)
+                        {
+                            Logger.LogError(e, "Error in SOCacheUnsubscribed");
+                            return 0;
+                        }
+                    };
+                }
+            });
         }
         else
         {
@@ -256,6 +305,19 @@ public class NativeService
                         Logger.LogError(e, "Error in SOCacheSubscribed");
                         return 0;
                     }
+                };
+            });
+
+            CPlayerInventory_SOCacheUnsubscribed_Linux.AddHook(next =>
+            {
+                return (pInventory,
+                    soid1,
+                    soid2) =>
+                {
+                    var ret = next()(pInventory, soid1, soid2);
+                    var inventory = new CCSPlayerInventory(pInventory);
+                    OnSOCacheUnsubscribed?.Invoke(inventory, new SOID_t(soid1, soid2));
+                    return ret;
                 };
             });
         }

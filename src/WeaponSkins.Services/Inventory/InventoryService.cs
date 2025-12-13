@@ -31,8 +31,7 @@ public class InventoryService
         Logger = logger;
 
         NativeService.OnSOCacheSubscribed += OnSOCacheSubscribed;
-
-        Core.Event.OnClientDisconnected += OnClientDisconnected;
+        NativeService.OnSOCacheUnsubscribed += OnSOCacheUnsubscribed;
     }
 
     public CCSPlayerInventory Get(ulong steamid)
@@ -53,15 +52,10 @@ public class InventoryService
         SubscribedInventories[soid.SteamID] = inventory;
     }
 
-    private void OnClientDisconnected(IOnClientDisconnectedEvent @event)
+    private void OnSOCacheUnsubscribed(CCSPlayerInventory inventory,
+        SOID_t soid)
     {
-        var player = Core.PlayerManager.GetPlayer(@event.PlayerId);
-        if (player == null)
-        {
-            return;
-        }
-
-        SubscribedInventories.Remove(player.SteamID);
+        SubscribedInventories.Remove(soid.SteamID);
     }
 
     public void UpdateWeaponSkins(ulong steamid,

@@ -2,6 +2,8 @@ using Microsoft.Extensions.Logging;
 
 using SwiftlyS2.Shared;
 using SwiftlyS2.Shared.Commands;
+using SwiftlyS2.Shared.Natives;
+using SwiftlyS2.Shared.SchemaDefinitions;
 
 namespace WeaponSkins;
 

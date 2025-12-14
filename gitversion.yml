@@ -1,0 +1,18 @@
+mode: ContinuousDeployment
+branches:
+  main:
+    regex: ^main$
+    mode: ContinuousDeployment
+    tag: ''
+    increment: Minor
+    prevent-increment-of-merged-branch-version: true
+    track-merge-target: false
+    is-release-branch: true
+  feature:
+    regex: ^feat(ure)?s?[/-]
+    mode: ContinuousDeployment
+    tag: alpha
+    increment: Minor
+ignore:
+  sha: []
+merge-message-formats: {}

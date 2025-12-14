@@ -1,0 +1,147 @@
+name: Build and Release
+
+on: 
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  versioning:
+    runs-on: windows-latest
+    outputs:
+      fullSemVer: ${{ steps.version_step.outputs.fullSemVer }}
+      semVer: ${{ steps.version_step.outputs.semVer }}
+      informationalVersion: ${{ steps.version_step.outputs.informationalVersion }}
+      preReleaseLabel: ${{ steps.version_step.outputs.preReleaseLabel }}
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+    
+    - name: Fetch all tags
+      run: |
+        git fetch --tags --force
+        git tag
+    
+    - name: Setup GitVersion
+      uses: gittools/actions/gitversion/setup@v3.0.0
+      with:
+        versionSpec: '5.x'
+    
+    - name: Determine Version
+      id: version_step
+      uses: gittools/actions/gitversion/execute@v3.0.0
+
+  build:
+    needs: versioning
+    runs-on: windows-latest
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+    
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '10.0.x'
+    
+    - name: Restore dependencies
+      run: dotnet restore WeaponSkins.sln
+    
+    - name: Build
+      run: |
+        dotnet build WeaponSkins.sln -c Release --no-restore -p:Version=${{ needs.versioning.outputs.semVer }} -p:InformationalVersion=${{ needs.versioning.outputs.informationalVersion }} -p:FileVersion=${{ needs.versioning.outputs.semVer }}
+    
+    - name: Create release package
+      run: |
+        mkdir release-package
+        Copy-Item -Path build/* -Destination release-package/ -Recurse
+        mkdir release-package/resources/exports
+        Copy-Item -Path WeaponSkins.Shared/bin/Release/net10.0/* -Destination release-package/resources/exports/ -Recurse
+        Compress-Archive -Path release-package/* -DestinationPath WeaponSkins-v${{ needs.versioning.outputs.semVer }}.zip
+    
+    - name: Upload release package
+      uses: actions/upload-artifact@v4
+      with:
+        name: weaponskins-${{ needs.versioning.outputs.semVer }}
+        path: WeaponSkins-v${{ needs.versioning.outputs.semVer }}.zip
+
+  release:
+    if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+    needs: [versioning, build]
+    runs-on: ubuntu-latest
+    env:
+      TAG_NAME: v${{ needs.versioning.outputs.semVer }}
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+    
+    - name: Create tag
+      run: |
+        TAG_NAME="${{ env.TAG_NAME }}"
+        MSG="Release v${{ needs.versioning.outputs.semVer }}"
+
+        git config --global user.name "github-actions[bot]"
+        git config --global user.email "github-actions[bot]@users.noreply.github.com"
+
+        if git rev-parse -q --verify "refs/tags/$TAG_NAME" >/dev/null; then
+          echo "Tag already exists, skipping"
+          exit 0
+        fi
+        git tag -a "$TAG_NAME" -m "${MSG}"
+        git push origin "$TAG_NAME"
+    
+    - name: Download release package
+      uses: actions/download-artifact@v4
+      with:
+        name: weaponskins-${{ needs.versioning.outputs.semVer }}
+        path: ./release
+    
+    - name: Get commit summary
+      id: commits
+      run: |
+        PREV_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
+        
+        if [ -n "$PREV_TAG" ]; then
+          COMMITS=$(git log ${PREV_TAG}..HEAD --pretty=format:"• %s (\`%h\`)" | head -c 900)
+        else
+          COMMITS=$(git log -10 --pretty=format:"• %s (\`%h\`)" | head -c 900)
+        fi
+        
+        if [ -z "$COMMITS" ]; then
+          COMMITS="No commit information available"
+        fi
+        
+        echo "summary<<EOF" >> $GITHUB_OUTPUT
+        echo "$COMMITS" >> $GITHUB_OUTPUT
+        echo "EOF" >> $GITHUB_OUTPUT
+    
+    - name: Create Release
+      uses: softprops/action-gh-release@v2
+      with:
+        generate_release_notes: true
+        files: |
+          release/WeaponSkins-v${{ needs.versioning.outputs.semVer }}.zip
+        prerelease: false
+        tag_name: ${{ env.TAG_NAME }}
+        name: Release v${{ needs.versioning.outputs.semVer }}
+        body: |
+          ## 📦 Version ${{ needs.versioning.outputs.semVer }}
+          
+          ### ✨ Release
+          
+          **📝 Recent Changes:**
+          ${{ steps.commits.outputs.summary }}
+          
+          ---
+          
+          **Download:**
+          - WeaponSkins-v${{ needs.versioning.outputs.semVer }}.zip

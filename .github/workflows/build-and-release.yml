@@ -63,7 +63,7 @@ jobs:
         mkdir release-package
         Copy-Item -Path build/* -Destination release-package/ -Recurse
         mkdir release-package/resources/exports
-        Copy-Item -Path WeaponSkins.Shared/bin/Release/net10.0/* -Destination release-package/resources/exports/ -Recurse
+        Copy-Item -Path build/exports/* -Destination release-package/resources/exports/ -Recurse
         Compress-Archive -Path release-package/* -DestinationPath WeaponSkins-v${{ needs.versioning.outputs.semVer }}.zip
     
     - name: Upload release package

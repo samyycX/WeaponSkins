@@ -61,9 +61,9 @@ jobs:
     - name: Create release package
       run: |
         mkdir release-package
-        Copy-Item -Path build/* -Destination release-package/ -Recurse
-        mkdir release-package/resources/exports
-        Copy-Item -Path build/exports/* -Destination release-package/resources/exports/ -Recurse
+        Get-ChildItem -Path build/net10.0 -Exclude exports | Copy-Item -Destination release-package/ -Recurse
+        New-Item -ItemType Directory -Path release-package/resources/exports -Force
+        Copy-Item -Path build/exports/net10.0/* -Destination release-package/resources/exports/ -Recurse
         Compress-Archive -Path release-package/* -DestinationPath WeaponSkins-v${{ needs.versioning.outputs.semVer }}.zip
     
     - name: Upload release package

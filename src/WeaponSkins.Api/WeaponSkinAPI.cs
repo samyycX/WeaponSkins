@@ -11,7 +11,7 @@ namespace WeaponSkins;
 
 public class WeaponSkinAPI : IWeaponSkinAPI
 {
-    private InventoryUpdateService InventoryUpdateService { get; init; }
+    private IInventoryUpdateService InventoryUpdateService { get; init; }
     private InventoryService InventoryService { get; init; }
     private DataService DataService { get; init; }
     private StorageService StorageService { get; init; }
@@ -29,7 +29,7 @@ public class WeaponSkinAPI : IWeaponSkinAPI
 
     public IReadOnlyDictionary<string, KeychainDefinition> Keychains => EconService.Keychains.AsReadOnly();
 
-    public WeaponSkinAPI(InventoryUpdateService inventoryUpdateService,
+    public WeaponSkinAPI(IInventoryUpdateService inventoryUpdateService,
         WeaponSkinGetterAPI weaponSkinGetterAPI,
         InventoryService inventoryService,
         DataService dataService,

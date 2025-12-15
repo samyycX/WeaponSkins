@@ -23,6 +23,7 @@ public static class PlayerExtensions
             player.RegiveTaser(weapon);
             return;
         }
+
         var name = Core.Helpers.GetClassnameByDefinitionIndex(newIndex)!;
         var clip1 = weapon.Clip1;
         var reservedAmmo = weapon.ReserveAmmo[0];

@@ -88,6 +88,13 @@ public class NativeService
     public delegate nint CAttribute_String_NewDelegate(nint pAttributeString,
         nint pArena);
 
+    public unsafe delegate nint GiveNamedItemDelegate(nint pItemServices,
+        nint pItemName,
+        nint subtype,
+        nint pEconItemView,
+        nint a5,
+        nint a6);
+
     public required IUnmanagedFunction<CreateCEconItemDelegate> CreateCEconItem { get; init; }
     public required IUnmanagedFunction<AddObjectDelegate> SOCache_AddObject { get; init; }
     public required IUnmanagedFunction<RemoveObjectDelegate> SOCache_RemoveObject { get; init; }
@@ -117,6 +124,7 @@ public class NativeService
     public required IUnmanagedFunction<GetEconItemByItemIDDelegate> GetEconItemByItemID { get; init; }
     public required IUnmanagedFunction<CAttribute_String_NewDelegate> CAttribute_String_New { get; init; }
     public required IUnmanagedFunction<UpdateItemViewDelegate> UpdateItemView { get; init; }
+    public IUnmanagedFunction<GiveNamedItemDelegate>? GiveNamedItem { get; init; }
 
     public required int CCSPlayerInventory_LoadoutsOffset { get; init; }
     public required int CCSInventoryManager_m_DefaultLoadoutsOffset { get; init; }
@@ -129,6 +137,7 @@ public class NativeService
 
     public event Action<CCSPlayerInventory, SOID_t>? OnSOCacheSubscribed;
     public event Action<CCSPlayerInventory, SOID_t>? OnSOCacheUnsubscribed;
+    public event Action<CCSPlayer_ItemServices, CBasePlayerWeapon>? OnGiveNamedItemPost;
 
 
     public NativeService(ISwiftlyCore core,
@@ -223,6 +232,17 @@ public class NativeService
         UpdateItemView = Core.Memory.GetUnmanagedFunctionByAddress<UpdateItemViewDelegate>(
             Core.GameData.GetSignature("UpdateItemView")
         );
+
+        try
+        {
+            GiveNamedItem = Core.Memory.GetUnmanagedFunctionByAddress<GiveNamedItemDelegate>(
+                Core.GameData.GetSignature("GiveNamedItem")
+            );
+        }
+        catch (Exception)
+        {
+            GiveNamedItem = null;
+        }
 
         CCSPlayerInventory_LoadoutsOffset = Core.GameData.GetOffset("CCSPlayerInventory::m_Loadouts");
         CCSInventoryManager_m_DefaultLoadoutsOffset = Core.GameData.GetOffset("CCSInventoryManager::m_DefaultLoadouts");
@@ -322,8 +342,42 @@ public class NativeService
             });
         }
 
-
         StaticNativeService.Service = this;
+
+        if (GiveNamedItem != null)
+        {
+            GiveNamedItem.AddHook(next =>
+            {
+                return (pItemServices,
+                    pItemName,
+                    subtype,
+                    pEconItemView,
+                    a5,
+                    a6) =>
+                {
+                    nint ret = 0;
+                    try
+                    {
+                        ret = next()(pItemServices, pItemName, subtype, pEconItemView, a5, a6);
+                        if (ret != 0)
+                        {
+                            var services = Helper.AsSchema<CCSPlayer_ItemServices>(pItemServices);
+                            var weapon = Helper.AsSchema<CBasePlayerWeapon>(ret);
+                            if (services.IsValid && weapon.IsValid)
+                            {
+                                OnGiveNamedItemPost?.Invoke(services, weapon);
+                            }
+                        }
+                    }
+                    catch (Exception e)
+                    {
+                        Logger.LogError(e, "Error in GiveNamedItemPost");
+                    }
+
+                    return ret;
+                };
+            });
+        }
     }
 
     public CEconItem CreateCEconItemInstance()

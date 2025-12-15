@@ -3,7 +3,7 @@ branches:
   main:
     regex: ^main$
     mode: ContinuousDeployment
-    tag: 'v'
+    tag: ''
     increment: Minor
     prevent-increment-of-merged-branch-version: true
     track-merge-target: false

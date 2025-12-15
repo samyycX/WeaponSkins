@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main
+      - beta
   workflow_dispatch:
 
 permissions:
@@ -54,10 +55,7 @@ jobs:
     - name: Update Version in Source Code
       shell: pwsh
       run: |
-        # 获取版本号并加上双引号，例如 "1.0.0"
         $version = '"${{ needs.versioning.outputs.semVer }}"'
-        
-        # 递归查找所有 .cs 文件并替换 WORKFLOW_VERSION
         Get-ChildItem -Path . -Filter "*.cs" -Recurse | ForEach-Object {
             $content = Get-Content $_.FullName
             if ($content -match 'WORKFLOW_VERSION') {
@@ -88,7 +86,7 @@ jobs:
         path: WeaponSkins-v${{ needs.versioning.outputs.semVer }}.zip
 
   release:
-    if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+    if: ${{ github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/beta') }}
     needs: [versioning, build]
     runs-on: ubuntu-latest
     env:
@@ -120,8 +118,9 @@ jobs:
         name: weaponskins-${{ needs.versioning.outputs.semVer }}
         path: ./release
     
-    - name: Get commit summary
-      id: commits
+    - name: Get commit summary for beta
+      if: github.ref == 'refs/heads/beta'
+      id: beta_commits
       run: |
         PREV_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
         
@@ -138,25 +137,53 @@ jobs:
         echo "summary<<EOF" >> $GITHUB_OUTPUT
         echo "$COMMITS" >> $GITHUB_OUTPUT
         echo "EOF" >> $GITHUB_OUTPUT
-    
-    - name: Create Release
+
+    - name: Get commit summary for main
+      if: github.ref == 'refs/heads/main'
+      id: main_commits
+      run: |
+        PREV_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
+        
+        if [ -n "$PREV_TAG" ]; then
+          COMMITS=$(git log ${PREV_TAG}..HEAD --pretty=format:"• %s (\`%h\`)" | head -c 900)
+        else
+          COMMITS=$(git log -15 --pretty=format:"• %s (\`%h\`)" | head -c 900)
+        fi
+        
+        if [ -z "$COMMITS" ]; then
+          COMMITS="No commit information available"
+        fi
+        
+        echo "summary<<EOF" >> $GITHUB_OUTPUT
+        echo "$COMMITS" >> $GITHUB_OUTPUT
+        echo "EOF" >> $GITHUB_OUTPUT
+
+    - name: Create Release (Beta)
+      if: github.ref == 'refs/heads/beta'
       uses: softprops/action-gh-release@v2
       with:
-        generate_release_notes: true
+        files: |
+          release/WeaponSkins-v${{ needs.versioning.outputs.semVer }}.zip
+        prerelease: true
+        tag_name: ${{ env.TAG_NAME }}
+        name: Pre-Release v${{ needs.versioning.outputs.semVer }}
+        body: |
+          ## 🧪 Pre-Release v${{ needs.versioning.outputs.semVer }}
+          
+          ### 📝 Recent Changes:
+          ${{ steps.beta_commits.outputs.summary }}
+
+    - name: Create Release (Main)
+      if: github.ref == 'refs/heads/main'
+      uses: softprops/action-gh-release@v2
+      with:
         files: |
           release/WeaponSkins-v${{ needs.versioning.outputs.semVer }}.zip
         prerelease: false
         tag_name: ${{ env.TAG_NAME }}
         name: Release v${{ needs.versioning.outputs.semVer }}
         body: |
-          ## 📦 Version ${{ needs.versioning.outputs.semVer }}
+          ## ✨ Release v${{ needs.versioning.outputs.semVer }}
           
-          ### ✨ Release
-          
-          **📝 Recent Changes:**
-          ${{ steps.commits.outputs.summary }}
-          
-          ---
-          
-          **Download:**
-          - WeaponSkins-v${{ needs.versioning.outputs.semVer }}.zip
+          ### 📝 Recent Changes:
+          ${{ steps.main_commits.outputs.summary }}

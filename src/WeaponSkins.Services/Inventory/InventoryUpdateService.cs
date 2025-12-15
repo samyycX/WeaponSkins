@@ -1,6 +1,8 @@
 using Microsoft.Extensions.Logging;
 
 using SwiftlyS2.Shared;
+using SwiftlyS2.Shared.GameEventDefinitions;
+using SwiftlyS2.Shared.Misc;
 using SwiftlyS2.Shared.Players;
 using SwiftlyS2.Shared.SchemaDefinitions;
 
@@ -9,7 +11,7 @@ using WeaponSkins.Shared;
 
 namespace WeaponSkins.Services;
 
-public class InventoryUpdateService
+public class InventoryUpdateService : IInventoryUpdateService
 {
     private ISwiftlyCore Core { get; init; }
     private InventoryService InventoryService { get; init; }
@@ -40,6 +42,8 @@ public class InventoryUpdateService
         DataService = dataService;
         NativeService.OnSOCacheSubscribed += OnSOCacheSubscribed;
 
+        Core.GameEvent.HookPost<EventPlayerSpawn>(OnPlayerSpawn);
+
         foreach (var player in Core.PlayerManager.GetAllPlayers())
         {
             if (player.Controller is { IsValid: true, InventoryServices.IsValid: true } controller)
@@ -50,6 +54,36 @@ public class InventoryUpdateService
                 }
             }
         }
+    }
+
+
+    private HookResult OnPlayerSpawn(EventPlayerSpawn @event)
+    {
+        IPlayer player = @event.UserIdPlayer;
+
+        Core.Scheduler.NextWorldUpdate(() =>
+        {
+            if (Api.TryGetGloveSkins(player.SteamID, out var gloves))
+            {
+                foreach (var glove in gloves)
+                {
+                    player.RegiveGlove(InventoryService.Get(player.SteamID));
+                }
+            }
+        });
+
+        Core.Scheduler.DelayBySeconds(0.1f, () =>
+        {
+            if (Api.TryGetGloveSkins(player.SteamID, out var gloves))
+            {
+                foreach (var glove in gloves)
+                {
+                    player.RegiveGlove(InventoryService.Get(player.SteamID));
+                }
+            }
+        });
+
+        return HookResult.Continue;
     }
 
     private void OnSOCacheSubscribed(CCSPlayerInventory inventory,

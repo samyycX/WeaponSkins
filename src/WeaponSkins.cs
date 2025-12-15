@@ -24,13 +24,11 @@ using WeaponSkins.Shared;
 
 namespace WeaponSkins;
 
-[PluginMetadata(Id = "WeaponSkins", Version = "0.1.2", Name = "WeaponSkins", Author = "samyyc & ELDment",
+[PluginMetadata(Id = "WeaponSkins", Version = "0.1.3", Name = "WeaponSkins", Author = "samyyc & ELDment",
     Description = "A swiftlys2 plugin to change player's skins.")]
 public partial class WeaponSkins : BasePlugin
 {
     private ServiceProvider _provider;
-
-    private unsafe delegate* unmanaged<void> b;
 
     public WeaponSkins(ISwiftlyCore core) : base(core)
     {
@@ -38,6 +36,12 @@ public partial class WeaponSkins : BasePlugin
 
     public override void Load(bool hotReload)
     {
+        Core.Configuration.InitializeTomlWithModel<MainConfigModel>("config.toml","Main")
+            .Configure(builder =>
+            {
+                builder.AddTomlFile("config.toml", false,true);
+            });
+
         StickerFixService.Initialize();
         var collection = new ServiceCollection()
             .AddSwiftly(Core)

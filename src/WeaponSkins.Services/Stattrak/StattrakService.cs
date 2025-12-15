@@ -36,15 +36,15 @@ public class StattrakService
     public HookResult OnPlayerDeath(EventPlayerDeath @event)
     {
         var attacker = Core.PlayerManager.GetPlayer(@event.Attacker);
-        if (attacker is { IsValid: false, IsFakeClient: false }) return HookResult.Continue;
+        if (attacker is null || attacker is { IsValid: false, IsFakeClient: false }) return HookResult.Continue;
 
         if (!@event.UserIdController.IsValid) return HookResult.Continue;
 
         var weaponHandle = attacker.PlayerPawn!.WeaponServices!.ActiveWeapon;
         if (!weaponHandle.IsValid) return HookResult.Continue;
 
-        var weapon = weaponHandle.Value;
-        var definitionIndex = weapon.AttributeManager.Item.ItemDefinitionIndex;
+        var weapon = weaponHandle.Value!;
+        var definitionIndex = weapon!.AttributeManager.Item.ItemDefinitionIndex;
         var team = attacker.Controller.Team;
 
         if (Utilities.IsWeaponDefinitionIndex(definitionIndex))

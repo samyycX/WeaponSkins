@@ -3,15 +3,16 @@ branches:
   main:
     regex: ^main$
     mode: ContinuousDeployment
-    tag: ''
-    increment: Minor
-    prevent-increment-of-merged-branch-version: true
+    label: ''
+    increment: Patch
+    prevent-increment:
+      of-merged-branch: true
     track-merge-target: false
     is-release-branch: true
   feature:
     regex: ^feat(ure)?s?[/-]
     mode: ContinuousDeployment
-    tag: alpha
+    label: alpha
     increment: Minor
 ignore:
   sha: []

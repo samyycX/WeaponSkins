@@ -1,18 +1,23 @@
-mode: ContinuousDeployment
+mode: Mainline
 branches:
   main:
     regex: ^main$
-    mode: ContinuousDeployment
-    tag: ''
-    increment: Minor
-    prevent-increment-of-merged-branch-version: true
-    track-merge-target: false
+    increment: Patch
+    is-mainline: true
     is-release-branch: true
-  feature:
-    regex: ^feat(ure)?s?[/-]
-    mode: ContinuousDeployment
-    tag: alpha
-    increment: Minor
+  beta:
+    regex: ^beta$
+    increment: Inherit
+    tag: beta
+    is-release-branch: false
+    is-mainline: false
+    source-branches: [ main ]
 ignore:
   sha: []
 merge-message-formats: {}
+commit-message-incrementing: Enabled
+major-version-bump-message: '\+semver:\s?(breaking|major)'
+minor-version-bump-message: '\+semver:\s?(feature|minor)'
+patch-version-bump-message: '\+semver:\s?(fix|patch)'
+tag-prefix: ''
+commit-date-format: yyyy-MM-dd

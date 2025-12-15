@@ -46,6 +46,10 @@
     <Compile Remove="WeaponSkins.Shared\**\*.cs" />
   </ItemGroup>
 
+  <PropertyGroup Condition="'$(WorkflowVersion)' != ''">
+    <DefineConstants>$(DefineConstants);WORKFLOW;WORKFLOW_VERSION="$(WorkflowVersion)"</DefineConstants>
+    </PropertyGroup>
+
   <Target Name="CreateZip" AfterTargets="Publish">
     <ItemGroup>
       <PublishFiles Include="$(PublishDir)**\*.*" />

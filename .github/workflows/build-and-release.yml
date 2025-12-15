@@ -51,12 +51,27 @@ jobs:
       with:
         dotnet-version: '10.0.x'
     
+    - name: Update Version in Source Code
+      shell: pwsh
+      run: |
+        # 获取版本号并加上双引号，例如 "1.0.0"
+        $version = '"${{ needs.versioning.outputs.semVer }}"'
+        
+        # 递归查找所有 .cs 文件并替换 WORKFLOW_VERSION
+        Get-ChildItem -Path . -Filter "*.cs" -Recurse | ForEach-Object {
+            $content = Get-Content $_.FullName
+            if ($content -match 'WORKFLOW_VERSION') {
+                Write-Host "Updating version in $($_.Name) to $version"
+                $content -replace 'WORKFLOW_VERSION', $version | Set-Content $_.FullName
+            }
+        }
+
     - name: Restore dependencies
       run: dotnet restore WeaponSkins.sln
     
     - name: Build
       run: |
-        dotnet build WeaponSkins.sln -c Release --no-restore -p:Version=${{ needs.versioning.outputs.semVer }} -p:InformationalVersion=${{ needs.versioning.outputs.informationalVersion }} -p:FileVersion=${{ needs.versioning.outputs.semVer }} -p:DefineConstants="WORKFLOW" ` -p:WorkflowVersion=${{ needs.versioning.outputs.semVer }}
+        dotnet build WeaponSkins.sln -c Release --no-restore -p:Version=${{ needs.versioning.outputs.semVer }} -p:InformationalVersion=${{ needs.versioning.outputs.informationalVersion }} -p:FileVersion=${{ needs.versioning.outputs.semVer }} -p:DefineConstants="WORKFLOW" 
     
     - name: Create release package
       run: |

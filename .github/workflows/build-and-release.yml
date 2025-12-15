@@ -56,7 +56,7 @@ jobs:
     
     - name: Build
       run: |
-        dotnet build WeaponSkins.sln -c Release --no-restore -p:Version=${{ needs.versioning.outputs.semVer }} -p:InformationalVersion=${{ needs.versioning.outputs.informationalVersion }} -p:FileVersion=${{ needs.versioning.outputs.semVer }}
+        dotnet build WeaponSkins.sln -c Release --no-restore -p:Version=${{ needs.versioning.outputs.semVer }} -p:InformationalVersion=${{ needs.versioning.outputs.informationalVersion }} -p:FileVersion=${{ needs.versioning.outputs.semVer }} -p:DefineConstants="WORKFLOW" ` -p:WorkflowVersion=${{ needs.versioning.outputs.semVer }}
     
     - name: Create release package
       run: |

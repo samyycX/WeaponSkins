@@ -24,8 +24,18 @@ using WeaponSkins.Shared;
 
 namespace WeaponSkins;
 
-[PluginMetadata(Id = "WeaponSkins", Version = "0.1.3", Name = "WeaponSkins", Author = "samyyc & ELDment",
-    Description = "A swiftlys2 plugin to change player's skins.")]
+
+[PluginMetadata(
+    Id = "WeaponSkins",
+#if WORKFLOW
+    Version = WORKFLOW_VERSION,
+#else
+    Version = "Local",
+#endif
+    Name = "WeaponSkins",
+    Author = "samyyc & ELDment",
+    Description = "A swiftlys2 plugin to change player's skins."
+)]
 public partial class WeaponSkins : BasePlugin
 {
     private ServiceProvider _provider;
@@ -36,10 +46,10 @@ public partial class WeaponSkins : BasePlugin
 
     public override void Load(bool hotReload)
     {
-        Core.Configuration.InitializeTomlWithModel<MainConfigModel>("config.toml","Main")
+        Core.Configuration.InitializeTomlWithModel<MainConfigModel>("config.toml", "Main")
             .Configure(builder =>
             {
-                builder.AddTomlFile("config.toml", false,true);
+                builder.AddTomlFile("config.toml", false, true);
             });
 
         StickerFixService.Initialize();
@@ -62,7 +72,7 @@ public partial class WeaponSkins : BasePlugin
         collection
             .AddOptions<MainConfigModel>()
             .BindConfiguration("Main");
-        
+
         _provider = collection.BuildServiceProvider();
 
         _provider
@@ -78,7 +88,6 @@ public partial class WeaponSkins : BasePlugin
             .UseLocalizationService()
             .UseItemPermissionService()
             .UseCommandService();
-        
     }
 
     public override void Unload()

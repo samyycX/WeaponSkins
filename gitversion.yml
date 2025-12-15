@@ -12,6 +12,7 @@ branches:
     is-release-branch: false
     is-mainline: false
     source-branches: [ main ]
+    tracks-release-branches: true
 ignore:
   sha: []
 merge-message-formats: {}

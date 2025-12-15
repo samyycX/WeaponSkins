@@ -29,13 +29,13 @@ jobs:
         git tag
     
     - name: Setup GitVersion
-      uses: gittools/actions/gitversion/setup@v3.0.0
+      uses: gittools/actions/gitversion/setup@v4.1.0
       with:
-        versionSpec: '5.x'
+        versionSpec: '6.x'
     
     - name: Determine Version
       id: version_step
-      uses: gittools/actions/gitversion/execute@v3.0.0
+      uses: gittools/actions/gitversion/execute@v4.1.0
 
   build:
     needs: versioning
@@ -54,10 +54,7 @@ jobs:
     - name: Update Version in Source Code
       shell: pwsh
       run: |
-        # 获取版本号并加上双引号，例如 "1.0.0"
         $version = '"${{ needs.versioning.outputs.semVer }}"'
-        
-        # 递归查找所有 .cs 文件并替换 WORKFLOW_VERSION
         Get-ChildItem -Path . -Filter "*.cs" -Recurse | ForEach-Object {
             $content = Get-Content $_.FullName
             if ($content -match 'WORKFLOW_VERSION') {

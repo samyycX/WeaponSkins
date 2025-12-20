@@ -13,6 +13,9 @@ public record GloveModel
     [Column(Name = "steamid")] public required string SteamID { get; set; }
     [Column(Name = "weapon_team")] public required short Team { get; set; }
     [Column(Name = "weapon_defindex")] public required int DefinitionIndex { get; set; }
+    [Column(Name = "weapon_paintkit")] public int Paintkit { get; set; } = 0;
+    [Column(Name = "weapon_paintkitseed")] public int PaintkitSeed { get; set; } = 0;
+    [Column(Name = "weapon_paintkitwear")] public float PaintkitWear { get; set; } = 0.0f;
 
     public GloveData ToDataModel()
     {
@@ -21,6 +24,9 @@ public record GloveModel
             SteamID = ulong.Parse(SteamID),
             Team = (Team)Team,
             DefinitionIndex = (ushort)DefinitionIndex,
+            Paintkit = Paintkit,
+            PaintkitSeed = PaintkitSeed,
+            PaintkitWear = PaintkitWear,
         };
     }
 
@@ -31,6 +37,9 @@ public record GloveModel
             SteamID = data.SteamID.ToString(),
             Team = (short)data.Team,
             DefinitionIndex = data.DefinitionIndex,
+            Paintkit = data.Paintkit,
+            PaintkitSeed = data.PaintkitSeed,
+            PaintkitWear = data.PaintkitWear,
         };
     }
 }

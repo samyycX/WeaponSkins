@@ -74,7 +74,7 @@ jobs:
     - name: Create release package
       run: |
         New-Item -ItemType Directory -Path release-package/WeaponSkins/resources/exports -Force
-        Get-ChildItem -Path build/net10.0 -Exclude exports | Copy-Item -Destination release-package/WeaponSkins/ -Recurse
+        Get-ChildItem -Path build/net10.0 -Exclude exports | Copy-Item -Destination release-package/WeaponSkins/ -Recurse -Force
         Copy-Item -Path build/exports/net10.0/* -Destination release-package/WeaponSkins/resources/exports/ -Recurse
         Compress-Archive -Path release-package/WeaponSkins -DestinationPath WeaponSkins-v${{ needs.versioning.outputs.semVer }}.zip
     

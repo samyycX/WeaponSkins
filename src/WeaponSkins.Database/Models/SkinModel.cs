@@ -146,4 +146,17 @@ public record SkinModel
             StattrakCount = data.StattrakCount
         };
     }
+
+    public static SkinModel FromGloveDataModel(GloveData data)
+    {
+        return new SkinModel
+        {
+            SteamID = data.SteamID.ToString(),
+            Team = (short)data.Team,
+            DefinitionIndex = data.DefinitionIndex,
+            PaintID = data.Paintkit,
+            Wear = data.PaintkitWear,
+            Seed = data.PaintkitSeed
+        };
+    }
 }

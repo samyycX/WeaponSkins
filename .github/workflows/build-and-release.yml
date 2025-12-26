@@ -73,11 +73,10 @@ jobs:
     
     - name: Create release package
       run: |
-        mkdir release-package
-        Get-ChildItem -Path build/net10.0 -Exclude exports | Copy-Item -Destination release-package/ -Recurse
-        New-Item -ItemType Directory -Path release-package/resources/exports -Force
-        Copy-Item -Path build/exports/net10.0/* -Destination release-package/resources/exports/ -Recurse
-        Compress-Archive -Path release-package/* -DestinationPath WeaponSkins-v${{ needs.versioning.outputs.semVer }}.zip
+        New-Item -ItemType Directory -Path release-package/WeaponSkins/resources/exports -Force
+        Get-ChildItem -Path build/net10.0 -Exclude exports | Copy-Item -Destination release-package/WeaponSkins/ -Recurse
+        Copy-Item -Path build/exports/net10.0/* -Destination release-package/WeaponSkins/resources/exports/ -Recurse
+        Compress-Archive -Path release-package/WeaponSkins -DestinationPath WeaponSkins-v${{ needs.versioning.outputs.semVer }}.zip
     
     - name: Upload release package
       uses: actions/upload-artifact@v4

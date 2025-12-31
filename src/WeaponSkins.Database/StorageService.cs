@@ -34,8 +34,7 @@ public class StorageService
         if (config.StorageBackend == "inherit")
         {
             Logger.LogInformation("Using inherited database storage backend.");
-            DatabaseService.Start(core.Database.GetConnection("weaponskins"),
-                core.Database.GetConnectionString("weaponskins"));
+            DatabaseService.Start(core.Database);
             Provider = DatabaseService;
             DatabaseSynchronizeService.Synchronize();
         }

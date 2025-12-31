@@ -11,6 +11,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
 using SwiftlyS2.Shared;
+using SwiftlyS2.Shared.Database;
 
 using WeaponSkins.Shared;
 
@@ -28,38 +29,48 @@ public partial class DatabaseService : IStorageProvider
         Core = core;
     }
 
-    public void Start(IDbConnection conn,
-        string connString)
+    public void Start(IDatabaseService dbService)
     {
         // var conn = core.Database.GetConnection("weaponskins");
         // var connString = core.Database.GetConnectionString("weaponskins");
-        fsql = GetBuilder(connString).Build();
+        
+        var protocol = dbService.GetConnectionInfo("weaponskins").Driver switch
+        {
+            "mysql" => DataType.MySql,
+            "postgresql" => DataType.PostgreSQL,
+            "sqlite" => DataType.Sqlite,
+            _ => throw new Exception("Unsupported database driver."),
+        };
+        var conn = dbService.GetConnection("weaponskins");
+        var connString = conn.ConnectionString;
 
-        RunMigrations(conn, connString);
+        fsql = GetBuilder(protocol, connString).Build();
+
+        RunMigrations(conn, protocol);
     }
 
     public void StartSqlite(string path)
     {
         fsql = GetSqliteBuilder(path).Build();
-        RunMigrations(new SqliteConnection($"Data Source={path}"), $"sqlite://{path}");
+        RunMigrations(new SqliteConnection($"Data Source={path}"), DataType.Sqlite);
     }
 
     private void RunMigrations(IDbConnection dbConnection,
-        string dbConnString)
+        DataType protocol)
     {
         var serviceProvider = new ServiceCollection()
             .AddFluentMigratorCore()
             .ConfigureRunner((rb) =>
             {
-                if (dbConnString.StartsWith("mysql", StringComparison.OrdinalIgnoreCase))
+                if (protocol == DataType.MySql)
                 {
                     rb.AddMySql8();
                 }
-                else if (dbConnString.StartsWith("postgresql", StringComparison.OrdinalIgnoreCase))
+                else if (protocol == DataType.PostgreSQL)
                 {
                     rb.AddPostgres();
                 }
-                else if (dbConnString.StartsWith("sqlite", StringComparison.OrdinalIgnoreCase))
+                else if (protocol == DataType.Sqlite)
                 {
                     rb.AddSQLite();
                 }
@@ -86,51 +97,10 @@ public partial class DatabaseService : IStorageProvider
         return builder;
     }
 
-    private FreeSqlBuilder GetBuilder(string connectionString)
+    private FreeSqlBuilder GetBuilder(DataType protocol, string connectionString)
     {
         var builder = new FreeSqlBuilder();
-
-        var protoEnd = connectionString.IndexOf("://");
-        var lastAt = connectionString.LastIndexOf('@');
-        var slash = connectionString.IndexOf('/', lastAt);
-
-        if (protoEnd < 0 || lastAt < protoEnd || slash < 0)
-            throw new FormatException("Expected format: protocol://user:password@host:port/database");
-
-        var protocol = connectionString[..protoEnd];
-        var credentials = connectionString[(protoEnd + 3)..lastAt];
-        var userEnd = credentials.IndexOf(':');
-
-        if (userEnd < 0)
-            throw new FormatException("Expected format: protocol://user:password@host:port/database");
-
-        var defaultPort = protocol switch
-        {
-            "mysql" => "3306",
-            "postgresql" => "5432",
-            _ => throw new NotSupportedException($"Unsupported protocol: {protocol}")
-        };
-
-        var hostPort = connectionString[(lastAt + 1)..slash];
-        var portColon = hostPort.LastIndexOf(':');
-        var host = portColon > 0 ? hostPort[..portColon] : hostPort;
-        var port = portColon > 0 ? hostPort[(portColon + 1)..] : defaultPort;
-
-        var connStr = $"Server={host};"
-                      + $"Port={port};"
-                      + $"Database={connectionString[(slash + 1)..]};"
-                      + $"User ID={credentials[..userEnd]};"
-                      + $"Password={credentials[(userEnd + 1)..]}";
-
-        if (protocol == "mysql")
-        {
-            builder.UseConnectionString(DataType.MySql, connStr);
-        }
-        else if (protocol == "postgresql")
-        {
-            builder.UseConnectionString(DataType.PostgreSQL, connStr);
-        }
-
+        builder.UseConnectionString(protocol, connectionString);
         builder.UseAdoConnectionPool(true);
         return builder;
     }

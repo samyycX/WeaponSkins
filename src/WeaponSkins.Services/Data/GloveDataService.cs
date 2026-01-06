@@ -14,7 +14,8 @@ public class GloveDataService
     public bool StoreGlove(GloveData glove)
     {
         var playerGloves = _playerGloves.GetOrAdd(glove.SteamID, _ => new());
-        return playerGloves.UpdateOrAdd(glove.Team, glove);
+        var result = playerGloves.UpdateOrAdd(glove.Team, glove);
+        return result;
     }
 
     public bool TryGetGlove(ulong steamId,
@@ -24,9 +25,9 @@ public class GloveDataService
         glove = null;
         if (_playerGloves.TryGetValue(steamId, out var playerGloves))
         {
-            return playerGloves.TryGetValue(team, out glove);
+            var result = playerGloves.TryGetValue(team, out glove);
+            return result;
         }
-
         return false;
     }
 

@@ -73,7 +73,16 @@ public class WeaponSkinAPI : IWeaponSkinAPI
         InventoryUpdateService.UpdateGloveSkins(gloves);
         if (permanent)
         {
-            var _ = Task.Run(async () => await StorageService.Get().StoreGlovesAsync(gloves));
+            var _ = Task.Run(async () =>
+            {
+                try
+                {
+                    await StorageService.Get().StoreGlovesAsync(gloves);
+                }
+                catch (Exception ex)
+                {
+                }
+            });
         }
     }
 

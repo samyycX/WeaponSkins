@@ -64,27 +64,37 @@ public static class PlayerExtensions
         Core.Scheduler.NextWorldUpdate(() =>
         {
             var econGloves = player.PlayerPawn.EconGloves;
-
-            // player.PlayerPawn.EconGloves.Initialized = false;
-            // player.PlayerPawn.EconGloves.InitializedUpdated();
-            econGloves.Initialized = true;
-
-            Core.Scheduler.NextWorldUpdate(() =>
+            var itemInLoadout = inv.GetItemInLoadout(player.Controller.Team, loadout_slot_t.LOADOUT_SLOT_CLOTHING_HANDS);
+            
+            if (itemInLoadout == null)
             {
-                var itemInLoadout =
-                    inv.GetItemInLoadout(player.Controller.Team, loadout_slot_t.LOADOUT_SLOT_CLOTHING_HANDS)!;
-                econGloves.ItemDefinitionIndex = itemInLoadout.ItemDefinitionIndex;
-                econGloves.AccountID = itemInLoadout.AccountID;
-                econGloves.ItemID = itemInLoadout.ItemID;
-                econGloves.ItemIDHigh = itemInLoadout.ItemIDHigh;
-                econGloves.ItemIDLow = itemInLoadout.ItemIDLow;
-                econGloves.InventoryPosition = itemInLoadout.InventoryPosition;
-                econGloves.EntityLevel = itemInLoadout.EntityLevel;
-                econGloves.EntityQuality = itemInLoadout.EntityQuality;
-                StaticNativeService.Service.UpdateItemView.CallOriginal(
-                    econGloves.Address, 0);
-                player.PlayerPawn.AcceptInput("SetBodygroup", "default_gloves,1");
-            });
+                return;
+            }
+            
+            econGloves.ItemDefinitionIndex = itemInLoadout.ItemDefinitionIndex;
+            econGloves.AccountID = itemInLoadout.AccountID;
+            econGloves.ItemID = itemInLoadout.ItemID;
+            econGloves.ItemIDHigh = itemInLoadout.ItemIDHigh;
+            econGloves.ItemIDLow = itemInLoadout.ItemIDLow;
+            econGloves.InventoryPosition = itemInLoadout.InventoryPosition;
+            econGloves.EntityLevel = itemInLoadout.EntityLevel;
+            econGloves.EntityQuality = itemInLoadout.EntityQuality;
+
+            if (itemInLoadout.ItemID == 0)
+            {
+                econGloves.NetworkedDynamicAttributes.SetOrAddAttribute("set item texture prefab", 0);
+                econGloves.NetworkedDynamicAttributes.SetOrAddAttribute("set item texture seed", 0);
+                econGloves.NetworkedDynamicAttributes.SetOrAddAttribute("set item texture wear", 0);
+                econGloves.AttributeList.SetOrAddAttribute("set item texture prefab", 0);
+                econGloves.AttributeList.SetOrAddAttribute("set item texture seed", 0);
+                econGloves.AttributeList.SetOrAddAttribute("set item texture wear", 0);
+            }
+
+            econGloves.Initialized = true;
+            
+            StaticNativeService.Service.UpdateItemView.CallOriginal(
+                econGloves.Address, 0);
+            player.PlayerPawn.AcceptInput("SetBodygroup", "default_gloves,1");
         });
     }
 }

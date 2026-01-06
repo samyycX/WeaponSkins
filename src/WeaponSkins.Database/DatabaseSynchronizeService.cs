@@ -21,6 +21,8 @@ public class DatabaseSynchronizeService
             knives.ToList().ForEach(knife => DataService.KnifeDataService.StoreKnife(knife));
             var gloves = await DatabaseService.GetAllGlovesAsync();
             gloves.ToList().ForEach(glove => DataService.GloveDataService.StoreGlove(glove));
+            var agents = await DatabaseService.GetAllAgentsAsync();
+            agents.ToList().ForEach(agent => DataService.AgentDataService.SetAgent(agent.SteamID, agent.Team, agent.AgentIndex));
         });
     }
 }

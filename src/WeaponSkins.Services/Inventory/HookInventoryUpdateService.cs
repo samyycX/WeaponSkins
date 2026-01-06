@@ -87,14 +87,84 @@ public class HookInventoryUpdateService : IInventoryUpdateService
         Core.Scheduler.NextWorldUpdate(() =>
         {
             ApplyPlayerGlove(player);
+            ApplyPlayerAgent(player);
         });
 
         Core.Scheduler.DelayBySeconds(0.1f, () =>
         {
             ApplyPlayerGlove(player);
+            ApplyPlayerAgent(player);
         });
 
         return HookResult.Continue;
+    }
+
+    private string? GetRefreshModel(string currentModel,
+        string targetModel)
+    {
+        foreach (var agent in EconService.Agents.Values)
+        {
+            var candidate = agent.ModelPath;
+            if (string.IsNullOrWhiteSpace(candidate)) continue;
+            if (string.Equals(candidate, currentModel, StringComparison.OrdinalIgnoreCase)) continue;
+            if (string.Equals(candidate, targetModel, StringComparison.OrdinalIgnoreCase)) continue;
+            return candidate;
+        }
+
+        return null;
+    }
+
+    private void ApplyPlayerAgent(IPlayer player)
+    {
+        if (!player.IsAlive()) return;
+
+        Core.Scheduler.NextWorldUpdate(() =>
+        {
+            if (!player.IsAlive()) return;
+
+            var pawn = player.PlayerPawn!;
+            var current = pawn.CBodyComponent!.SceneNode!.GetSkeletonInstance()
+                .ModelState
+                .ModelName;
+            DataService.AgentDataService.CaptureDefaultModel(player.SteamID, player.Controller.Team, current);
+
+            if (DataService.AgentDataService.TryGetAgent(player.SteamID, player.Controller.Team, out var agentIndex))
+            {
+                var agent = EconService.Agents.Values.FirstOrDefault(a => a.Index == agentIndex);
+                if (agent != null)
+                {
+                    var modelPath = agent.ModelPath;
+                    var refreshModel = GetRefreshModel(current, modelPath);
+                    if (!string.IsNullOrWhiteSpace(refreshModel))
+                    {
+                        pawn.SetModel(refreshModel);
+                        pawn.SetModel(current);
+                    }
+
+                    Core.Scheduler.NextWorldUpdate(() =>
+                    {
+                        if (!player.IsAlive()) return;
+                        pawn.SetModel(modelPath);
+                    });
+                }
+            }
+            else if (DataService.AgentDataService.TryGetDefaultModel(player.SteamID, player.Controller.Team,
+                         out var defaultModel))
+            {
+                var refreshModel = GetRefreshModel(current, defaultModel);
+                if (!string.IsNullOrWhiteSpace(refreshModel))
+                {
+                    pawn.SetModel(refreshModel);
+                    pawn.SetModel(current);
+                }
+
+                Core.Scheduler.NextWorldUpdate(() =>
+                {
+                    if (!player.IsAlive()) return;
+                    pawn.SetModel(defaultModel);
+                });
+            }
+        });
     }
 
     public void UpdateWeaponSkins(IEnumerable<WeaponSkinData> skins)
@@ -422,6 +492,7 @@ public class HookInventoryUpdateService : IInventoryUpdateService
     {
         var item = weapon.AttributeManager.Item;
         item.EntityQuality = (int)knife.Quality;
+
         item.NetworkedDynamicAttributes.SetOrAddAttribute("set item texture prefab", knife.Paintkit);
         item.NetworkedDynamicAttributes.SetOrAddAttribute("set item texture seed", knife.PaintkitSeed);
         item.NetworkedDynamicAttributes.SetOrAddAttribute("set item texture wear", knife.PaintkitWear);
@@ -471,26 +542,16 @@ public class HookInventoryUpdateService : IInventoryUpdateService
     {
         Core.Scheduler.NextWorldUpdate(() =>
         {
-            var model = pawn.CBodyComponent!.SceneNode!.GetSkeletonInstance()
-                .ModelState
-                .ModelName;
-            pawn.SetModel("characters/models/tm_jumpsuit/tm_jumpsuit_varianta.vmdl");
-            pawn.SetModel(model);
-
-            Core.Scheduler.NextWorldUpdate(() =>
-            {
-                var econGloves = pawn.EconGloves;
-                econGloves.ItemDefinitionIndex = glove.DefinitionIndex;
-                econGloves.NetworkedDynamicAttributes.SetOrAddAttribute("set item texture prefab", glove.Paintkit);
-                econGloves.NetworkedDynamicAttributes.SetOrAddAttribute("set item texture seed", glove.PaintkitSeed);
-                econGloves.NetworkedDynamicAttributes.SetOrAddAttribute("set item texture wear", glove.PaintkitWear);
-                econGloves.AttributeList.SetOrAddAttribute("set item texture prefab", glove.Paintkit);
-                econGloves.AttributeList.SetOrAddAttribute("set item texture seed", glove.PaintkitSeed);
-                econGloves.AttributeList.SetOrAddAttribute("set item texture wear", glove.PaintkitWear);
-                econGloves.Initialized = true;
-                pawn.AcceptInput("SetBodygroup", "default_gloves,1");
-            });
+            var econGloves = pawn.EconGloves;
+            econGloves.ItemDefinitionIndex = glove.DefinitionIndex;
+            econGloves.NetworkedDynamicAttributes.SetOrAddAttribute("set item texture prefab", glove.Paintkit);
+            econGloves.NetworkedDynamicAttributes.SetOrAddAttribute("set item texture seed", glove.PaintkitSeed);
+            econGloves.NetworkedDynamicAttributes.SetOrAddAttribute("set item texture wear", glove.PaintkitWear);
+            econGloves.AttributeList.SetOrAddAttribute("set item texture prefab", glove.Paintkit);
+            econGloves.AttributeList.SetOrAddAttribute("set item texture seed", glove.PaintkitSeed);
+            econGloves.AttributeList.SetOrAddAttribute("set item texture wear", glove.PaintkitWear);
+            econGloves.Initialized = true;
+            pawn.AcceptInput("SetBodygroup", "default_gloves,1");
         });
     }
 }
- 

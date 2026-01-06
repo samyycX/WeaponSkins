@@ -28,6 +28,7 @@ KnifeSkins = "vip"
 GloveSkins = "vip"
 Stickers = "vip"
 Keychains = "vip"
+Agents = "vip"
 ```
 Leave a value empty or remove it to keep the feature available to everyone. Players without the required permission cannot open the related menus, and any equipped cosmetics of that type are hidden until they regain access.
 

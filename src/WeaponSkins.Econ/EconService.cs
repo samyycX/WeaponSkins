@@ -12,6 +12,7 @@ using SwiftlyS2.Shared;
 using ValveKeyValue;
 
 using WeaponSkins.Shared;
+using AgentDefinition = WeaponSkins.Shared.AgentDefinition;
 
 namespace WeaponSkins.Econ;
 
@@ -41,12 +42,14 @@ public class EconService
 
     public Dictionary<string /* Name */, KeychainDefinition> Keychains { get; } = new(StringComparer.OrdinalIgnoreCase);
 
+    public Dictionary<string /* Name */, AgentDefinition> Agents { get; set; } = new(StringComparer.OrdinalIgnoreCase);
+
     private Dictionary<string /* Language */, Dictionary<string /* Key */, string /* Value */>> Languages { get; } =
         new(StringComparer.OrdinalIgnoreCase);
 
     private Dictionary<string, string> RevolvingLootLists { get; } = new(StringComparer.OrdinalIgnoreCase);
 
-    private const int SchemaVersion = 2;
+    private const int SchemaVersion = 17;
 
     public EconService(ISwiftlyCore core,
         ILogger<EconService> logger)
@@ -72,6 +75,8 @@ public class EconService
                 // TODO read from json
                 Items = JsonSerializer.Deserialize<Dictionary<string, ItemDefinition>>(
                     File.ReadAllText(Path.Combine(Core.PluginDataDirectory, "items.json")))!;
+                Agents = JsonSerializer.Deserialize<Dictionary<string, AgentDefinition>>(
+                    File.ReadAllText(Path.Combine(Core.PluginDataDirectory, "agents.json")))!;
                 WeaponToPaintkits =
                     JsonSerializer.Deserialize<Dictionary<string, List<PaintkitDefinition>>>(
                         File.ReadAllText(Path.Combine(Core.PluginDataDirectory, "weapon_to_paintkits.json")))!;
@@ -136,6 +141,10 @@ public class EconService
         Logger.LogInformation($"Parsed {Items.Count} items in {watch.ElapsedMilliseconds}ms.");
         watch.Restart();
 
+        ParseAgents();
+        Logger.LogInformation($"Parsed {Agents.Count} agents in {watch.ElapsedMilliseconds}ms.");
+        watch.Restart();
+
         ParsePaintkits();
         Logger.LogInformation($"Parsed {Paintkits.Count} paintkits in {watch.ElapsedMilliseconds}ms.");
         watch.Restart();
@@ -181,6 +190,9 @@ public class EconService
 
         File.WriteAllText(Path.Combine(dataDirectory, "items.json"),
             JsonSerializer.Serialize(Items, options));
+
+        File.WriteAllText(Path.Combine(dataDirectory, "agents.json"),
+            JsonSerializer.Serialize(Agents, options));
 
         File.WriteAllText(Path.Combine(dataDirectory, "sticker_collections.json"),
             JsonSerializer.Serialize(StickerCollections, options));
@@ -372,6 +384,150 @@ public class EconService
         }
 
         NamedWeapons = Items.Keys.OrderByDescending(i => i.Length).ToList();
+    }
+
+    public void ParseAgents()
+    {
+        KVObject? FindPrefab(string prefabName)
+        {
+            foreach (var keys in Root.Children)
+            {
+                if (keys.Name == "prefabs")
+                {
+                    foreach (var prefab in keys.Children)
+                    {
+                        if (prefab.Name == prefabName)
+                        {
+                            return prefab;
+                        }
+                    }
+                }
+            }
+            return null;
+        }
+
+        static string? FindAgentModelInChildren(KVObject obj)
+        {
+            foreach (var child in obj.Children)
+            {
+                var value = child.Value.EToString();
+
+                if (!string.IsNullOrWhiteSpace(value))
+                {
+                    var s = value.Replace('\\', '/');
+                    if (s.Contains("/tm_", StringComparison.OrdinalIgnoreCase) ||
+                        s.Contains("/ctm_", StringComparison.OrdinalIgnoreCase) ||
+                        s.StartsWith("tm_", StringComparison.OrdinalIgnoreCase) ||
+                        s.StartsWith("ctm_", StringComparison.OrdinalIgnoreCase))
+                    {
+                        return s;
+                    }
+                }
+
+                if (child.Children.Any())
+                {
+                    var nested = FindAgentModelInChildren(child);
+                    if (!string.IsNullOrWhiteSpace(nested))
+                    {
+                        return nested;
+                    }
+                }
+            }
+            return null;
+        }
+
+        foreach (var section in Root.Children)
+        {
+            if (section.Name != "items")
+            {
+                continue;
+            }
+            
+            foreach (var item in section.Children)
+            {
+                var prefabName = item.HasSubKey("prefab") ? item.Value["prefab"].EToString() : string.Empty;
+                
+                // Only include customplayertradable items (the actual selectable agents)
+                if (!prefabName.Equals("customplayertradable", StringComparison.OrdinalIgnoreCase))
+                {
+                    continue;
+                }
+                
+                var prefab = FindPrefab(prefabName);
+                
+                // Try to find the agent model path
+                string? modelPath = FindAgentModelInChildren(item);
+                if (string.IsNullOrWhiteSpace(modelPath) && prefab != null)
+                {
+                    modelPath = FindAgentModelInChildren(prefab);
+                }
+
+                if (string.IsNullOrWhiteSpace(modelPath))
+                {
+                    continue;
+                }
+                
+                modelPath = modelPath.Replace('\\', '/');
+
+                // Ensure the model path starts with characters/models/
+                string fullModelPath = modelPath;
+                if (!fullModelPath.StartsWith("characters/models/", StringComparison.OrdinalIgnoreCase))
+                {
+                    if (fullModelPath.Contains("characters/models/", StringComparison.OrdinalIgnoreCase))
+                    {
+                        var idx = fullModelPath.IndexOf("characters/models/", StringComparison.OrdinalIgnoreCase);
+                        fullModelPath = fullModelPath.Substring(idx);
+                    }
+                }
+                
+                // Ensure .vmdl extension
+                if (!fullModelPath.EndsWith(".vmdl", StringComparison.OrdinalIgnoreCase))
+                {
+                    fullModelPath += ".vmdl";
+                }
+                
+                // Extract the agent name from the path (remove characters/models/ prefix and .vmdl extension)
+                string normalizedPath = fullModelPath;
+                if (normalizedPath.StartsWith("characters/models/", StringComparison.OrdinalIgnoreCase))
+                {
+                    normalizedPath = normalizedPath.Substring("characters/models/".Length);
+                }
+                if (normalizedPath.EndsWith(".vmdl", StringComparison.OrdinalIgnoreCase))
+                {
+                    normalizedPath = normalizedPath.Substring(0, normalizedPath.Length - 5);
+                }
+
+                string? itemName = null;
+                if (item.HasSubKey("item_name"))
+                {
+                    itemName = item.Value["item_name"].EToString();
+                }
+                else if (prefab != null && prefab.HasSubKey("item_name"))
+                {
+                    itemName = prefab["item_name"].EToString();
+                }
+
+                // Get rarity information (same as keychains)
+                var rarityName = item.Value["item_rarity"];
+                RarityDefinition rarity = rarityName == null ? Rarities["default"] : Rarities[rarityName.EToString()];
+
+                // Use the normalized path as the internal name
+                var internalName = normalizedPath;
+
+                var definition = new AgentDefinition
+                {
+                    Name = internalName,
+                    Index = int.Parse(item.Name),
+                    ModelPath = fullModelPath,
+                    LocalizedNames = !string.IsNullOrWhiteSpace(itemName) ? GetLocalizedNames(itemName) : new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase),
+                    Rarity = rarity
+                };
+
+                Agents[definition.Name] = definition;
+            }
+        }
+        
+        Logger.LogInformation($"ParseAgents completed. Total agents found: {Agents.Count}");
     }
 
     public void ParseColors()

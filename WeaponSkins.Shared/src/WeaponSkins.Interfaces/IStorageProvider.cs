@@ -150,4 +150,47 @@ public interface IStorageProvider
     /// <param name="steamId">The SteamID64 of the player.</param>
     /// <returns>A task representing the asynchronous operation.</returns>
     Task RemoveGlovesAsync(ulong steamId);
+
+    /// <summary>
+    /// Store the agents.
+    /// </summary>
+    /// <param name="agents">The agents to store.</param>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    Task StoreAgentsAsync(IEnumerable<(ulong SteamID, Team Team, int AgentIndex)> agents);
+
+    /// <summary>
+    /// Get an agent.
+    /// </summary>
+    /// <param name="steamId">The SteamID64 of the player.</param>
+    /// <param name="team">The team of the player.</param>
+    /// <returns>The agent index.</returns>
+    Task<int?> GetAgentAsync(ulong steamId, Team team);
+
+    /// <summary>
+    /// Get all agents.
+    /// </summary>
+    /// <param name="steamId">The SteamID64 of the player.</param>
+    /// <returns>The agents data.</returns>
+    Task<IEnumerable<(ulong SteamID, Team Team, int AgentIndex)>> GetAgentsAsync(ulong steamId);
+
+    /// <summary>
+    /// Get all agents.
+    /// </summary>
+    /// <returns>The agents data.</returns>
+    Task<IEnumerable<(ulong SteamID, Team Team, int AgentIndex)>> GetAllAgentsAsync();
+
+    /// <summary>
+    /// Remove an agent.
+    /// </summary>
+    /// <param name="steamId">The SteamID64 of the player.</param>
+    /// <param name="team">The team of the player.</param>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    Task RemoveAgentAsync(ulong steamId, Team team);
+
+    /// <summary>
+    /// Remove all agents.
+    /// </summary>
+    /// <param name="steamId">The SteamID64 of the player.</param>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    Task RemoveAgentsAsync(ulong steamId);
 }

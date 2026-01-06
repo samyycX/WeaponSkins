@@ -172,6 +172,36 @@ public class WeaponSkinAPI : IWeaponSkinAPI
         [MaybeNullWhen(false)] out IEnumerable<GloveData> result) =>
         WeaponSkinGetterAPI.TryGetGloveSkins(steamid, out result);
 
+    public bool TryGetAgentSkin(ulong steamid,
+        Team team,
+        out int agentIndex) =>
+        DataService.AgentDataService.TryGetAgent(steamid, team, out agentIndex);
+
+    public bool TryGetAgentSkins(ulong steamid,
+        [MaybeNullWhen(false)] out IEnumerable<(Team Team, int AgentIndex)> result)
+    {
+        var agents = new List<(Team, int)>();
+        
+        if (DataService.AgentDataService.TryGetAgent(steamid, Team.T, out var tIndex))
+        {
+            agents.Add((Team.T, tIndex));
+        }
+        
+        if (DataService.AgentDataService.TryGetAgent(steamid, Team.CT, out var ctIndex))
+        {
+            agents.Add((Team.CT, ctIndex));
+        }
+        
+        if (agents.Count > 0)
+        {
+            result = agents;
+            return true;
+        }
+        
+        result = null;
+        return false;
+    }
+
     public void ResetWeaponSkin(ulong steamid,
         Team team,
         ushort definitionIndex,
@@ -205,6 +235,29 @@ public class WeaponSkinAPI : IWeaponSkinAPI
         if (permanent)
         {
             var _ = Task.Run(async () => await StorageService.Get().RemoveGloveAsync(steamid, team));
+        }
+    }
+
+    public void UpdateAgentSkin(ulong steamid,
+        Team team,
+        int agentIndex,
+        bool permanent = false)
+    {
+        DataService.AgentDataService.SetAgent(steamid, team, agentIndex);
+        if (permanent)
+        {
+            var _ = Task.Run(async () => await StorageService.Get().StoreAgentsAsync(new[] { (steamid, team, agentIndex) }));
+        }
+    }
+
+    public void ResetAgentSkin(ulong steamid,
+        Team team,
+        bool permanent = false)
+    {
+        DataService.AgentDataService.TryRemoveAgent(steamid, team);
+        if (permanent)
+        {
+            var _ = Task.Run(async () => await StorageService.Get().RemoveAgentAsync(steamid, team));
         }
     }
 

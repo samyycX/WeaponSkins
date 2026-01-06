@@ -40,4 +40,17 @@ public struct CCSPlayerInventory_Loadouts
     [UnscopedRef] public ref LoadoutItem this[int team, loadout_slot_t slot] => ref this[team, (int)slot];
 
     [UnscopedRef] public ref LoadoutItem this[int team, int slot] => ref _element0[team][slot];
+
+
+    public void DebugPrint()
+    {
+        for (var team = 0; team < 4; team++)
+        {
+            for (var slot = 0; slot < 57; slot++)
+            {
+                Console.WriteLine(
+                    $"{(Team)team} {(loadout_slot_t)slot} {this[team, slot].ItemId} {this[team, slot].DefinitionIndex}");
+            }
+        }
+    }
 }

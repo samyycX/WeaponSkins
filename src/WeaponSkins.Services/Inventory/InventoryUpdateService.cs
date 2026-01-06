@@ -71,9 +71,12 @@ public class InventoryUpdateService : IInventoryUpdateService
 
         Core.Scheduler.NextWorldUpdate(() =>
         {
-            if (Api.TryGetGloveSkin(player.SteamID, player.Controller.Team, out var glove))
+            if (Api.TryGetGloveSkins(player.SteamID, out var gloves))
             {
-                player.RegiveGlove(InventoryService.Get(player.SteamID));
+                foreach (var glove in gloves)
+                {
+                    player.RegiveGlove(InventoryService.Get(player.SteamID));
+                }
             }
 
             ApplyPlayerAgent(player);
@@ -81,9 +84,12 @@ public class InventoryUpdateService : IInventoryUpdateService
 
         Core.Scheduler.DelayBySeconds(0.1f, () =>
         {
-            if (Api.TryGetGloveSkin(player.SteamID, player.Controller.Team, out var glove))
+            if (Api.TryGetGloveSkins(player.SteamID, out var gloves))
             {
-                player.RegiveGlove(InventoryService.Get(player.SteamID));
+                foreach (var glove in gloves)
+                {
+                    player.RegiveGlove(InventoryService.Get(player.SteamID));
+                }
             }
 
             ApplyPlayerAgent(player);
@@ -189,19 +195,7 @@ public class InventoryUpdateService : IInventoryUpdateService
                 DataService.AgentDataService.SetAgent(agent.SteamID, agent.Team, agent.AgentIndex);
             }
             
-            Core.Scheduler.NextWorldUpdate(() =>
-            {
-                Update(inventory);
-                
-                // Apply gloves to player if they're alive after data is loaded
-                if (PlayerService.TryGetPlayer(steamId, out var player) && player.IsAlive())
-                {
-                    if (Api.TryGetGloveSkin(steamId, player.Controller.Team, out var glove))
-                    {
-                        player.RegiveGlove(InventoryService.Get(steamId));
-                    }
-                }
-            });
+            Core.Scheduler.NextWorldUpdate(() => Update(inventory));
         });
     }
 
@@ -229,18 +223,6 @@ public class InventoryUpdateService : IInventoryUpdateService
             {
                 inventory.UpdateGloveSkin(glove);
             }
-            
-            // Schedule glove application after inventory items are created
-            Core.Scheduler.NextWorldUpdate(() =>
-            {
-                if (PlayerService.TryGetPlayer(inventory.SteamID, out var player) && player.IsAlive())
-                {
-                    if (Api.TryGetGloveSkin(inventory.SteamID, player.Controller.Team, out var glove))
-                    {
-                        player.RegiveGlove(inventory);
-                    }
-                }
-            });
         }
     }
 
@@ -346,16 +328,12 @@ public class InventoryUpdateService : IInventoryUpdateService
             {
                 if (player.IsAlive())
                 {
-                    var teamGlove = updatedGloves.FirstOrDefault(g => g.Team == player.Controller.Team);
-                    if (teamGlove != null)
+                    foreach (var glove in updatedGloves)
                     {
-                        Core.Scheduler.NextWorldUpdate(() =>
+                        if (player.Controller.Team == glove.Team)
                         {
-                            if (player.IsAlive())
-                            {
-                                player.RegiveGlove(InventoryService.Get(steamID));
-                            }
-                        });
+                            player.RegiveGlove(InventoryService.Get(steamID));
+                        }
                     }
                 }
             }

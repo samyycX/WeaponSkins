@@ -1,9 +1,5 @@
 using FluentMigrator.Runner;
 
-using System;
-using System.Collections.Generic;
-using System.Linq;
-
 using Microsoft.Extensions.Logging;
 
 using SwiftlyS2.Shared;
@@ -171,226 +167,6 @@ public class HookInventoryUpdateService : IInventoryUpdateService
         });
     }
 
-    public void ResetWeaponSkin(ulong steamid,
-        Team team,
-        ushort definitionIndex)
-    {
-        if (DataService.WeaponDataService.TryRemoveSkin(steamid, team, definitionIndex))
-        {
-            InventoryService.ResetWeaponSkin(steamid, team, definitionIndex);
-            if (PlayerService.TryGetPlayer(steamid, out var player))
-            {
-                Core.Scheduler.NextWorldUpdate(() =>
-                {
-                    if (player.IsAlive())
-                    {
-                        player.RegiveWeapon(
-                            player.PlayerPawn!.WeaponServices!.MyWeapons.FirstOrDefault(w =>
-                                w.Value!.AttributeManager.Item.ItemDefinitionIndex == definitionIndex &&
-                                player.Controller.Team == team).Value!, definitionIndex);
-                    }
-                });
-            }
-        }
-    }
-
-    public void ResetKnifeSkin(ulong steamid,
-        Team team)
-    {
-        if (DataService.KnifeDataService.TryRemoveKnife(steamid, team))
-        {
-            InventoryService.ResetKnifeSkin(steamid, team);
-            if (PlayerService.TryGetPlayer(steamid, out var player))
-            {
-                Core.Scheduler.NextWorldUpdate(() =>
-                {
-                    if (player.IsAlive())
-                    {
-                        player.RegiveKnife();
-                    }
-                });
-            }
-        }
-    }
-
-    private void ApplyPlayerWeapons(IPlayer player)
-    {
-        if (!Api.TryGetWeaponSkins(player.SteamID, out var weaponSkins) &&
-            !Api.TryGetKnifeSkins(player.SteamID, out var knifeSkins))
-        {
-            return;
-        }
-
-        foreach (var handle in player.PlayerPawn!.WeaponServices!.MyWeapons)
-        {
-            var weapon = handle.Value;
-            if (weapon == null || !weapon.IsValid) continue;
-            ApplyWeaponSkin(player.SteamID, player.Controller.Team, weapon);
-        }
-    }
-
-    private void ApplyPlayerGlove(IPlayer player)
-    {
-        if (!player.IsAlive()) return;
-        var pawn = player.PlayerPawn!;
-        ApplyGlove(player, pawn);
-    }
-
-    private void ApplyWeaponSkins(IPlayer player,
-        IEnumerable<WeaponSkinData> skins)
-    {
-        var weaponMap = skins.ToDictionary(s => s.DefinitionIndex, s => s);
-        foreach (var handle in player.PlayerPawn!.WeaponServices!.MyWeapons)
-        {
-            var weapon = handle.Value;
-            if (weapon == null || !weapon.IsValid) continue;
-            var def = weapon.AttributeManager.Item.ItemDefinitionIndex;
-            if (weaponMap.TryGetValue(def, out var skin))
-            {
-                ApplyWeaponAttributes(weapon, skin);
-            }
-        }
-    }
-
-    private void ApplyKnifeSkins(IPlayer player,
-        IEnumerable<KnifeSkinData> knives)
-    {
-        foreach (var handle in player.PlayerPawn!.WeaponServices!.MyWeapons)
-        {
-            var weapon = handle.Value;
-            if (weapon == null || !weapon.IsValid) continue;
-            if (!Utilities.IsKnifeDefinitionIndex(weapon.AttributeManager.Item.ItemDefinitionIndex)) continue;
-            var knife = knives.LastOrDefault(k => k.Team == player.Controller.Team);
-            if (knife != null)
-            {
-                ApplyKnifeAttributes(weapon, knife);
-            }
-        }
-    }
-
-    private void ApplyWeaponSkin(ulong steamId,
-        Team team,
-        CBasePlayerWeapon weapon)
-    {
-        var def = weapon.AttributeManager.Item.ItemDefinitionIndex;
-        if (Utilities.IsKnifeDefinitionIndex(def))
-        {
-            if (Api.TryGetKnifeSkin(steamId, team, out var knife))
-            {
-                ApplyKnifeAttributes(weapon, knife);
-            }
-
-            return;
-        }
-
-        if (Utilities.IsWeaponDefinitionIndex(def))
-        {
-            if (Api.TryGetWeaponSkin(steamId, team, (ushort)def, out var skin))
-            {
-                ApplyWeaponAttributes(weapon, skin);
-            }
-        }
-    }
-
-    private void ApplyWeaponAttributes(CBasePlayerWeapon weapon,
-        WeaponSkinData skin)
-    {
-        StickerFixService.FixSticker(skin);
-        var item = weapon.AttributeManager.Item;
-        item.ItemDefinitionIndex = skin.DefinitionIndex;
-        item.EntityQuality = (int)skin.Quality;
-        item.NetworkedDynamicAttributes.SetOrAddAttribute("set item texture prefab", skin.Paintkit);
-        item.NetworkedDynamicAttributes.SetOrAddAttribute("set item texture seed", skin.PaintkitSeed);
-        item.NetworkedDynamicAttributes.SetOrAddAttribute("set item texture wear", skin.PaintkitWear);
-        item.AttributeList.SetOrAddAttribute("set item texture prefab", skin.Paintkit);
-        item.AttributeList.SetOrAddAttribute("set item texture seed", skin.PaintkitSeed);
-        item.AttributeList.SetOrAddAttribute("set item texture wear", skin.PaintkitWear);
-
-        var useLegacy = EconService
-            .WeaponToPaintkits[Core.Helpers.GetClassnameByDefinitionIndex(item.ItemDefinitionIndex)]
-            .Where(p => p.Index == skin.Paintkit).FirstOrDefault().UseLegacyModel;
-        weapon.AcceptInputAsync("SetBodygroup", value: $"body,{(useLegacy ? 1 : 0)}");
-
-        if (skin.Quality == EconItemQuality.StatTrak)
-        {
-            var val = BitConverter.Int32BitsToSingle(skin.StattrakCount);
-            item.AttributeList.SetOrAddAttribute("kill eater", val);
-            item.AttributeList.SetOrAddAttribute("kill eater score type", 0);
-            item.NetworkedDynamicAttributes.SetOrAddAttribute("kill eater", val);
-            item.NetworkedDynamicAttributes.SetOrAddAttribute("kill eater score type", 0);
-        }
-
-        if (skin.Nametag != null)
-        {
-            item.CustomName = skin.Nametag;
-        }
-
-        for (var i = 0; i < 6; i++)
-        {
-            var sticker = skin.GetSticker(i);
-            if (sticker == null) continue;
-            item.NetworkedDynamicAttributes.SetOrAddAttribute($"sticker slot {i} id",
-                BitConverter.Int32BitsToSingle(sticker.Id));
-            if (sticker.Schema != 1337)
-            {
-                item.NetworkedDynamicAttributes.SetOrAddAttribute($"sticker slot {i} schema",
-                    BitConverter.Int32BitsToSingle(sticker.Schema));
-                item.NetworkedDynamicAttributes.SetOrAddAttribute($"sticker slot {i} offset x", sticker.OffsetX);
-                item.NetworkedDynamicAttributes.SetOrAddAttribute($"sticker slot {i} offset y", sticker.OffsetY);
-            }
-
-            item.NetworkedDynamicAttributes.SetOrAddAttribute($"sticker slot {i} wear", sticker.Wear);
-            item.NetworkedDynamicAttributes.SetOrAddAttribute($"sticker slot {i} scale", sticker.Scale);
-            item.NetworkedDynamicAttributes.SetOrAddAttribute($"sticker slot {i} rotation", sticker.Rotation);
-        }
-
-        var keychain = skin.Keychain0;
-        if (keychain != null)
-        {
-            item.NetworkedDynamicAttributes.SetOrAddAttribute("keychain slot 0 id",
-                BitConverter.Int32BitsToSingle(keychain.Id));
-            item.NetworkedDynamicAttributes.SetOrAddAttribute("keychain slot 0 offset x", keychain.OffsetX);
-            item.NetworkedDynamicAttributes.SetOrAddAttribute("keychain slot 0 offset y", keychain.OffsetY);
-            item.NetworkedDynamicAttributes.SetOrAddAttribute("keychain slot 0 offset z", keychain.OffsetZ);
-            item.NetworkedDynamicAttributes.SetOrAddAttribute("keychain slot 0 seed",
-                BitConverter.Int32BitsToSingle(keychain.Seed));
-        }
-    }
-
-    private void ApplyKnifeAttributes(CBasePlayerWeapon weapon,
-        KnifeSkinData knife)
-    {
-        var item = weapon.AttributeManager.Item;
-        item.EntityQuality = (int)knife.Quality;
-
-        item.NetworkedDynamicAttributes.SetOrAddAttribute("set item texture prefab", knife.Paintkit);
-        item.NetworkedDynamicAttributes.SetOrAddAttribute("set item texture seed", knife.PaintkitSeed);
-        item.NetworkedDynamicAttributes.SetOrAddAttribute("set item texture wear", knife.PaintkitWear);
-        item.AttributeList.SetOrAddAttribute("set item texture prefab", knife.Paintkit);
-        item.AttributeList.SetOrAddAttribute("set item texture seed", knife.PaintkitSeed);
-        item.AttributeList.SetOrAddAttribute("set item texture wear", knife.PaintkitWear);
-        if (knife.Nametag != null)
-        {
-            item.CustomName = knife.Nametag;
-        }
-
-        if (item.ItemDefinitionIndex != knife.DefinitionIndex)
-        {
-            weapon.AcceptInputAsync("ChangeSubclass", knife.DefinitionIndex.ToString());
-        }
-
-        item.ItemDefinitionIndex = knife.DefinitionIndex;
-
-        if (knife.Quality == EconItemQuality.StatTrak)
-        {
-            var val = BitConverter.Int32BitsToSingle(knife.StattrakCount);
-            item.AttributeList.SetOrAddAttribute("kill eater", val);
-            item.AttributeList.SetOrAddAttribute("kill eater score type", 0);
-            item.NetworkedDynamicAttributes.SetOrAddAttribute("kill eater", val);
-            item.NetworkedDynamicAttributes.SetOrAddAttribute("kill eater score type", 0);
-        }
-    }
-
     public void UpdateWeaponSkins(IEnumerable<WeaponSkinData> skins)
     {
         Dictionary<ulong, List<WeaponSkinData>> updatedSkinMaps = new();
@@ -500,12 +276,50 @@ public class HookInventoryUpdateService : IInventoryUpdateService
             {
                 if (player.IsAlive())
                 {
-                    var teamGlove = updatedGloves.FirstOrDefault(g => g.Team == player.Controller.Team);
-                    if (teamGlove != null)
-                    {
-                        ApplyGlove(player, teamGlove);
-                    }
+                    ApplyGlove(player, updatedGloves.Last());
                 }
+            }
+        }
+    }
+
+    public void ResetWeaponSkin(ulong steamid,
+        Team team,
+        ushort definitionIndex)
+    {
+        if (DataService.WeaponDataService.TryRemoveSkin(steamid, team, definitionIndex))
+        {
+            InventoryService.ResetWeaponSkin(steamid, team, definitionIndex);
+            if (PlayerService.TryGetPlayer(steamid, out var player))
+            {
+                Core.Scheduler.NextWorldUpdate(() =>
+                {
+                    if (player.IsAlive())
+                    {
+                        player.RegiveWeapon(
+                            player.PlayerPawn!.WeaponServices!.MyWeapons.FirstOrDefault(w =>
+                                w.Value!.AttributeManager.Item.ItemDefinitionIndex == definitionIndex &&
+                                player.Controller.Team == team).Value!, definitionIndex);
+                    }
+                });
+            }
+        }
+    }
+
+    public void ResetKnifeSkin(ulong steamid,
+        Team team)
+    {
+        if (DataService.KnifeDataService.TryRemoveKnife(steamid, team))
+        {
+            InventoryService.ResetKnifeSkin(steamid, team);
+            if (PlayerService.TryGetPlayer(steamid, out var player))
+            {
+                Core.Scheduler.NextWorldUpdate(() =>
+                {
+                    if (player.IsAlive())
+                    {
+                        player.RegiveKnife();
+                    }
+                });
             }
         }
     }
@@ -518,69 +332,209 @@ public class HookInventoryUpdateService : IInventoryUpdateService
             InventoryService.ResetGloveSkin(steamid, team);
             if (PlayerService.TryGetPlayer(steamid, out var player))
             {
-                var inv = InventoryService.Get(steamid);
                 Core.Scheduler.NextWorldUpdate(() =>
                 {
-                    Core.Scheduler.NextWorldUpdate(() =>
+                    if (player.IsAlive())
                     {
-                        if (!player.IsAlive()) return;
-                        player.RegiveGlove(inv);
-                    });
-                });
-
-                Core.Scheduler.DelayBySeconds(0.05f, () =>
-                {
-                    if (!player.IsAlive()) return;
-                    player.RegiveGlove(inv);
-                });
-
-                Core.Scheduler.DelayBySeconds(0.2f, () =>
-                {
-                    if (!player.IsAlive()) return;
-                    player.RegiveGlove(inv);
+                        player.RegiveGlove(InventoryService.Get(steamid));
+                    }
                 });
             }
         }
     }
 
-    private void ApplyGlove(IPlayer player,
-        CCSPlayerPawn pawn)
+    private void ApplyWeaponSkins(IPlayer player,
+        IEnumerable<WeaponSkinData> skins)
     {
-        if (!Api.TryGetGloveSkin(player.SteamID, player.Controller.Team, out var glove)) return;
-        ApplyGlove(player, glove);
+        var weaponMap = skins.ToDictionary(s => s.DefinitionIndex, s => s);
+        foreach (var handle in player.PlayerPawn!.WeaponServices!.MyWeapons)
+        {
+            var weapon = handle.Value;
+            if (weapon == null || !weapon.IsValid) continue;
+            var def = weapon.AttributeManager.Item.ItemDefinitionIndex;
+            if (weaponMap.TryGetValue(def, out var skin))
+            {
+                ApplyWeaponAttributes(weapon, skin);
+            }
+        }
+    }
+
+    private void ApplyKnifeSkins(IPlayer player,
+        IEnumerable<KnifeSkinData> knives)
+    {
+        foreach (var handle in player.PlayerPawn!.WeaponServices!.MyWeapons)
+        {
+            var weapon = handle.Value;
+            if (weapon == null || !weapon.IsValid) continue;
+            if (!Utilities.IsKnifeDefinitionIndex(weapon.AttributeManager.Item.ItemDefinitionIndex)) continue;
+            var knife = knives.LastOrDefault(k => k.Team == player.Controller.Team);
+            if (knife != null)
+            {
+                ApplyKnifeAttributes(weapon, knife);
+            }
+        }
+    }
+
+    private void ApplyPlayerWeapons(IPlayer player)
+    {
+        if (!Api.TryGetWeaponSkins(player.SteamID, out var weaponSkins) &&
+            !Api.TryGetKnifeSkins(player.SteamID, out var knifeSkins))
+        {
+            return;
+        }
+
+        foreach (var handle in player.PlayerPawn!.WeaponServices!.MyWeapons)
+        {
+            var weapon = handle.Value;
+            if (weapon == null || !weapon.IsValid) continue;
+            ApplyWeaponSkin(player.SteamID, player.Controller.Team, weapon);
+        }
+    }
+
+    private void ApplyPlayerGlove(IPlayer player)
+    {
+        if (!player.IsAlive()) return;
+        var pawn = player.PlayerPawn!;
+        ApplyGlove(player, pawn);
+    }
+
+    private void ApplyWeaponSkin(ulong steamId,
+        Team team,
+        CBasePlayerWeapon weapon)
+    {
+        var def = weapon.AttributeManager.Item.ItemDefinitionIndex;
+        if (Utilities.IsKnifeDefinitionIndex(def))
+        {
+            if (Api.TryGetKnifeSkin(steamId, team, out var knife))
+            {
+                ApplyKnifeAttributes(weapon, knife);
+            }
+
+            return;
+        }
+
+        if (Utilities.IsWeaponDefinitionIndex(def))
+        {
+            if (Api.TryGetWeaponSkin(steamId, team, (ushort)def, out var skin))
+            {
+                ApplyWeaponAttributes(weapon, skin);
+            }
+        }
+    }
+
+    private void ApplyWeaponAttributes(CBasePlayerWeapon weapon,
+        WeaponSkinData skin)
+    {
+        StickerFixService.FixSticker(skin);
+        var item = weapon.AttributeManager.Item;
+        item.ItemDefinitionIndex = skin.DefinitionIndex;
+        item.EntityQuality = (int)skin.Quality;
+        item.NetworkedDynamicAttributes.SetOrAddAttribute("set item texture prefab", skin.Paintkit);
+        item.NetworkedDynamicAttributes.SetOrAddAttribute("set item texture seed", skin.PaintkitSeed);
+        item.NetworkedDynamicAttributes.SetOrAddAttribute("set item texture wear", skin.PaintkitWear);
+        item.AttributeList.SetOrAddAttribute("set item texture prefab", skin.Paintkit);
+        item.AttributeList.SetOrAddAttribute("set item texture seed", skin.PaintkitSeed);
+        item.AttributeList.SetOrAddAttribute("set item texture wear", skin.PaintkitWear);
+
+        var useLegacy = EconService
+            .WeaponToPaintkits[Core.Helpers.GetClassnameByDefinitionIndex(item.ItemDefinitionIndex)]
+            .Where(p => p.Index == skin.Paintkit).FirstOrDefault().UseLegacyModel;
+        weapon.AcceptInputAsync("SetBodygroup", value: $"body,{(useLegacy ? 1 : 0)}");
+
+        if (skin.Quality == EconItemQuality.StatTrak)
+        {
+            var val = BitConverter.Int32BitsToSingle(skin.StattrakCount);
+            item.AttributeList.SetOrAddAttribute("kill eater", val);
+            item.AttributeList.SetOrAddAttribute("kill eater score type", 0);
+            item.NetworkedDynamicAttributes.SetOrAddAttribute("kill eater", val);
+            item.NetworkedDynamicAttributes.SetOrAddAttribute("kill eater score type", 0);
+        }
+
+        if (skin.Nametag != null)
+        {
+            item.CustomName = skin.Nametag;
+        }
+
+        for (var i = 0; i < 6; i++)
+        {
+            var sticker = skin.GetSticker(i);
+            if (sticker == null) continue;
+            item.NetworkedDynamicAttributes.SetOrAddAttribute($"sticker slot {i} id",
+                BitConverter.Int32BitsToSingle(sticker.Id));
+            if (sticker.Schema != 1337)
+            {
+                item.NetworkedDynamicAttributes.SetOrAddAttribute($"sticker slot {i} schema",
+                    BitConverter.Int32BitsToSingle(sticker.Schema));
+                item.NetworkedDynamicAttributes.SetOrAddAttribute($"sticker slot {i} offset x", sticker.OffsetX);
+                item.NetworkedDynamicAttributes.SetOrAddAttribute($"sticker slot {i} offset y", sticker.OffsetY);
+            }
+
+            item.NetworkedDynamicAttributes.SetOrAddAttribute($"sticker slot {i} wear", sticker.Wear);
+            item.NetworkedDynamicAttributes.SetOrAddAttribute($"sticker slot {i} scale", sticker.Scale);
+            item.NetworkedDynamicAttributes.SetOrAddAttribute($"sticker slot {i} rotation", sticker.Rotation);
+        }
+
+        var keychain = skin.Keychain0;
+        if (keychain != null)
+        {
+            item.NetworkedDynamicAttributes.SetOrAddAttribute("keychain slot 0 id",
+                BitConverter.Int32BitsToSingle(keychain.Id));
+            item.NetworkedDynamicAttributes.SetOrAddAttribute("keychain slot 0 offset x", keychain.OffsetX);
+            item.NetworkedDynamicAttributes.SetOrAddAttribute("keychain slot 0 offset y", keychain.OffsetY);
+            item.NetworkedDynamicAttributes.SetOrAddAttribute("keychain slot 0 offset z", keychain.OffsetZ);
+            item.NetworkedDynamicAttributes.SetOrAddAttribute("keychain slot 0 seed",
+                BitConverter.Int32BitsToSingle(keychain.Seed));
+        }
+    }
+
+    private void ApplyKnifeAttributes(CBasePlayerWeapon weapon,
+        KnifeSkinData knife)
+    {
+        var item = weapon.AttributeManager.Item;
+        item.EntityQuality = (int)knife.Quality;
+
+        item.NetworkedDynamicAttributes.SetOrAddAttribute("set item texture prefab", knife.Paintkit);
+        item.NetworkedDynamicAttributes.SetOrAddAttribute("set item texture seed", knife.PaintkitSeed);
+        item.NetworkedDynamicAttributes.SetOrAddAttribute("set item texture wear", knife.PaintkitWear);
+        item.AttributeList.SetOrAddAttribute("set item texture prefab", knife.Paintkit);
+        item.AttributeList.SetOrAddAttribute("set item texture seed", knife.PaintkitSeed);
+        item.AttributeList.SetOrAddAttribute("set item texture wear", knife.PaintkitWear);
+        if (knife.Nametag != null)
+        {
+            item.CustomName = knife.Nametag;
+        }
+
+
+        if (item.ItemDefinitionIndex != knife.DefinitionIndex)
+        {
+            weapon.AcceptInputAsync("ChangeSubclass", knife.DefinitionIndex.ToString());
+        }
+
+        item.ItemDefinitionIndex = knife.DefinitionIndex;
+
+
+        if (knife.Quality == EconItemQuality.StatTrak)
+        {
+            var val = BitConverter.Int32BitsToSingle(knife.StattrakCount);
+            item.AttributeList.SetOrAddAttribute("kill eater", val);
+            item.AttributeList.SetOrAddAttribute("kill eater score type", 0);
+            item.NetworkedDynamicAttributes.SetOrAddAttribute("kill eater", val);
+            item.NetworkedDynamicAttributes.SetOrAddAttribute("kill eater score type", 0);
+        }
     }
 
     private void ApplyGlove(IPlayer player,
         GloveData glove)
     {
         if (!player.IsAlive()) return;
+        ApplyGlove(player.PlayerPawn!, glove);
+    }
 
-        var inv = InventoryService.Get(player.SteamID);
-        inv.UpdateGloveSkin(glove);
-
-        Core.Scheduler.NextWorldUpdate(() =>
-        {
-            Core.Scheduler.NextWorldUpdate(() =>
-            {
-                if (!player.IsAlive()) return;
-                player.RegiveGlove(inv);
-                ApplyGlove(player.PlayerPawn!, glove);
-            });
-        });
-
-        Core.Scheduler.DelayBySeconds(0.05f, () =>
-        {
-            if (!player.IsAlive()) return;
-            player.RegiveGlove(inv);
-            ApplyGlove(player.PlayerPawn!, glove);
-        });
-
-        Core.Scheduler.DelayBySeconds(0.2f, () =>
-        {
-            if (!player.IsAlive()) return;
-            player.RegiveGlove(inv);
-            ApplyGlove(player.PlayerPawn!, glove);
-        });
+    private void ApplyGlove(IPlayer player,
+        CCSPlayerPawn pawn)
+    {
+        if (!Api.TryGetGloveSkin(player.SteamID, player.Controller.Team, out var glove)) return;
+        ApplyGlove(pawn, glove);
     }
 
     private void ApplyGlove(CCSPlayerPawn pawn,
@@ -597,9 +551,6 @@ public class HookInventoryUpdateService : IInventoryUpdateService
             econGloves.AttributeList.SetOrAddAttribute("set item texture seed", glove.PaintkitSeed);
             econGloves.AttributeList.SetOrAddAttribute("set item texture wear", glove.PaintkitWear);
             econGloves.Initialized = true;
-
-            StaticNativeService.Service.UpdateItemView.CallOriginal(
-                econGloves.Address, 0);
             pawn.AcceptInput("SetBodygroup", "default_gloves,1");
         });
     }

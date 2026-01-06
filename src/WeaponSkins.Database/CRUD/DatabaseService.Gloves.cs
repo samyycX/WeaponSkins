@@ -9,13 +9,12 @@ public partial class DatabaseService
 
     public async Task StoreGlovesAsync(IEnumerable<GloveData> gloves)
     {
-        var gloveList = gloves.ToList();
-        var affectedGloves = await fsql.InsertOrUpdate<GloveModel>()
-            .SetSource(gloveList.Select(glove => GloveModel.FromDataModel(glove)))
+        await fsql.InsertOrUpdate<GloveModel>()
+            .SetSource(gloves.Select(glove => GloveModel.FromDataModel(glove)))
             .ExecuteAffrowsAsync();
 
-        var affectedSkins = await fsql.InsertOrUpdate<SkinModel>()
-            .SetSource(gloveList.Select(glove => SkinModel.FromGloveDataModel(glove)))
+        await fsql.InsertOrUpdate<SkinModel>()
+            .SetSource(gloves.Select(glove => SkinModel.FromGloveDataModel(glove)))
             .ExecuteAffrowsAsync();
     }
 
@@ -25,11 +24,6 @@ public partial class DatabaseService
         var model = await fsql.Select<GloveModel>()
             .Where(glove => glove.SteamID == steamId.ToString() && glove.Team == (short)team)
             .ToOneAsync();
-
-        if (model == null)
-        {
-            return null;
-        }
 
         var data = model.ToDataModel();
         var skinModel = await fsql.Select<SkinModel>()

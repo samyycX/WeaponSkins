@@ -39,7 +39,8 @@ public class ItemPermissionService
             KnifeSkins = source.KnifeSkins,
             GloveSkins = source.GloveSkins,
             Stickers = source.Stickers,
-            Keychains = source.Keychains
+            Keychains = source.Keychains,
+            Agents = source.Agents
         };
     }
 
@@ -177,6 +178,8 @@ public class ItemPermissionService
     public bool CanUseStickers(ulong steamId) => HasPermission(steamId, Config.Stickers);
 
     public bool CanUseKeychains(ulong steamId) => HasPermission(steamId, Config.Keychains);
+
+    public bool CanUseAgents(ulong steamId) => HasPermission(steamId, Config.Agents);
 
     private bool HasPermission(ulong steamId,
         string permission)

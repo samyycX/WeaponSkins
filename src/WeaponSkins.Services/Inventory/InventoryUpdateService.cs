@@ -6,8 +6,10 @@ using SwiftlyS2.Shared.Misc;
 using SwiftlyS2.Shared.Players;
 using SwiftlyS2.Shared.SchemaDefinitions;
 
+using WeaponSkins.Econ;
 using WeaponSkins.Extensions;
 using WeaponSkins.Shared;
+using WeaponSkins.Database;
 
 namespace WeaponSkins.Services;
 
@@ -21,25 +23,31 @@ public class InventoryUpdateService : IInventoryUpdateService
     private ItemPermissionService ItemPermissionService { get; init; }
     private WeaponSkinGetterAPI Api { get; init; }
     private DataService DataService { get; init; }
+    private EconService EconService { get; init; }
+    private StorageService StorageService { get; init; }
 
     public InventoryUpdateService(ISwiftlyCore core,
         InventoryService inventoryService,
         WeaponSkinGetterAPI api,
+        EconService econService,
         PlayerService playerService,
         NativeService nativeService,
         ILogger<InventoryUpdateService> logger,
         ItemPermissionService itemPermissionService,
-        DataService dataService)
+        DataService dataService,
+        StorageService storageService)
     {
         Core = core;
         InventoryService = inventoryService;
         Api = api;
+        EconService = econService;
 
         PlayerService = playerService;
         NativeService = nativeService;
         Logger = logger;
         ItemPermissionService = itemPermissionService;
         DataService = dataService;
+        StorageService = storageService;
         NativeService.OnSOCacheSubscribed += OnSOCacheSubscribed;
 
         Core.GameEvent.HookPost<EventPlayerSpawn>(OnPlayerSpawn);
@@ -70,6 +78,8 @@ public class InventoryUpdateService : IInventoryUpdateService
                     player.RegiveGlove(InventoryService.Get(player.SteamID));
                 }
             }
+
+            ApplyPlayerAgent(player);
         });
 
         Core.Scheduler.DelayBySeconds(0.1f, () =>
@@ -81,15 +91,112 @@ public class InventoryUpdateService : IInventoryUpdateService
                     player.RegiveGlove(InventoryService.Get(player.SteamID));
                 }
             }
+
+            ApplyPlayerAgent(player);
         });
 
         return HookResult.Continue;
     }
 
+    private string? GetRefreshModel(string currentModel,
+        string targetModel)
+    {
+        foreach (var agent in EconService.Agents.Values)
+        {
+            var candidate = agent.ModelPath;
+            if (string.IsNullOrWhiteSpace(candidate)) continue;
+            if (string.Equals(candidate, currentModel, StringComparison.OrdinalIgnoreCase)) continue;
+            if (string.Equals(candidate, targetModel, StringComparison.OrdinalIgnoreCase)) continue;
+            return candidate;
+        }
+
+        return null;
+    }
+
+    private void ApplyPlayerAgent(IPlayer player)
+    {
+        Core.Scheduler.NextWorldUpdate(() =>
+        {
+            if (!player.IsAlive()) return;
+
+            var pawn = player.PlayerPawn!;
+            var current = pawn.CBodyComponent!.SceneNode!.GetSkeletonInstance()
+                .ModelState
+                .ModelName;
+            DataService.AgentDataService.CaptureDefaultModel(player.SteamID, player.Controller.Team, current);
+
+            if (DataService.AgentDataService.TryGetAgent(player.SteamID, player.Controller.Team, out var agentIndex))
+            {
+                var agent = EconService.Agents.Values.FirstOrDefault(a => a.Index == agentIndex);
+                if (agent != null)
+                {
+                    var modelPath = agent.ModelPath;
+                    var refreshModel = GetRefreshModel(current, modelPath);
+                    if (!string.IsNullOrWhiteSpace(refreshModel))
+                    {
+                        pawn.SetModel(refreshModel);
+                        pawn.SetModel(current);
+                    }
+
+                    Core.Scheduler.NextWorldUpdate(() =>
+                    {
+                        if (!player.IsAlive()) return;
+                        pawn.SetModel(modelPath);
+                    });
+                }
+            }
+            else if (DataService.AgentDataService.TryGetDefaultModel(player.SteamID, player.Controller.Team,
+                         out var defaultModel))
+            {
+                var refreshModel = GetRefreshModel(current, defaultModel);
+                if (!string.IsNullOrWhiteSpace(refreshModel))
+                {
+                    pawn.SetModel(refreshModel);
+                    pawn.SetModel(current);
+                }
+
+                Core.Scheduler.NextWorldUpdate(() =>
+                {
+                    if (!player.IsAlive()) return;
+                    pawn.SetModel(defaultModel);
+                });
+            }
+        });
+    }
+
     private void OnSOCacheSubscribed(CCSPlayerInventory inventory,
         SOID_t soid)
     {
-        Update(inventory);
+        Task.Run(async () =>
+        {
+            var steamId = soid.SteamID;
+            
+            var skins = await StorageService.Get().GetSkinsAsync(steamId);
+            foreach (var skin in skins)
+            {
+                DataService.WeaponDataService.StoreSkin(skin);
+            }
+            
+            var knives = await StorageService.Get().GetKnifesAsync(steamId);
+            foreach (var knife in knives)
+            {
+                DataService.KnifeDataService.StoreKnife(knife);
+            }
+            
+            var gloves = await StorageService.Get().GetGlovesAsync(steamId);
+            foreach (var glove in gloves)
+            {
+                DataService.GloveDataService.StoreGlove(glove);
+            }
+            
+            var agents = await StorageService.Get().GetAgentsAsync(steamId);
+            foreach (var agent in agents)
+            {
+                DataService.AgentDataService.SetAgent(agent.SteamID, agent.Team, agent.AgentIndex);
+            }
+            
+            Core.Scheduler.NextWorldUpdate(() => Update(inventory));
+        });
     }
 
     private void Update(CCSPlayerInventory inventory)

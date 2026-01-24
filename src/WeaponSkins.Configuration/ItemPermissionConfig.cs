@@ -13,4 +13,6 @@ public class ItemPermissionConfig
     public string Stickers { get; set; } = "";
 
     public string Keychains { get; set; } = "";
+
+    public string Agents { get; set; } = "";
 }

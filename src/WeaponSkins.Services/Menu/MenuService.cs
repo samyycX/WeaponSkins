@@ -24,13 +24,15 @@ public partial class MenuService
     private EconService EconService { get; init; }
     private LocalizationService LocalizationService { get; init; }
     private ItemPermissionService ItemPermissionService { get; init; }
+    private DataService DataService { get; init; }
 
     public MenuService(ISwiftlyCore core,
         ILogger<MenuService> logger,
         WeaponSkinAPI api,
         EconService econService,
         LocalizationService localizationService,
-        ItemPermissionService itemPermissionService)
+        ItemPermissionService itemPermissionService,
+        DataService dataService)
     {
         Core = core;
         Logger = logger;
@@ -38,6 +40,7 @@ public partial class MenuService
         EconService = econService;
         LocalizationService = localizationService;
         ItemPermissionService = itemPermissionService;
+        DataService = dataService;
     }
 
     public void OpenMainMenu(IPlayer player)
@@ -61,6 +64,9 @@ public partial class MenuService
             () => GetKnifePropertiesMenuSubmenuOption(player), LocalizationService[player].MenuTitleKnifeProperties);
         AddMenuOption(main, ItemPermissionService.CanUseGloveSkins(player.SteamID),
             () => GetGlovePropertiesMenuSubmenuOption(player), LocalizationService[player].MenuTitleGloveProperties);
+
+        AddMenuOption(main, ItemPermissionService.CanUseAgents(player.SteamID),
+            () => GetAgentMenuSubmenuOption(player), LocalizationService[player].MenuTitleAgents);
 
         Core.MenusAPI.OpenMenuForPlayer(player, main.Build());
     }
@@ -157,6 +163,13 @@ public partial class MenuService
         [MaybeNullWhen(false)] out GloveData dataInHand)
     {
         return Api.TryGetGloveSkin(player.SteamID, player.Controller.Team, out dataInHand);
+    }
+
+    private string GetAgentName(AgentDefinition agent, string language)
+    {
+        return agent.LocalizedNames.TryGetValue(language, out var localized)
+            ? localized
+            : agent.LocalizedNames.GetValueOrDefault("english") ?? agent.Name;
     }
 
     private static void AddMenuOption(IMenuBuilderAPI builder,

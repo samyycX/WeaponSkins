@@ -137,4 +137,40 @@ public class EmptyStorageProvider : IStorageProvider
         WarnEmpty();
         return Task.CompletedTask;
     }
+
+    public Task StoreAgentsAsync(IEnumerable<(ulong SteamID, Team Team, int AgentIndex)> agents)
+    {
+        WarnEmpty();
+        return Task.CompletedTask;
+    }
+
+    public Task<int?> GetAgentAsync(ulong steamId, Team team)
+    {
+        WarnEmpty();
+        return Task.FromResult<int?>(null);
+    }
+
+    public Task<IEnumerable<(ulong SteamID, Team Team, int AgentIndex)>> GetAgentsAsync(ulong steamId)
+    {
+        WarnEmpty();
+        return Task.FromResult<IEnumerable<(ulong, Team, int)>>(new List<(ulong, Team, int)>());
+    }
+
+    public Task<IEnumerable<(ulong SteamID, Team Team, int AgentIndex)>> GetAllAgentsAsync()
+    {
+        WarnEmpty();
+        return Task.FromResult<IEnumerable<(ulong, Team, int)>>(new List<(ulong, Team, int)>());
+    }
+
+    public Task RemoveAgentAsync(ulong steamId, Team team)
+    {
+        WarnEmpty();
+        return Task.CompletedTask;
+    }
+
+    public Task RemoveAgentsAsync(ulong steamId)
+    {
+        WarnEmpty();
+        return Task.CompletedTask;
+    }
 }

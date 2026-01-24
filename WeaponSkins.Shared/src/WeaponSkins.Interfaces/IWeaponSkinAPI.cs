@@ -90,5 +90,21 @@ public interface IWeaponSkinAPI
         Team team,
         bool permanent = false);
 
+    bool TryGetAgentSkin(ulong steamid,
+        Team team,
+        out int agentIndex);
+
+    bool TryGetAgentSkins(ulong steamid,
+        [MaybeNullWhen(false)] out IEnumerable<(Team Team, int AgentIndex)> result);
+
+    void UpdateAgentSkin(ulong steamid,
+        Team team,
+        int agentIndex,
+        bool permanent = false);
+
+    void ResetAgentSkin(ulong steamid,
+        Team team,
+        bool permanent = false);
+
     void SetExternalStorageProvider(IStorageProvider provider);
 }

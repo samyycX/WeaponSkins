@@ -23,7 +23,7 @@
   // on linux has string 'kill eater'
   "UpdateItemView": {
     "lib": "server",
-    "windows": "48 89 54 24 ? 48 89 4C 24 ? 55 53 56 57 48 8D 6C 24",
+    "windows": "48 89 54 24 ? 48 89 4C 24 ? 55 56 57 48 8D 6C 24",
     "linux": "55 48 89 E5 41 57 41 56 41 55 49 89 FD 41 54 53 48 81 EC ? ? ? ? 48 89 B5 ? ? ? ? 48 85 F6"
   },
   // Hook GiveNamedItem 

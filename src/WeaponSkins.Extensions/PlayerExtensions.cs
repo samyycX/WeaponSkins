@@ -63,6 +63,12 @@ public static class PlayerExtensions
     {
         Core.Scheduler.NextWorldUpdate(() =>
         {
+            var model = player.PlayerPawn!.CBodyComponent!.SceneNode.GetSkeletonInstance()
+                .ModelState
+                .ModelName;
+            player.PlayerPawn.SetModel("characters/models/tm_jumpsuit/tm_jumpsuit_varianta.vmdl");
+            player.PlayerPawn.SetModel(model);
+            
             var econGloves = player.PlayerPawn.EconGloves;
 
             // player.PlayerPawn.EconGloves.Initialized = false;

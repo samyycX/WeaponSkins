@@ -540,6 +540,12 @@ public class HookInventoryUpdateService : IInventoryUpdateService
     private void ApplyGlove(CCSPlayerPawn pawn,
         GloveData glove)
     {
+        var model = pawn.CBodyComponent!.SceneNode!.GetSkeletonInstance()
+                .ModelState
+                .ModelName;
+            pawn.SetModel("characters/models/tm_jumpsuit/tm_jumpsuit_varianta.vmdl");
+            pawn.SetModel(model);
+
         Core.Scheduler.NextWorldUpdate(() =>
         {
             var econGloves = pawn.EconGloves;

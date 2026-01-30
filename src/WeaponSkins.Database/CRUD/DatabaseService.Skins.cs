@@ -30,13 +30,21 @@ public partial class DatabaseService
         return await fsql.Select<SkinModel>()
             .Where(skin => skin.SteamID == steamId.ToString())
             .ToListAsync()
-            .ContinueWith(task => task.Result.Select(skin => skin.ToDataModel()));
+            .ContinueWith(task => 
+                task.Result
+                    .Where(skin => Utilities.IsWeaponDefinitionIndex(skin.DefinitionIndex))
+                    .Select(skin => skin.ToDataModel())
+                );
     }
 
     public async Task<IEnumerable<WeaponSkinData>> GetAllSkinsAsync()
     {
         return await fsql.Select<SkinModel>().ToListAsync()
-            .ContinueWith(task => task.Result.Select(skin => skin.ToDataModel()));
+            .ContinueWith(task => 
+                task.Result
+                    .Where(skin => Utilities.IsWeaponDefinitionIndex(skin.DefinitionIndex))
+                    .Select(skin => skin.ToDataModel())
+                );
     }
 
     public async Task RemoveSkinAsync(ulong steamId,

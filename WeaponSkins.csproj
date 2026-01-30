@@ -10,7 +10,7 @@
     <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
     <AssemblyName>WeaponSkins</AssemblyName>
     <OutputPath>$(MSBuildThisFileDirectory)build/</OutputPath>
-    <PublishDir>F:/cs2server/game/csgo/addons/swiftlys2/plugins/WeaponSkins</PublishDir>
+    <PublishDir>F:/cs2server/cs2/game/csgo/addons/swiftlys2/plugins/WeaponSkins</PublishDir>
   </PropertyGroup>
 
   <ItemGroup>

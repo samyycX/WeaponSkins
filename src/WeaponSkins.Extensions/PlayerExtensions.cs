@@ -12,8 +12,7 @@ public static class PlayerExtensions
 
     public static bool IsAlive(this IPlayer player)
     {
-        return player.Controller is
-            { IsValid: true, PawnIsAlive: true, PlayerPawn: { Value: { LifeState: (byte)LifeState_t.LIFE_ALIVE } } };
+        return player.IsAlive;
     }
 
     public static void RegiveWeapon(this IPlayer player,

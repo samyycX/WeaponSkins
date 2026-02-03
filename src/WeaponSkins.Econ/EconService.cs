@@ -44,6 +44,8 @@ public class EconService
 
     public Dictionary<string /* Name */, AgentDefinition> Agents { get; set; } = new(StringComparer.OrdinalIgnoreCase);
 
+    public Dictionary<string /* Name */, MusicKitDefinition> MusicKits { get; set; } = new(StringComparer.OrdinalIgnoreCase);
+
     private Dictionary<string /* Language */, Dictionary<string /* Key */, string /* Value */>> Languages { get; } =
         new(StringComparer.OrdinalIgnoreCase);
 
@@ -85,6 +87,8 @@ public class EconService
                         File.ReadAllText(Path.Combine(Core.PluginDataDirectory, "sticker_collections.json")))!;
                 Keychains = JsonSerializer.Deserialize<Dictionary<string, KeychainDefinition>>(
                     File.ReadAllText(Path.Combine(Core.PluginDataDirectory, "keychains.json")))!;
+                MusicKits = JsonSerializer.Deserialize<Dictionary<string, MusicKitDefinition>>(
+                    File.ReadAllText(Path.Combine(Core.PluginDataDirectory, "musickits.json")))!;
 
                 // TrimLanguages(allowedLanguages);
                 GC.Collect();
@@ -168,6 +172,10 @@ public class EconService
         Logger.LogInformation($"Parsed {Keychains.Count} keychains in {watch.ElapsedMilliseconds}ms.");
         watch.Restart();
 
+        ParseMusicKits();
+        Logger.LogInformation($"Parsed {MusicKits.Count} music kits in {watch.ElapsedMilliseconds}ms.");
+        watch.Restart();
+
         var version = new EconVersion { EconDataVersion = GetVersion(items), SchemaVersion = SchemaVersion };
 
         File.WriteAllText(Path.Combine(Core.PluginDataDirectory, "version.lock"), JsonSerializer.Serialize(version));
@@ -199,6 +207,9 @@ public class EconService
 
         File.WriteAllText(Path.Combine(dataDirectory, "keychains.json"),
             JsonSerializer.Serialize(Keychains, options));
+
+        File.WriteAllText(Path.Combine(dataDirectory, "musickits.json"),
+            JsonSerializer.Serialize(MusicKits, options));
 
         Stickers.Clear();
         ClientLootLists.Clear();
@@ -528,6 +539,53 @@ public class EconService
         }
         
         Logger.LogInformation($"ParseAgents completed. Total agents found: {Agents.Count}");
+    }
+
+    public void ParseMusicKits()
+    {
+        var stopwatch = System.Diagnostics.Stopwatch.StartNew();
+
+        foreach (var section in Root.Children)
+        {
+            if (section.Name != "music_definitions")
+            {
+                continue;
+            }
+            
+            foreach (var musicKit in section.Children)
+            {
+                var internalName = musicKit.Name;
+                
+                string? itemName = null;
+                if (musicKit.HasSubKey("loc_name"))
+                {
+                    itemName = musicKit.Value["loc_name"].EToString();
+                }
+                else if (musicKit.HasSubKey("name"))
+                {
+                    itemName = musicKit.Value["name"].EToString();
+                }
+
+                var index = musicKit.HasSubKey("id") ? musicKit.Value["id"].EToInt32() : 0;
+                if (index == 0 && int.TryParse(musicKit.Name, out var parsedIndex))
+                {
+                    index = parsedIndex;
+                }
+
+                var definition = new MusicKitDefinition
+                {
+                    Name = internalName,
+                    Index = index,
+                    LocalizedNames = !string.IsNullOrWhiteSpace(itemName) ? GetLocalizedNames(itemName) : new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase),
+                    Rarity = Rarities.ContainsKey("default") ? Rarities["default"] : new RarityDefinition { Name = "default", Id = 0, Color = new ColorDefinition { Name = "default", HexColor = "FFFFFF" } }
+                };
+
+                MusicKits[definition.Name] = definition;
+            }
+        }
+        
+        stopwatch.Stop();
+        Logger.LogInformation($"Parsed {MusicKits.Count} music kits in {stopwatch.ElapsedMilliseconds}ms.");
     }
 
     public void ParseColors()

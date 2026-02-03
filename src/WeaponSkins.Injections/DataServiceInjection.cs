@@ -1,5 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
 
+using WeaponSkins.Services;
+
 namespace WeaponSkins.Injections;
 
 public static class DataServiceInjection
@@ -11,6 +13,7 @@ public static class DataServiceInjection
             .AddSingleton<KnifeDataService>()
             .AddSingleton<GloveDataService>()
             .AddSingleton<AgentDataService>()
+            .AddSingleton<MusicKitDataService>()
             .AddSingleton<DataService>();
     }
 

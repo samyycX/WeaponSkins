@@ -100,8 +100,6 @@ public record WeaponSkinData
         {
             case 0: Keychain0 = data; break;
         }
-
-        ISwiftlyCore core;
     }
 
     public bool HasKeychain(int slot) => GetKeychain(slot) != null;

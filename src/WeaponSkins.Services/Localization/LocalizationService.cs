@@ -42,6 +42,7 @@ public class PlayerLocalizationService
     public string MenuTitleStickers => Localizer["menu.stickers.title"];
     public string MenuTitleKeychains => Localizer["menu.keychains.title"];
     public string MenuTitleAgents => Localizer["menu.agents.title"];
+    public string MenuTitleMusicKits => Localizer["menu.musickits.title"];
     public string MenuTitleSkinProperties => Localizer["menu.skinproperties.title"];
     public string MenuTitleKnifeProperties => Localizer["menu.knifeproperties.title"];
     public string MenuTitleGloveProperties => Localizer["menu.gloveproperties.title"];

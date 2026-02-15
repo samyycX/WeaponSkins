@@ -1,9 +1,9 @@
 namespace WeaponSkins.Shared;
 
-public class MusicKitDefinition
+public record MusicKitDefinition
 {
-    public string Name { get; set; } = string.Empty;
-    public int Index { get; set; }
-    public Dictionary<string, string> LocalizedNames { get; set; } = new(StringComparer.OrdinalIgnoreCase);
-    public RarityDefinition Rarity { get; set; } = null!;
+    public required string Name { get; init; }
+    public required int Index { get; init; }
+    public required Dictionary<string, string> LocalizedNames { get; init; }
+    public required RarityDefinition Rarity { get; init; }
 }

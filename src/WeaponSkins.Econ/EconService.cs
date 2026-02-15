@@ -73,30 +73,37 @@ public class EconService
                     File.ReadAllText(Path.Combine(Core.PluginDataDirectory, "version.lock")));
             if (lockVersion?.EconDataVersion == version && lockVersion.SchemaVersion == SchemaVersion)
             {
-                Logger.LogInformation("Econ data is up to date, skipping parsing...");
-                // TODO read from json
-                Items = JsonSerializer.Deserialize<Dictionary<string, ItemDefinition>>(
-                    File.ReadAllText(Path.Combine(Core.PluginDataDirectory, "items.json")))!;
-                Agents = JsonSerializer.Deserialize<Dictionary<string, AgentDefinition>>(
-                    File.ReadAllText(Path.Combine(Core.PluginDataDirectory, "agents.json")))!;
-                WeaponToPaintkits =
-                    JsonSerializer.Deserialize<Dictionary<string, List<PaintkitDefinition>>>(
-                        File.ReadAllText(Path.Combine(Core.PluginDataDirectory, "weapon_to_paintkits.json")))!;
-                StickerCollections =
-                    JsonSerializer.Deserialize<Dictionary<string, StickerCollectionDefinition>>(
-                        File.ReadAllText(Path.Combine(Core.PluginDataDirectory, "sticker_collections.json")))!;
-                Keychains = JsonSerializer.Deserialize<Dictionary<string, KeychainDefinition>>(
-                    File.ReadAllText(Path.Combine(Core.PluginDataDirectory, "keychains.json")))!;
-                MusicKits = JsonSerializer.Deserialize<Dictionary<string, MusicKitDefinition>>(
-                    File.ReadAllText(Path.Combine(Core.PluginDataDirectory, "musickits.json")))!;
+                var files = new[] { "items.json", "agents.json", "weapon_to_paintkits.json", "sticker_collections.json", "keychains.json", "musickits.json" };
+                var allFilesExist = files.All(f => File.Exists(Path.Combine(Core.PluginDataDirectory, f)));
 
-                // TrimLanguages(allowedLanguages);
-                GC.Collect();
-                GC.WaitForPendingFinalizers();
-                GC.Collect();
-                var endMemory = GC.GetTotalMemory(true);
-                Logger.LogInformation($"Memory usage: {endMemory - startMemory} bytes");
-                return;
+                if (allFilesExist)
+                {
+                    Logger.LogInformation("Econ data is up to date, skipping parsing...");
+                    Items = JsonSerializer.Deserialize<Dictionary<string, ItemDefinition>>(
+                        File.ReadAllText(Path.Combine(Core.PluginDataDirectory, "items.json")))!;
+                    Agents = JsonSerializer.Deserialize<Dictionary<string, AgentDefinition>>(
+                        File.ReadAllText(Path.Combine(Core.PluginDataDirectory, "agents.json")))!;
+                    WeaponToPaintkits =
+                        JsonSerializer.Deserialize<Dictionary<string, List<PaintkitDefinition>>>(
+                            File.ReadAllText(Path.Combine(Core.PluginDataDirectory, "weapon_to_paintkits.json")))!;
+                    StickerCollections =
+                        JsonSerializer.Deserialize<Dictionary<string, StickerCollectionDefinition>>(
+                            File.ReadAllText(Path.Combine(Core.PluginDataDirectory, "sticker_collections.json")))!;
+                    Keychains = JsonSerializer.Deserialize<Dictionary<string, KeychainDefinition>>(
+                        File.ReadAllText(Path.Combine(Core.PluginDataDirectory, "keychains.json")))!;
+                    MusicKits = JsonSerializer.Deserialize<Dictionary<string, MusicKitDefinition>>(
+                        File.ReadAllText(Path.Combine(Core.PluginDataDirectory, "musickits.json")))!;
+
+                    // TrimLanguages(allowedLanguages);
+                    GC.Collect();
+                    GC.WaitForPendingFinalizers();
+                    GC.Collect();
+                    var endMemory = GC.GetTotalMemory(true);
+                    Logger.LogInformation($"Memory usage: {endMemory - startMemory} bytes");
+                    return;
+                }
+                
+                Logger.LogWarning("Some econ data files are missing, re-parsing...");
             }
         }
 

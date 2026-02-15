@@ -30,24 +30,15 @@ public partial class MenuService
 
                 var truncatedName = musicKitName.Length > 30 ? musicKitName.Substring(0, 27) + "..." : musicKitName;
                 var index = musicKit.Index;
-                
-                var submenuOption = new SubmenuMenuOption(truncatedName, () =>
+
+                var selectOption = new ButtonMenuOption(truncatedName);
+                selectOption.Click += (_, args) =>
                 {
-                    var detailMenu = Core.MenusAPI.CreateBuilder();
-                    detailMenu.Design.SetMenuTitle(musicKitName);
-                    
-                    var selectOption = new ButtonMenuOption(LocalizationService[player].MenuReset.Replace("Reset", "Select"));
-                    selectOption.Click += (_, args) =>
-                    {
-                        Api.SetMusicKit(player.SteamID, index);
-                        return ValueTask.CompletedTask;
-                    };
-                    detailMenu.AddOption(selectOption);
-                    
-                    return detailMenu.Build();
-                });
-                
-                menu.AddOption(submenuOption);
+                    Api.SetMusicKit(args.Player.SteamID, index);
+                    return ValueTask.CompletedTask;
+                };
+
+                menu.AddOption(selectOption);
             }
 
             return menu.Build();

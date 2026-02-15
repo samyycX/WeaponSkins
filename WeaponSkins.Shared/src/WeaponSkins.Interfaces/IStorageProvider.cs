@@ -193,4 +193,38 @@ public interface IStorageProvider
     /// <param name="steamId">The SteamID64 of the player.</param>
     /// <returns>A task representing the asynchronous operation.</returns>
     Task RemoveAgentsAsync(ulong steamId);
+
+    /// <summary>
+    /// Store the music kits.
+    /// </summary>
+    /// <param name="musicKits">The music kits to store.</param>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    Task StoreMusicKitsAsync(IEnumerable<(ulong SteamID, int MusicKitIndex)> musicKits);
+
+    /// <summary>
+    /// Get a music kit.
+    /// </summary>
+    /// <param name="steamId">The SteamID64 of the player.</param>
+    /// <returns>The music kit index.</returns>
+    Task<int?> GetMusicKitAsync(ulong steamId);
+
+    /// <summary>
+    /// Get all music kits.
+    /// </summary>
+    /// <param name="steamId">The SteamID64 of the player.</param>
+    /// <returns>The music kits data.</returns>
+    Task<IEnumerable<(ulong SteamID, int MusicKitIndex)>> GetMusicKitsAsync(ulong steamId);
+
+    /// <summary>
+    /// Get all music kits.
+    /// </summary>
+    /// <returns>The music kits data.</returns>
+    Task<IEnumerable<(ulong SteamID, int MusicKitIndex)>> GetAllMusicKitsAsync();
+
+    /// <summary>
+    /// Remove a music kit.
+    /// </summary>
+    /// <param name="steamId">The SteamID64 of the player.</param>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    Task RemoveMusicKitAsync(ulong steamId);
 }

@@ -23,6 +23,8 @@ public class DatabaseSynchronizeService
             gloves.ToList().ForEach(glove => DataService.GloveDataService.StoreGlove(glove));
             var agents = await DatabaseService.GetAllAgentsAsync();
             agents.ToList().ForEach(agent => DataService.AgentDataService.SetAgent(agent.SteamID, agent.Team, agent.AgentIndex));
+            var musicKits = await DatabaseService.GetAllMusicKitsAsync();
+            musicKits.ToList().ForEach(mk => DataService.MusicKitDataService.SetMusicKit(mk.SteamID, mk.MusicKitIndex));
         });
     }
 }

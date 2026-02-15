@@ -333,4 +333,71 @@ public class CCSPlayerInventory : INativeHandle
             }
         });
     }
+
+    public void UpdateMusicKit(int musicKitIndex)
+    {
+        Core.Scheduler.NextWorldUpdate(() =>
+        {
+            var item = NativeService.CreateCEconItemInstance();
+            
+            for (int teamIndex = 0; teamIndex < 2; teamIndex++)
+            {
+                var team = (Team)teamIndex;
+                ref var loadout = ref Loadouts[team, loadout_slot_t.LOADOUT_SLOT_MUSICKIT];
+                
+                if (teamIndex == 0)
+                {
+                    if (IsValidItemID(loadout.ItemId) && TryGetEconItemByItemID(loadout.ItemId, out var oldItem))
+                    {
+                        if (loadout.ItemId != GetDefaultMusicKitItemID())
+                        {
+                            SOCache.RemoveObject(oldItem);
+                        }
+                        SODestroyed(SteamID, oldItem);
+                    }
+
+                    item.AccountID = new CSteamID(SteamID).GetAccountID().m_AccountID;
+                    item.ItemID = GetNewItemID();
+                    item.InventoryPosition = GetNewInventoryPosition();
+                    item.DefinitionIndex = 1314;
+                    
+                    item.ConfigureAttributes(customData =>
+                    {
+                        customData.SetMusicId(musicKitIndex);
+                    });
+                    
+                    SOCache.AddObject(item);
+                    SOCreated(SteamID, item);
+                    SOUpdated(SteamID, item);
+                }
+                
+                loadout.ItemId = item.ItemID;
+                loadout.DefinitionIndex = 1314;
+            }
+        });
+    }
+
+    public ulong GetDefaultMusicKitItemID()
+    {
+        return _defaultLoadouts[(Team)0, loadout_slot_t.LOADOUT_SLOT_MUSICKIT].ItemId;
+    }
+
+    public void ResetMusicKit()
+    {
+        Core.Scheduler.NextWorldUpdate(() =>
+        {
+            for (int teamIndex = 0; teamIndex < 2; teamIndex++)
+            {
+                var team = (Team)teamIndex;
+                ref var loadout = ref Loadouts[team, loadout_slot_t.LOADOUT_SLOT_MUSICKIT];
+                loadout = _defaultLoadouts[team, loadout_slot_t.LOADOUT_SLOT_MUSICKIT];
+                
+                if (teamIndex == 0 && TryGetEconItemByItemID(loadout.ItemId, out var item))
+                {
+                    SOCreated(SteamID, item);
+                    SOUpdated(SteamID, item);
+                }
+            }
+        });
+    }
 }

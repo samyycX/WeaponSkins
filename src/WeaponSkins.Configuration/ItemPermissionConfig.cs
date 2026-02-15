@@ -15,4 +15,6 @@ public class ItemPermissionConfig
     public string Keychains { get; set; } = "";
 
     public string Agents { get; set; } = "";
+
+    public string MusicKits { get; set; } = "";
 }

@@ -1,3 +1,5 @@
+using WeaponSkins.Services;
+
 namespace WeaponSkins;
 
 public class DataService
@@ -10,16 +12,20 @@ public class DataService
 
     public AgentDataService AgentDataService { get; init; }
 
+    public MusicKitDataService MusicKitDataService { get; init; }
+
     public DataService(
         WeaponDataService weaponDataService,
         KnifeDataService knifeDataService,
         GloveDataService gloveDataService,
-        AgentDataService agentDataService
+        AgentDataService agentDataService,
+        MusicKitDataService musicKitDataService
     )
     {
         WeaponDataService = weaponDataService;
         KnifeDataService = knifeDataService;
         GloveDataService = gloveDataService;
         AgentDataService = agentDataService;
+        MusicKitDataService = musicKitDataService;
     }
 }

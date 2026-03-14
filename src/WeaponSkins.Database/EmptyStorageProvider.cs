@@ -173,4 +173,34 @@ public class EmptyStorageProvider : IStorageProvider
         WarnEmpty();
         return Task.CompletedTask;
     }
+
+    public Task StoreMusicKitsAsync(IEnumerable<(ulong SteamID, int MusicKitIndex)> musicKits)
+    {
+        WarnEmpty();
+        return Task.CompletedTask;
+    }
+
+    public Task<int?> GetMusicKitAsync(ulong steamId)
+    {
+        WarnEmpty();
+        return Task.FromResult<int?>(null);
+    }
+
+    public Task<IEnumerable<(ulong SteamID, int MusicKitIndex)>> GetMusicKitsAsync(ulong steamId)
+    {
+        WarnEmpty();
+        return Task.FromResult<IEnumerable<(ulong, int)>>(new List<(ulong, int)>());
+    }
+
+    public Task<IEnumerable<(ulong SteamID, int MusicKitIndex)>> GetAllMusicKitsAsync()
+    {
+        WarnEmpty();
+        return Task.FromResult<IEnumerable<(ulong, int)>>(new List<(ulong, int)>());
+    }
+
+    public Task RemoveMusicKitAsync(ulong steamId)
+    {
+        WarnEmpty();
+        return Task.CompletedTask;
+    }
 }

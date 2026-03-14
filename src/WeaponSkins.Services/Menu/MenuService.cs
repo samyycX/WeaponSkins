@@ -67,6 +67,8 @@ public partial class MenuService
 
         AddMenuOption(main, ItemPermissionService.CanUseAgents(player.SteamID),
             () => GetAgentMenuSubmenuOption(player), LocalizationService[player].MenuTitleAgents);
+        AddMenuOption(main, ItemPermissionService.CanUseMusicKits(player.SteamID),
+            () => GetMusicKitMenuSubmenuOption(player), LocalizationService[player].MenuTitleMusicKits);
 
         Core.MenusAPI.OpenMenuForPlayer(player, main.Build());
     }

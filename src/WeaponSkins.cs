@@ -2,6 +2,7 @@ using System.IO.MemoryMappedFiles;
 using System.Runtime.InteropServices;
 
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 
 using SwiftlyS2.Shared.Plugins;
 using SwiftlyS2.Shared;
@@ -10,9 +11,6 @@ using SwiftlyS2.Shared.Commands;
 using SwiftlyS2.Shared.SteamAPI;
 
 using Tomlyn.Extensions.Configuration;
-
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Options;
 
 using SwiftlyS2.Shared.Natives;
 using SwiftlyS2.Shared.SchemaDefinitions;

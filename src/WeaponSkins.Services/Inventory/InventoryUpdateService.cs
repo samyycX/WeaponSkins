@@ -195,6 +195,12 @@ public class InventoryUpdateService : IInventoryUpdateService
                 DataService.AgentDataService.SetAgent(agent.SteamID, agent.Team, agent.AgentIndex);
             }
             
+            var musicKit = await StorageService.Get().GetMusicKitAsync(steamId);
+            if (musicKit.HasValue)
+            {
+                DataService.MusicKitDataService.SetMusicKit(steamId, musicKit.Value);
+            }
+            
             Core.Scheduler.NextWorldUpdate(() => Update(inventory));
         });
     }
@@ -223,6 +229,11 @@ public class InventoryUpdateService : IInventoryUpdateService
             {
                 inventory.UpdateGloveSkin(glove);
             }
+        }
+
+        if (DataService.MusicKitDataService.TryGetMusicKit(inventory.SteamID, out var musicKitIndex))
+        {
+            inventory.UpdateMusicKit(musicKitIndex);
         }
     }
 

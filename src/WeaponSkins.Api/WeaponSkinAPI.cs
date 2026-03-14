@@ -261,6 +261,29 @@ public class WeaponSkinAPI : IWeaponSkinAPI
         }
     }
 
+    public void SetMusicKit(ulong steamid,
+        int musicKitIndex,
+        bool permanent = true)
+    {
+        DataService.MusicKitDataService.SetMusicKit(steamid, musicKitIndex);
+        InventoryService.UpdateMusicKit(steamid, musicKitIndex);
+        if (permanent)
+        {
+            var _ = Task.Run(async () => await StorageService.Get().StoreMusicKitsAsync([(steamid, musicKitIndex)]));
+        }
+    }
+
+    public void ResetMusicKit(ulong steamid,
+        bool permanent = true)
+    {
+        DataService.MusicKitDataService.RemoveMusicKit(steamid);
+        InventoryService.ResetMusicKit(steamid);
+        if (permanent)
+        {
+            var _ = Task.Run(async () => await StorageService.Get().RemoveMusicKitAsync(steamid));
+        }
+    }
+
     public void SetExternalStorageProvider(IStorageProvider provider)
     {
         StorageService.Set(provider);

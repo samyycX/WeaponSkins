@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
 using SwiftlyS2.Shared;
+using SwiftlyS2.Shared.Events;
 
 using WeaponSkins.Configuration;
 using WeaponSkins.Shared;
@@ -29,19 +30,25 @@ public class StorageService
         Provider = emptyStorageProvider;
         DatabaseService = databaseService;
         DatabaseSynchronizeService = databaseSynchronizeService;
-        var config = options.CurrentValue;
 
+        Configure(options.CurrentValue);
+
+        options.OnChange(Configure);
+    }
+
+    public void Configure(MainConfigModel config)
+    {
         if (config.StorageBackend == "inherit")
         {
             Logger.LogInformation("Using inherited database storage backend.");
-            DatabaseService.Start(core.Database);
+            DatabaseService.Start(Core.Database);
             Provider = DatabaseService;
             DatabaseSynchronizeService.Synchronize();
         }
         else if (config.StorageBackend == "sqlite")
         {
             Logger.LogInformation("Using SQLite storage backend.");
-            var path = Path.Combine(core.PluginDataDirectory, "weaponskins.db");
+            var path = Path.Combine(Core.PluginDataDirectory, "weaponskins.db");
             if (!File.Exists(path))
             {
                 File.Create(path).Close();
@@ -54,13 +61,26 @@ public class StorageService
         else if (config.StorageBackend == "external")
         {
             Logger.LogInformation("Using external storage backend.");
-            Provider = emptyStorageProvider;
         }
         else
         {
             Logger.LogError("Invalid storage backend: {Backend}", config.StorageBackend);
             throw new InvalidOperationException($"Invalid storage backend: {config.StorageBackend}");
         }
+
+        if (config.SyncFromDatabaseWhenPlayerJoin)
+        {
+            Logger.LogInformation("Synchronizing data from database when player join.");
+            Core.Event.OnClientPutInServer += OnClientPutInServer;
+        } else {
+            Logger.LogInformation("Not synchronizing data from database when player join.");
+            Core.Event.OnClientPutInServer -= OnClientPutInServer;
+        }
+    }
+
+    private void OnClientPutInServer(IOnClientPutInServerEvent @event)
+    {
+        DatabaseSynchronizeService.Synchronize();
     }
 
     public void Set(IStorageProvider provider)

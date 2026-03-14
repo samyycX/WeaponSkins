@@ -8,5 +8,7 @@ public class MainConfigModel
 
     public string InventoryUpdateBackend { get; set; } = "hook";
 
+    public bool SyncFromDatabaseWhenPlayerJoin { get; set; } = false;
+
     public ItemPermissionConfig ItemPermissions { get; set; } = new();
 }

@@ -25,7 +25,7 @@ The `config.toml` should have the following structure in `Main` section:
 [Main]
 StorageBackend = "inherit"
 InventoryUpdateBackend = "hook"
-SyncFromDatabaseWhenPlayerJoin = falses
+SyncFromDatabaseWhenPlayerJoin = false
 ```
 
 #### `StorageBackend`

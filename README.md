@@ -19,6 +19,29 @@
 - Player-based skin name localization
 - Completely game-based econ data dumping (no network required)
 
+## Main Configuration
+The `config.toml` should have the following structure in `Main` section:
+```toml
+[Main]
+StorageBackend = "inherit"
+InventoryUpdateBackend = "hook"
+SyncFromDatabaseWhenPlayerJoin = falses
+```
+
+#### `StorageBackend`
+When set to `inherit`, the plugin use the database configuration from swiftlys2 database configuration.
+
+When set to `sqlite`, the plugin use its own file-based sqlite database.
+
+#### `InventoryUpdateBackend`
+Recommended to set to `hook` for now. Another option is `inventory` but its deprecated.
+
+#### `SyncFromDatabaseWhenPlayerJoin`
+When set to true, the plugin will automatically synchronize skin data from database when a player join.
+
+The update is asynchronous so it won't introduce lags in theory.
+
+
 ## Item Permissions
 Gate entire feature groups with a single permission string in `config.toml`:
 ```toml

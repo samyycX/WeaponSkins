@@ -111,6 +111,31 @@ public partial class MenuService
 
         main.AddOption(setStattrakOption);
 
+        var unsetStattrakOption = new ButtonMenuOption(LocalizationService[player].MenuSkinPropertiesUnsetStattrak);
+        unsetStattrakOption.Click += (_,
+            args) =>
+        {
+            Api.UpdateWeaponSkin(weaponInHand.SteamID, weaponInHand.Team, weaponInHand.DefinitionIndex, skin =>
+            {
+                skin.Quality = EconItemQuality.Normal;
+            }, true);
+            return ValueTask.CompletedTask;
+        };
+
+        main.AddOption(unsetStattrakOption);
+
+        var setSouvenirOption = new ButtonMenuOption(LocalizationService[player].MenuSkinPropertiesSetSouvenir);
+        setSouvenirOption.Click += (_,
+            args) =>
+        {
+            Api.UpdateWeaponSkin(weaponInHand.SteamID, weaponInHand.Team, weaponInHand.DefinitionIndex, skin =>
+            {
+                skin.Quality = EconItemQuality.Souvenir;
+            }, true);
+            return ValueTask.CompletedTask;
+        };
+        main.AddOption(setSouvenirOption);
+
         var unsetSouvenirOption = new ButtonMenuOption(LocalizationService[player].MenuSkinPropertiesUnsetSouvenir);
         unsetSouvenirOption.Click += (_,
             args) =>
@@ -123,32 +148,6 @@ public partial class MenuService
         };
 
         main.AddOption(unsetSouvenirOption);
-
-        var setSouvenirOption = new ButtonMenuOption(LocalizationService[player].MenuSkinPropertiesSetSouvenir);
-        setSouvenirOption.Click += (_,
-            args) =>
-        {
-            Api.UpdateWeaponSkin(weaponInHand.SteamID, weaponInHand.Team, weaponInHand.DefinitionIndex, skin =>
-            {
-                skin.Quality = EconItemQuality.Souvenir;
-            }, true);
-            return ValueTask.CompletedTask;
-        };
-
-        main.AddOption(setSouvenirOption);
-
-        var unsetStattrakOption = new ButtonMenuOption(LocalizationService[player].MenuSkinPropertiesUnsetStattrak);
-        unsetStattrakOption.Click += (_,
-            args) =>
-        {
-            Api.UpdateWeaponSkin(weaponInHand.SteamID, weaponInHand.Team, weaponInHand.DefinitionIndex, skin =>
-            {
-                skin.Quality = EconItemQuality.Normal;
-            }, true);   
-            return ValueTask.CompletedTask;
-        };
-
-        main.AddOption(unsetStattrakOption);
 
         var setStattrakCountOption = new InputMenuOption(
             LocalizationService[player].MenuSkinPropertiesStattrakCount(weaponInHand.StattrakCount),

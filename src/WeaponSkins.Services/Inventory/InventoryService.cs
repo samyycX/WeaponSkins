@@ -143,4 +143,20 @@ public class InventoryService
             inventory.ResetGloveSkin(team);
         }
     }
+
+    public void UpdateMusicKit(ulong steamid, int musicKitIndex)
+    {
+        if (TryGet(steamid, out var inventory))
+        {
+            inventory.UpdateMusicKit(musicKitIndex);
+        }
+    }
+
+    public void ResetMusicKit(ulong steamid)
+    {
+        if (TryGet(steamid, out var inventory))
+        {
+            inventory.ResetMusicKit();
+        }
+    }
 }

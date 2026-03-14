@@ -25,7 +25,7 @@ public partial class MenuService
             KeychainDefinitions[data.Id] = definition;
         }
 
-        return definition.LocalizedNames[language];
+        return EconService.GetLocalizedName(definition.LocalizedNames, language);
     }
 
     private IMenuAPI BuildKeychainMenuBySlot(IPlayer player,
@@ -57,8 +57,8 @@ public partial class MenuService
         var sorted = EconService.Keychains.OrderByDescending(k => k.Value.Rarity.Id).ToList();
         foreach (var (index, keychain) in sorted)
         {
-            main.Design.SetMenuTitle(keychain.LocalizedNames[language]);
-            var option = new ButtonMenuOption(HtmlGradient.GenerateGradientText(keychain.LocalizedNames[language],
+            main.Design.SetMenuTitle(EconService.GetLocalizedName(keychain.LocalizedNames, language));
+            var option = new ButtonMenuOption(HtmlGradient.GenerateGradientText(EconService.GetLocalizedName(keychain.LocalizedNames, language),
                 keychain.Rarity.Color.HexColor));
             option.Click += (_,
                 args) =>
@@ -87,8 +87,6 @@ public partial class MenuService
 
     public IMenuAPI BuildKeychainMenu(IPlayer player)
     {
-        var language = GetLanguage(player);
-
         var main = Core.MenusAPI.CreateBuilder();
         main.Design.SetMenuTitle(LocalizationService[player].MenuTitleKeychains);
         for (int i = 0; i < 1; i++)
@@ -97,7 +95,7 @@ public partial class MenuService
                 $"[{i + 1}] Slot";
             var slot = i;
             main.AddOption(new SubmenuMenuOption(title,
-                () => Task.FromResult(BuildKeychainMenuBySlot(player, slot, language, title))));
+                () => Task.FromResult(BuildKeychainMenuBySlot(player, slot, player.PlayerLanguage.Value, title))));
         }
 
         var menu = main.Build();

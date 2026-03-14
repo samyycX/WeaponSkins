@@ -26,6 +26,7 @@ The `config.toml` should have the following structure in `Main` section:
 StorageBackend = "inherit"
 InventoryUpdateBackend = "hook"
 SyncFromDatabaseWhenPlayerJoin = false
+ItemLanguages = []
 ```
 
 #### `StorageBackend`
@@ -41,6 +42,15 @@ When set to true, the plugin will automatically synchronize skin data from datab
 
 The update is asynchronous so it won't introduce lags in theory.
 
+### `ItemLanguages`
+When unset or set to empty list, the plugin will load item and skin names in all languages.
+
+When set to a list of language, the **first** language will be used as default fallback language, and only  languages in this list will be loaded and set for player based on their game language.
+
+This configuration helps optimizing your memory usage, reducing 80MB at max.
+
+Check the `Code` column in this table for all available languages: 
+[Available language codes](https://swiftlys2.net/docs/development/translations/#language-codes)
 
 ## Item Permissions
 Gate entire feature groups with a single permission string in `config.toml`:

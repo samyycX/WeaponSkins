@@ -6,12 +6,15 @@ using System.Text.Json;
 using System.Text.RegularExpressions;
 
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 using SwiftlyS2.Shared;
 
 using ValveKeyValue;
 
+using WeaponSkins.Configuration;
 using WeaponSkins.Shared;
+
 using AgentDefinition = WeaponSkins.Shared.AgentDefinition;
 
 namespace WeaponSkins.Econ;
@@ -21,6 +24,9 @@ public class EconService
     private ISwiftlyCore Core { get; init; }
     private KVObject Root { get; set; }
     private ILogger<EconService> Logger { get; init; }
+    private MainConfigModel Config { get; init; }
+    private string _PrimaryLanguage { get; set; } = "english";
+    private List<string> _RequiredLanguages { get; set; } = [];
 
     public Dictionary<string /* Name */, ItemDefinition> Items { get; set; } = new(StringComparer.OrdinalIgnoreCase);
 
@@ -51,17 +57,32 @@ public class EconService
 
     private Dictionary<string, string> RevolvingLootLists { get; } = new(StringComparer.OrdinalIgnoreCase);
 
-    private const int SchemaVersion = 17;
+    private const int SchemaVersion = 25;
 
     public EconService(ISwiftlyCore core,
-        ILogger<EconService> logger)
+        ILogger<EconService> logger,
+        IOptions<MainConfigModel> config)
     {
         Core = core;
         Logger = logger;
+        Config = config.Value;
+
+        var itemLanguages = Config.ItemLanguages;
+        if (itemLanguages.Count == 0)
+        {
+            Logger.LogInformation("No item languages specified, using default languages setting...");
+            _PrimaryLanguage = "english";
+            _RequiredLanguages = [];
+        }
+        else
+        {
+            _PrimaryLanguage = LanguageCodeToTranslationKey[itemLanguages[0]];
+            _RequiredLanguages = itemLanguages.Select(l => LanguageCodeToTranslationKey[l]).ToList();
+            Logger.LogInformation($"Item languages specified, primary language is {_PrimaryLanguage} and required languages are {string.Join(", ", _RequiredLanguages)}...");
+        }
 
         var items = Core.GameFileSystem.ReadFile("scripts/items/items_game.txt", "GAME");
         var version = GetVersion(items);
-        string[] allowedLanguages = ["english", "schinese"];
         if (File.Exists(Path.Combine(Core.PluginDataDirectory, "version.lock")))
         {
             GC.Collect();
@@ -71,7 +92,7 @@ public class EconService
             var lockVersion =
                 JsonSerializer.Deserialize<EconVersion>(
                     File.ReadAllText(Path.Combine(Core.PluginDataDirectory, "version.lock")));
-            if (lockVersion?.EconDataVersion == version && lockVersion.SchemaVersion == SchemaVersion)
+            if (new HashSet<string>(itemLanguages).SetEquals(lockVersion?.ItemLanguages ?? []) && lockVersion?.EconDataVersion == version && lockVersion.SchemaVersion == SchemaVersion)
             {
                 var files = new[] { "items.json", "agents.json", "weapon_to_paintkits.json", "sticker_collections.json", "keychains.json", "musickits.json" };
                 var allFilesExist = files.All(f => File.Exists(Path.Combine(Core.PluginDataDirectory, f)));
@@ -102,7 +123,7 @@ public class EconService
                     Logger.LogInformation($"Memory usage: {endMemory - startMemory} bytes");
                     return;
                 }
-                
+
                 Logger.LogWarning("Some econ data files are missing, re-parsing...");
             }
         }
@@ -183,7 +204,7 @@ public class EconService
         Logger.LogInformation($"Parsed {MusicKits.Count} music kits in {watch.ElapsedMilliseconds}ms.");
         watch.Restart();
 
-        var version = new EconVersion { EconDataVersion = GetVersion(items), SchemaVersion = SchemaVersion };
+        var version = new EconVersion { ItemLanguages = Config.ItemLanguages, EconDataVersion = GetVersion(items), SchemaVersion = SchemaVersion };
 
         File.WriteAllText(Path.Combine(Core.PluginDataDirectory, "version.lock"), JsonSerializer.Serialize(version));
 
@@ -243,35 +264,113 @@ public class EconService
         return Rarities.FirstOrDefault(r => r.Value.Id == original + 1).Value;
     }
 
+    private static readonly Dictionary<string, string> LanguageCodeToTranslationKey = new Dictionary<string, string>
+    {
+        { "ar", "arabic" },
+        { "bg", "bulgarian" },
+        { "zh-CN", "schinese" },
+        { "zh-TW", "tchinese" },
+        { "cs", "czech" },
+        { "da", "danish" },
+        { "nl", "dutch" },
+        { "en", "english" },
+        { "fi", "finnish" },
+        { "fr", "french" },
+        { "de", "german" },
+        { "el", "greek" },
+        { "hu", "hungarian" },
+        { "id", "indonesian" },
+        { "it", "italian" },
+        { "ja", "japanese" },
+        { "ko", "koreana" },
+        { "no", "norwegian" },
+        { "pl", "polish" },
+        { "pt", "portuguese" },
+        { "pt-BR", "brazilian" },
+        { "ro", "romanian" },
+        { "ru", "russian" },
+        { "es", "spanish" },
+        { "es-419", "latam" },
+        { "sv", "swedish" },
+        { "th", "thai" },
+        { "tr", "turkish" },
+        { "uk", "ukrainian" },
+        { "vn", "vietnamese" }
+    };
+
+    public string GetLocalizedName(Dictionary<string, string> localizedNames, string key)
+    {
+        if (!LanguageCodeToTranslationKey.TryGetValue(key, out string? translationKey))
+        {
+            Logger.LogWarning($"Language code {key} not found in LanguageCodeToTranslationKey, using primary language {_PrimaryLanguage}...");
+            return localizedNames[_PrimaryLanguage];
+        }
+        if (localizedNames.TryGetValue(translationKey, out string? value))
+        {
+            return value;
+        }
+        // hard-coded english fallback
+        if (localizedNames.TryGetValue(_PrimaryLanguage, out string? value2))
+        {
+            return value2;
+        }
+        return localizedNames["english"];
+    }
+
     private Dictionary<string, string> GetLocalizedNames(string key)
     {
         if (key.StartsWith("#"))
         {
-            key = key.Substring(1);
+            key = key[1..];
         }
 
         var localizedNames = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         var notFoundLanguages = new List<string>();
+
+        string? fallbackSource1 = null;
+        string? fallbackSource2 = null;
+
         foreach (var (languageName, tokens) in Languages)
         {
+            if (_RequiredLanguages.Count > 0 &&!_RequiredLanguages.Contains(languageName)
+                && languageName != _PrimaryLanguage && languageName != "english")
+            {
+                continue;
+            }
+
             if (tokens.TryGetValue(key, out var value))
             {
-                localizedNames[string.Intern(languageName)] = value;
+                if (_RequiredLanguages.Count == 0 || _RequiredLanguages.Contains(languageName))
+                {
+                    localizedNames[string.Intern(languageName)] = value;
+                }
             }
             else
             {
                 notFoundLanguages.Add(string.Intern(languageName));
             }
-        }
 
-        if (localizedNames.ContainsKey("english"))
-        {
-            foreach (var notfoundLanguage in notFoundLanguages)
+            if (fallbackSource1 == null && languageName == _PrimaryLanguage && tokens.TryGetValue(key, out var fb1))
             {
-                localizedNames[string.Intern(notfoundLanguage)] = localizedNames["english"];
+                fallbackSource1 = fb1;
+            }
+            if (fallbackSource2 == null && languageName == "english" && tokens.TryGetValue(key, out var fb2))
+            {
+                fallbackSource2 = fb2;
             }
         }
 
+        foreach (var notfoundLanguage in notFoundLanguages)
+        {
+            if (fallbackSource1 != null)
+            {
+                localizedNames[string.Intern(notfoundLanguage)] = fallbackSource1;
+            } else if (fallbackSource2 != null) {
+                // hard-coded english fallback
+                localizedNames[string.Intern(_PrimaryLanguage)] = fallbackSource2;
+                localizedNames[string.Intern(notfoundLanguage)] = fallbackSource2;
+            }
+        }
         return localizedNames;
     }
 
@@ -460,19 +559,19 @@ public class EconService
             {
                 continue;
             }
-            
+
             foreach (var item in section.Children)
             {
                 var prefabName = item.HasSubKey("prefab") ? item.Value["prefab"].EToString() : string.Empty;
-                
+
                 // Only include customplayertradable items (the actual selectable agents)
                 if (!prefabName.Equals("customplayertradable", StringComparison.OrdinalIgnoreCase))
                 {
                     continue;
                 }
-                
+
                 var prefab = FindPrefab(prefabName);
-                
+
                 // Try to find the agent model path
                 string? modelPath = FindAgentModelInChildren(item);
                 if (string.IsNullOrWhiteSpace(modelPath) && prefab != null)
@@ -484,7 +583,7 @@ public class EconService
                 {
                     continue;
                 }
-                
+
                 modelPath = modelPath.Replace('\\', '/');
 
                 // Ensure the model path starts with characters/models/
@@ -497,13 +596,13 @@ public class EconService
                         fullModelPath = fullModelPath.Substring(idx);
                     }
                 }
-                
+
                 // Ensure .vmdl extension
                 if (!fullModelPath.EndsWith(".vmdl", StringComparison.OrdinalIgnoreCase))
                 {
                     fullModelPath += ".vmdl";
                 }
-                
+
                 // Extract the agent name from the path (remove characters/models/ prefix and .vmdl extension)
                 string normalizedPath = fullModelPath;
                 if (normalizedPath.StartsWith("characters/models/", StringComparison.OrdinalIgnoreCase))
@@ -544,7 +643,7 @@ public class EconService
                 Agents[definition.Name] = definition;
             }
         }
-        
+
         Logger.LogInformation($"ParseAgents completed. Total agents found: {Agents.Count}");
     }
 
@@ -558,11 +657,11 @@ public class EconService
             {
                 continue;
             }
-            
+
             foreach (var musicKit in section.Children)
             {
                 var internalName = musicKit.Name;
-                
+
                 string? itemName = null;
                 if (musicKit.HasSubKey("loc_name"))
                 {
@@ -590,7 +689,7 @@ public class EconService
                 MusicKits[definition.Name] = definition;
             }
         }
-        
+
         stopwatch.Stop();
         Logger.LogInformation($"Parsed {MusicKits.Count} music kits in {stopwatch.ElapsedMilliseconds}ms.");
     }
@@ -605,7 +704,8 @@ public class EconService
                 {
                     var definition = new ColorDefinition
                     {
-                        Name = color.Name, HexColor = color.Value["hex_color"].EToString()
+                        Name = color.Name,
+                        HexColor = color.Value["hex_color"].EToString()
                     };
 
                     Colors[definition.Name] = definition;
@@ -780,7 +880,8 @@ public class EconService
 
                         items.Add(new ClientLootItemDefinition
                         {
-                            Name = itemName, BelongingItemName = belongingItemName,
+                            Name = itemName,
+                            BelongingItemName = belongingItemName,
                         });
                     }
                 }
@@ -789,7 +890,7 @@ public class EconService
             var definition = new ClientLootListDefinition { Name = name, Items = items, };
             ClientLootLists[definition.Name] = definition;
 
-            notMainEntry: ;
+        notMainEntry:;
         }
     }
 
@@ -968,7 +1069,7 @@ public class EconService
                                 .EToString();
                         if (!ClientLootLists.TryGetValue(lootListName, out lootList)
                             && !ClientLootLists.TryGetValue(lootListName2, out lootList))
-                        {   
+                        {
                             Logger.LogWarning($"Sticker collection {name} not found in ClientLootLists");
                             continue;
                         }
@@ -983,10 +1084,14 @@ public class EconService
 
                         var definition = new StickerCollectionDefinition
                         {
-                            Name = name, Index = index, LocalizedNames = localizedNames, Stickers = stickers,
+                            Name = name,
+                            Index = index,
+                            LocalizedNames = localizedNames,
+                            Stickers = stickers,
                         };
                         StickerCollections[definition.Name] = definition;
-                    } else if (stickerCollections.HasSubKey("prefab"))
+                    }
+                    else if (stickerCollections.HasSubKey("prefab"))
                     {
                         var prefab = stickerCollections.Value["prefab"].EToString();
                         if (!prefab.Contains("_capsule_prefab"))
@@ -1025,7 +1130,10 @@ public class EconService
 
                                 var definition = new StickerCollectionDefinition
                                 {
-                                    Name = name, Index = index, LocalizedNames = localizedNames, Stickers = stickers,
+                                    Name = name,
+                                    Index = index,
+                                    LocalizedNames = localizedNames,
+                                    Stickers = stickers,
                                 };
                                 StickerCollections[definition.Name] = definition;
 

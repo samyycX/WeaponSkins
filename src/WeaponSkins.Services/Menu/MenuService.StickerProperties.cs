@@ -116,7 +116,7 @@ public partial class MenuService
         if (!ItemPermissionService.CanUseStickers(player.SteamID)) return null;
         if (!data.HasSticker(slot)) return null;
         var sticker = data.GetSticker(slot);
-        var stickerName = GetStickerName(sticker, GetLanguage(player));
+        var stickerName = GetStickerName(sticker, player.PlayerLanguage.Value);
         if (stickerName == null) return null;
         return new SubmenuMenuOption(LocalizationService[player].MenuSkinPropertiesSetSticker(slot, stickerName),
             () => Task.FromResult(BuildStickerPropertiesMenu(player, data, slot)));

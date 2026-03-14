@@ -73,46 +73,6 @@ public partial class MenuService
         Core.MenusAPI.OpenMenuForPlayer(player, main.Build());
     }
 
-    public static readonly Dictionary<string, string> LanguageCodeToTranslationKey = new Dictionary<string, string>
-    {
-        { "ar", "arabic" },
-        { "bg", "bulgarian" },
-        { "zh-CN", "schinese" },
-        { "zh-TW", "tchinese" },
-        { "cs", "czech" },
-        { "da", "danish" },
-        { "nl", "dutch" },
-        { "en", "english" },
-        { "fi", "finnish" },
-        { "fr", "french" },
-        { "de", "german" },
-        { "el", "greek" },
-        { "hu", "hungarian" },
-        { "id", "indonesian" },
-        { "it", "italian" },
-        { "ja", "japanese" },
-        { "ko", "koreana" },
-        { "no", "norwegian" },
-        { "pl", "polish" },
-        { "pt", "portuguese" },
-        { "pt-BR", "brazilian" },
-        { "ro", "romanian" },
-        { "ru", "russian" },
-        { "es", "spanish" },
-        { "es-419", "latam" },
-        { "sv", "swedish" },
-        { "th", "thai" },
-        { "tr", "turkish" },
-        { "uk", "ukrainian" },
-        { "vn", "vietnamese" }
-    };
-
-    private static string GetLanguage(IPlayer player)
-    {
-        return LanguageCodeToTranslationKey[player.PlayerLanguage.Value];
-    }
-
-
     public bool TryGetWeaponInHand(IPlayer player,
         [MaybeNullWhen(false)] out CBasePlayerWeapon weaponInHand)
     {

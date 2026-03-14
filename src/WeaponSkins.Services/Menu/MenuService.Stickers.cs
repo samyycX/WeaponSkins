@@ -39,7 +39,7 @@ public partial class MenuService
 
         if (definition == null) return null;
 
-        return definition.LocalizedNames[language];
+        return EconService.GetLocalizedName(definition.LocalizedNames, language);
     }
 
     private IMenuAPI BuildStickerMenuBySlot(IPlayer player,
@@ -70,16 +70,16 @@ public partial class MenuService
         main.AddOption(resetOption);
         foreach (var (_, stickerCollection) in EconService.StickerCollections)
         {
-            main.AddOption(new SubmenuMenuOption(stickerCollection.LocalizedNames[language], () =>
+            main.AddOption(new SubmenuMenuOption(EconService.GetLocalizedName(stickerCollection.LocalizedNames, language), () =>
             {
                 var stickerMenu = Core.MenusAPI.CreateBuilder();
-                stickerMenu.Design.SetMenuTitle(stickerCollection.LocalizedNames[language]);
+                stickerMenu.Design.SetMenuTitle(EconService.GetLocalizedName(stickerCollection.LocalizedNames, language));
 
                 foreach (var sticker in stickerCollection.Stickers)
                 {
                     if (sticker.Index == 0) continue;
                     var option = new ButtonMenuOption(HtmlGradient.GenerateGradientText(
-                        sticker.LocalizedNames[language],
+                        EconService.GetLocalizedName(sticker.LocalizedNames, language),
                         sticker.Rarity.Color.HexColor));
                     option.Click += (_,
                         args) =>
@@ -109,8 +109,6 @@ public partial class MenuService
 
     public IMenuAPI BuildStickerMenu(IPlayer player)
     {
-        var language = GetLanguage(player);
-
         var main = Core.MenusAPI.CreateBuilder();
         main.Design.SetMenuTitle(LocalizationService[player].MenuTitleStickers);
 
@@ -120,7 +118,7 @@ public partial class MenuService
                 $"[{i + 1}] Slot";
             var slot = i;
             main.AddOption(new SubmenuMenuOption(title,
-                () => Task.FromResult(BuildStickerMenuBySlot(player, slot, language, title))));
+                () => Task.FromResult(BuildStickerMenuBySlot(player, slot, player.PlayerLanguage.Value, title))));
         }
 
         var menu = main.Build();

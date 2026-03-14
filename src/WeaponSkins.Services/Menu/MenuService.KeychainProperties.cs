@@ -137,7 +137,7 @@ public partial class MenuService
         if (!ItemPermissionService.CanUseKeychains(player.SteamID)) return null;
         if (!data.HasKeychain(slot)) return null;
         var keychain = data.GetKeychain(slot);
-        var keychainName = GetKeychainName(keychain, GetLanguage(player));
+        var keychainName = GetKeychainName(keychain, player.PlayerLanguage.Value);
         if (keychainName == null) return null;
         return new SubmenuMenuOption(LocalizationService[player].MenuSkinPropertiesSetKeychain(slot, keychainName),
             () => Task.FromResult(BuildKeychainPropertiesMenu(player, data, slot)));

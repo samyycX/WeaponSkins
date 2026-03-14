@@ -41,7 +41,6 @@ public partial class MenuService
         };
         main.AddOption(reset);
 
-        var language = GetLanguage(player);
         var team = player.Controller.Team;
         
         // Filter agents by team: CT agents start with "ctm_", T agents start with "tm_"
@@ -51,15 +50,12 @@ public partial class MenuService
             .Where(a => a.ModelPath.Contains($"/{teamPrefix}", StringComparison.OrdinalIgnoreCase) || 
                        a.ModelPath.StartsWith(teamPrefix, StringComparison.OrdinalIgnoreCase))
             .OrderByDescending(a => a.Rarity.Id)
-            .ThenBy(a => a.LocalizedNames.TryGetValue(language, out var ln) ? ln : a.Name)
+            .ThenBy(a => EconService.GetLocalizedName(a.LocalizedNames, player.PlayerLanguage.Value))
             .ToList();
 
         foreach (var agent in agents)
         {
-            var title = agent.LocalizedNames.TryGetValue(language, out var localized)
-                ? localized
-                : agent.Name;
-
+            var title = EconService.GetLocalizedName(agent.LocalizedNames, player.PlayerLanguage.Value);
             var coloredTitle = HtmlGradient.GenerateGradientText(title, agent.Rarity.Color.HexColor);
             var option = new ButtonMenuOption(coloredTitle);
             option.Click += (_, args) =>

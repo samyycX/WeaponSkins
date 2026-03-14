@@ -28,7 +28,6 @@ public partial class MenuService
 
     public IMenuAPI BuildGloveSkinMenu(IPlayer player)
     {
-        var language = GetLanguage(player);
         var main = Core.MenusAPI.CreateBuilder();
         main.Design.SetMenuTitle(LocalizationService[player].MenuTitleGloves);
 
@@ -40,7 +39,7 @@ public partial class MenuService
                 continue;
             }
 
-            var submenuOption = new SubmenuMenuOption(EconService.Items[glove].LocalizedNames[language], () =>
+            var submenuOption = new SubmenuMenuOption(EconService.GetLocalizedName(EconService.Items[glove].LocalizedNames, player.PlayerLanguage.Value), () =>
             {
                 var skinMenu = Core.MenusAPI.CreateBuilder();
                 skinMenu.Design.SetMenuTitleVisible(false);
@@ -55,7 +54,7 @@ public partial class MenuService
                 skinMenu.AddOption(resetOption);
                 foreach (var paintkit in sorted)
                 {
-                    var option = new ButtonMenuOption(HtmlGradient.GenerateGradientText(paintkit.LocalizedNames[language],
+                    var option = new ButtonMenuOption(HtmlGradient.GenerateGradientText(EconService.GetLocalizedName(paintkit.LocalizedNames, player.PlayerLanguage.Value),
                         paintkit.Rarity.Color.HexColor));
 
                     option.Click += (_,

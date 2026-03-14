@@ -493,17 +493,10 @@ public class HookInventoryUpdateService : IInventoryUpdateService
         var item = weapon.AttributeManager.Item;
         item.EntityQuality = (int)knife.Quality;
 
-        item.NetworkedDynamicAttributes.SetOrAddAttribute("set item texture prefab", knife.Paintkit);
-        item.NetworkedDynamicAttributes.SetOrAddAttribute("set item texture seed", knife.PaintkitSeed);
-        item.NetworkedDynamicAttributes.SetOrAddAttribute("set item texture wear", knife.PaintkitWear);
-        item.AttributeList.SetOrAddAttribute("set item texture prefab", knife.Paintkit);
-        item.AttributeList.SetOrAddAttribute("set item texture seed", knife.PaintkitSeed);
-        item.AttributeList.SetOrAddAttribute("set item texture wear", knife.PaintkitWear);
         if (knife.Nametag != null)
         {
             item.CustomName = knife.Nametag;
         }
-
 
         if (item.ItemDefinitionIndex != knife.DefinitionIndex)
         {
@@ -520,7 +513,17 @@ public class HookInventoryUpdateService : IInventoryUpdateService
             item.AttributeList.SetOrAddAttribute("kill eater score type", 0);
             item.NetworkedDynamicAttributes.SetOrAddAttribute("kill eater", val);
             item.NetworkedDynamicAttributes.SetOrAddAttribute("kill eater score type", 0);
+        } else {
+            item.AttributeList.Attributes.RemoveAll();
+            item.NetworkedDynamicAttributes.Attributes.RemoveAll();
         }
+
+        item.NetworkedDynamicAttributes.SetOrAddAttribute("set item texture prefab", knife.Paintkit);
+        item.NetworkedDynamicAttributes.SetOrAddAttribute("set item texture seed", knife.PaintkitSeed);
+        item.NetworkedDynamicAttributes.SetOrAddAttribute("set item texture wear", knife.PaintkitWear);
+        item.AttributeList.SetOrAddAttribute("set item texture prefab", knife.Paintkit);
+        item.AttributeList.SetOrAddAttribute("set item texture seed", knife.PaintkitSeed);
+        item.AttributeList.SetOrAddAttribute("set item texture wear", knife.PaintkitWear);
     }
 
     private void ApplyGlove(IPlayer player,

@@ -545,24 +545,19 @@ public class HookInventoryUpdateService : IInventoryUpdateService
     {
         Core.Scheduler.NextWorldUpdate(() =>
         {
-            var model = pawn.CBodyComponent!.SceneNode!.GetSkeletonInstance()
-                .ModelState
-                .ModelName;
-            pawn.SetModel("characters/models/tm_jumpsuit/tm_jumpsuit_varianta.vmdl");
-            pawn.SetModel(model);
-
-            Core.Scheduler.NextWorldUpdate(() =>
+            var econGloves = pawn.EconGloves;
+            econGloves.ItemDefinitionIndex = glove.DefinitionIndex;
+            econGloves.NetworkedDynamicAttributes.SetOrAddAttribute("set item texture prefab", glove.Paintkit);
+            econGloves.NetworkedDynamicAttributes.SetOrAddAttribute("set item texture seed", glove.PaintkitSeed);
+            econGloves.NetworkedDynamicAttributes.SetOrAddAttribute("set item texture wear", glove.PaintkitWear);
+            econGloves.AttributeList.SetOrAddAttribute("set item texture prefab", glove.Paintkit);
+            econGloves.AttributeList.SetOrAddAttribute("set item texture seed", glove.PaintkitSeed);
+            econGloves.AttributeList.SetOrAddAttribute("set item texture wear", glove.PaintkitWear);
+            econGloves.Initialized = true;
+            pawn.AcceptInput("SetBodygroup", "first_or_third_person,0");
+            Core.Scheduler.DelayBySeconds(0.2f, () =>
             {
-                var econGloves = pawn.EconGloves;
-                econGloves.ItemDefinitionIndex = glove.DefinitionIndex;
-                econGloves.NetworkedDynamicAttributes.SetOrAddAttribute("set item texture prefab", glove.Paintkit);
-                econGloves.NetworkedDynamicAttributes.SetOrAddAttribute("set item texture seed", glove.PaintkitSeed);
-                econGloves.NetworkedDynamicAttributes.SetOrAddAttribute("set item texture wear", glove.PaintkitWear);
-                econGloves.AttributeList.SetOrAddAttribute("set item texture prefab", glove.Paintkit);
-                econGloves.AttributeList.SetOrAddAttribute("set item texture seed", glove.PaintkitSeed);
-                econGloves.AttributeList.SetOrAddAttribute("set item texture wear", glove.PaintkitWear);
-                econGloves.Initialized = true;
-                pawn.AcceptInput("SetBodygroup", "default_gloves,1");
+                pawn.AcceptInput("SetBodygroup", "first_or_third_person,1");
             });
         });
     }

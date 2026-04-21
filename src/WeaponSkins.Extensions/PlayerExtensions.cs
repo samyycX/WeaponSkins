@@ -62,33 +62,25 @@ public static class PlayerExtensions
     {
         Core.Scheduler.NextWorldUpdate(() =>
         {
-            var model = player.PlayerPawn!.CBodyComponent!.SceneNode.GetSkeletonInstance()
-                .ModelState
-                .ModelName;
-            player.PlayerPawn.SetModel("characters/models/tm_jumpsuit/tm_jumpsuit_varianta.vmdl");
-            player.PlayerPawn.SetModel(model);
-            
             var econGloves = player.PlayerPawn.EconGloves;
 
-            // player.PlayerPawn.EconGloves.Initialized = false;
-            // player.PlayerPawn.EconGloves.InitializedUpdated();
             econGloves.Initialized = true;
-
-            Core.Scheduler.NextWorldUpdate(() =>
+            var itemInLoadout =
+                inv.GetItemInLoadout(player.Controller.Team, loadout_slot_t.LOADOUT_SLOT_CLOTHING_HANDS)!;
+            econGloves.ItemDefinitionIndex = itemInLoadout.ItemDefinitionIndex;
+            econGloves.AccountID = itemInLoadout.AccountID;
+            econGloves.ItemID = itemInLoadout.ItemID;
+            econGloves.ItemIDHigh = itemInLoadout.ItemIDHigh;
+            econGloves.ItemIDLow = itemInLoadout.ItemIDLow;
+            econGloves.InventoryPosition = itemInLoadout.InventoryPosition;
+            econGloves.EntityLevel = itemInLoadout.EntityLevel;
+            econGloves.EntityQuality = itemInLoadout.EntityQuality;
+            StaticNativeService.Service.UpdateItemView.CallOriginal(
+                econGloves.Address, 0);
+            player.PlayerPawn.AcceptInput("SetBodygroup", "first_or_third_person,0");
+            Core.Scheduler.DelayBySeconds(0.2f, () =>
             {
-                var itemInLoadout =
-                    inv.GetItemInLoadout(player.Controller.Team, loadout_slot_t.LOADOUT_SLOT_CLOTHING_HANDS)!;
-                econGloves.ItemDefinitionIndex = itemInLoadout.ItemDefinitionIndex;
-                econGloves.AccountID = itemInLoadout.AccountID;
-                econGloves.ItemID = itemInLoadout.ItemID;
-                econGloves.ItemIDHigh = itemInLoadout.ItemIDHigh;
-                econGloves.ItemIDLow = itemInLoadout.ItemIDLow;
-                econGloves.InventoryPosition = itemInLoadout.InventoryPosition;
-                econGloves.EntityLevel = itemInLoadout.EntityLevel;
-                econGloves.EntityQuality = itemInLoadout.EntityQuality;
-                StaticNativeService.Service.UpdateItemView.CallOriginal(
-                    econGloves.Address, 0);
-                player.PlayerPawn.AcceptInput("SetBodygroup", "default_gloves,1");
+                player.PlayerPawn.AcceptInput("SetBodygroup", "first_or_third_person,1");
             });
         });
     }

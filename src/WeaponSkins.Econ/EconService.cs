@@ -1109,7 +1109,15 @@ public class EconService
                         {
                             continue;
                         }
-                        var revolvingIndex = attributes.GetSubKey("set supply crate series")!.Value["value"].EToString();
+                        string revolvingIndex;
+                        try
+                        {
+                            revolvingIndex = attributes.GetSubKey("set supply crate series")!.Value["value"].EToString();
+                        } catch
+                        {
+                            Logger.LogWarning($"Failed to parse {prefab}, skipping...");
+                            continue;
+                        }
                         if (RevolvingLootLists.TryGetValue(revolvingIndex, out var revolvingLootListName))
                         {
                             if (ClientLootLists.TryGetValue(revolvingLootListName, out var lootList))

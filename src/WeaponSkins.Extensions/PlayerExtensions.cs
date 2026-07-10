@@ -56,32 +56,4 @@ public static class PlayerExtensions
         player.PlayerPawn!.ItemServices!.GiveItem("weapon_knife");
         player.PlayerPawn!.WeaponServices!.SelectWeaponBySlot(gear_slot_t.GEAR_SLOT_KNIFE);
     }
-
-    public static void RegiveGlove(this IPlayer player,
-        CCSPlayerInventory inv)
-    {
-        Core.Scheduler.NextWorldUpdate(() =>
-        {
-            var econGloves = player.PlayerPawn.EconGloves;
-
-            econGloves.Initialized = true;
-            var itemInLoadout =
-                inv.GetItemInLoadout(player.Controller.Team, loadout_slot_t.LOADOUT_SLOT_CLOTHING_HANDS)!;
-            econGloves.ItemDefinitionIndex = itemInLoadout.ItemDefinitionIndex;
-            econGloves.AccountID = itemInLoadout.AccountID;
-            econGloves.ItemID = itemInLoadout.ItemID;
-            econGloves.ItemIDHigh = itemInLoadout.ItemIDHigh;
-            econGloves.ItemIDLow = itemInLoadout.ItemIDLow;
-            econGloves.InventoryPosition = itemInLoadout.InventoryPosition;
-            econGloves.EntityLevel = itemInLoadout.EntityLevel;
-            econGloves.EntityQuality = itemInLoadout.EntityQuality;
-            StaticNativeService.Service.UpdateItemView.CallOriginal(
-                econGloves.Address, 0);
-            player.PlayerPawn.AcceptInput("SetBodygroup", "first_or_third_person,0");
-            Core.Scheduler.DelayBySeconds(0.2f, () =>
-            {
-                player.PlayerPawn.AcceptInput("SetBodygroup", "first_or_third_person,1");
-            });
-        });
-    }
 }

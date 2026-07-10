@@ -12,7 +12,6 @@ namespace WeaponSkins;
 public class WeaponSkinAPI : IWeaponSkinAPI
 {
     private IInventoryUpdateService InventoryUpdateService { get; init; }
-    private InventoryService InventoryService { get; init; }
     private DataService DataService { get; init; }
     private StorageService StorageService { get; init; }
     private EconService EconService { get; init; }
@@ -31,7 +30,6 @@ public class WeaponSkinAPI : IWeaponSkinAPI
 
     public WeaponSkinAPI(IInventoryUpdateService inventoryUpdateService,
         WeaponSkinGetterAPI weaponSkinGetterAPI,
-        InventoryService inventoryService,
         DataService dataService,
         StorageService storageService,
         EconService econService,
@@ -39,7 +37,6 @@ public class WeaponSkinAPI : IWeaponSkinAPI
     )
     {
         InventoryUpdateService = inventoryUpdateService;
-        InventoryService = inventoryService;
         DataService = dataService;
         StorageService = storageService;
         EconService = econService;
@@ -181,23 +178,23 @@ public class WeaponSkinAPI : IWeaponSkinAPI
         [MaybeNullWhen(false)] out IEnumerable<(Team Team, int AgentIndex)> result)
     {
         var agents = new List<(Team, int)>();
-        
+
         if (DataService.AgentDataService.TryGetAgent(steamid, Team.T, out var tIndex))
         {
             agents.Add((Team.T, tIndex));
         }
-        
+
         if (DataService.AgentDataService.TryGetAgent(steamid, Team.CT, out var ctIndex))
         {
             agents.Add((Team.CT, ctIndex));
         }
-        
+
         if (agents.Count > 0)
         {
             result = agents;
             return true;
         }
-        
+
         result = null;
         return false;
     }
@@ -266,7 +263,7 @@ public class WeaponSkinAPI : IWeaponSkinAPI
         bool permanent = true)
     {
         DataService.MusicKitDataService.SetMusicKit(steamid, musicKitIndex);
-        InventoryService.UpdateMusicKit(steamid, musicKitIndex);
+        InventoryUpdateService.UpdateMusicKit(steamid, musicKitIndex);
         if (permanent)
         {
             var _ = Task.Run(async () => await StorageService.Get().StoreMusicKitsAsync([(steamid, musicKitIndex)]));
@@ -277,7 +274,7 @@ public class WeaponSkinAPI : IWeaponSkinAPI
         bool permanent = true)
     {
         DataService.MusicKitDataService.RemoveMusicKit(steamid);
-        InventoryService.ResetMusicKit(steamid);
+        InventoryUpdateService.ResetMusicKit(steamid);
         if (permanent)
         {
             var _ = Task.Run(async () => await StorageService.Get().RemoveMusicKitAsync(steamid));

@@ -12,5 +12,7 @@ public interface IInventoryUpdateService
     void ResetWeaponSkin(ulong steamid, Team team, ushort definitionIndex);
     void ResetKnifeSkin(ulong steamid, Team team);
     void ResetGloveSkin(ulong steamid, Team team);
+    void UpdateMusicKit(ulong steamid, int musicKitIndex);
+    void ResetMusicKit(ulong steamid);
 }
 

@@ -15,19 +15,19 @@ public class StattrakService
     private ISwiftlyCore Core { get; init; }
     private DataService DataService { get; init; }
     private WeaponSkinAPI WeaponSkinAPI { get; init; }
-    private InventoryService InventoryService { get; init; }
+    private IInventoryUpdateService InventoryUpdateService { get; init; }
     private ILogger<StattrakService> Logger { get; init; }
 
     public StattrakService(ISwiftlyCore core,
         DataService dataService,
         WeaponSkinAPI weaponSkinAPI,
-        InventoryService inventoryService,
+        IInventoryUpdateService inventoryService,
         ILogger<StattrakService> logger)
     {
         Core = core;
         DataService = dataService;
         WeaponSkinAPI = weaponSkinAPI;
-        InventoryService = inventoryService;
+        InventoryUpdateService = inventoryService;
         Logger = logger;
 
         Core.GameEvent.HookPost<EventPlayerDeath>(OnPlayerDeath);
@@ -57,10 +57,6 @@ public class StattrakService
                     BitConverter.Int32BitsToSingle(skin.StattrakCount));
                 weapon.AttributeManager.Item.AttributeList.SetOrAddAttribute("kill eater score type", 0);
                 WeaponSkinAPI.SetWeaponSkins([skin], true);
-                if (InventoryService.TryGet(attacker.SteamID, out var inventory))
-                {
-                    inventory.UpdateWeaponSkin(skin);
-                }
             }
         }
 
@@ -74,10 +70,6 @@ public class StattrakService
                     BitConverter.Int32BitsToSingle(knife.StattrakCount));
                 weapon.AttributeManager.Item.AttributeList.SetOrAddAttribute("kill eater score type", 0);
                 WeaponSkinAPI.SetKnifeSkins([knife], true);
-                if (InventoryService.TryGet(attacker.SteamID, out var inventory))
-                {
-                    inventory.UpdateKnifeSkin(knife);
-                }
             }
         }
 

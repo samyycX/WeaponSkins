@@ -17,7 +17,6 @@ namespace WeaponSkins.Services;
 public class HookInventoryUpdateService : IInventoryUpdateService
 {
     private ISwiftlyCore Core { get; }
-    private InventoryService InventoryService { get; }
     private PlayerService PlayerService { get; }
     private NativeService NativeService { get; }
     private ILogger<HookInventoryUpdateService> Logger { get; }
@@ -27,7 +26,6 @@ public class HookInventoryUpdateService : IInventoryUpdateService
     private EconService EconService { get; }
 
     public HookInventoryUpdateService(ISwiftlyCore core,
-        InventoryService inventoryService,
         WeaponSkinGetterAPI api,
         PlayerService playerService,
         NativeService nativeService,
@@ -37,7 +35,6 @@ public class HookInventoryUpdateService : IInventoryUpdateService
         EconService econService)
     {
         Core = core;
-        InventoryService = inventoryService;
         Api = api;
         PlayerService = playerService;
         NativeService = nativeService;
@@ -48,6 +45,8 @@ public class HookInventoryUpdateService : IInventoryUpdateService
 
         NativeService.OnGiveNamedItemPost += OnGiveNamedItemPost;
         Core.GameEvent.HookPost<EventPlayerSpawn>(OnPlayerSpawn);
+        Core.GameEvent.HookPre<EventRoundStart>(OnRoundStart);
+        Core.GameEvent.HookPre<EventRoundMvp>(OnRoundMvp);
 
         foreach (var player in Core.PlayerManager.GetAllPlayers())
         {
@@ -80,6 +79,36 @@ public class HookInventoryUpdateService : IInventoryUpdateService
         }
     }
 
+    private bool _mvpPlayed;
+    private HookResult OnRoundStart(EventRoundStart @event)
+    {
+        _mvpPlayed = false;
+        return HookResult.Continue;
+    }
+
+    private HookResult OnRoundMvp(EventRoundMvp @event)
+    {
+        if (_mvpPlayed) return HookResult.Continue;
+
+        if (@event.UserIdPlayer is { IsValid: true } player)
+        {
+            if (DataService.MusicKitDataService.TryGetMusicKit(player.SteamID, out var musicKit))
+            {
+                @event.DontBroadcast = true;
+
+                Core.GameEvent.Fire<EventRoundMvp>(@event =>
+                {
+                    @event.UserId = player.PlayerID;
+                    @event.MusickItID = musicKit;
+                    @event.NoMusic = 0;
+                });
+
+                _mvpPlayed = true;
+            }
+        }
+        return HookResult.Continue;
+    }
+
     private HookResult OnPlayerSpawn(EventPlayerSpawn @event)
     {
         IPlayer player = @event.UserIdPlayer;
@@ -98,6 +127,8 @@ public class HookInventoryUpdateService : IInventoryUpdateService
 
         return HookResult.Continue;
     }
+
+
 
     private string? GetRefreshModel(string currentModel,
         string targetModel)
@@ -184,8 +215,6 @@ public class HookInventoryUpdateService : IInventoryUpdateService
 
         foreach (var (steamID, updatedSkins) in updatedSkinMaps)
         {
-            InventoryService.UpdateWeaponSkins(steamID, updatedSkins);
-
             if (PlayerService.TryGetPlayer(steamID, out var player))
             {
                 if (player.IsAlive())
@@ -227,7 +256,6 @@ public class HookInventoryUpdateService : IInventoryUpdateService
 
         foreach (var (steamID, updatedKnives) in updatedKnifeMaps)
         {
-            InventoryService.UpdateKnifeSkins(steamID, updatedKnives);
 
             if (PlayerService.TryGetPlayer(steamID, out var player))
             {
@@ -270,8 +298,6 @@ public class HookInventoryUpdateService : IInventoryUpdateService
 
         foreach (var (steamID, updatedGloves) in updatedGloveMaps)
         {
-            InventoryService.UpdateGloveSkins(steamID, updatedGloves);
-
             if (PlayerService.TryGetPlayer(steamID, out var player))
             {
                 if (player.IsAlive())
@@ -288,7 +314,6 @@ public class HookInventoryUpdateService : IInventoryUpdateService
     {
         if (DataService.WeaponDataService.TryRemoveSkin(steamid, team, definitionIndex))
         {
-            InventoryService.ResetWeaponSkin(steamid, team, definitionIndex);
             if (PlayerService.TryGetPlayer(steamid, out var player))
             {
                 Core.Scheduler.NextWorldUpdate(() =>
@@ -310,7 +335,6 @@ public class HookInventoryUpdateService : IInventoryUpdateService
     {
         if (DataService.KnifeDataService.TryRemoveKnife(steamid, team))
         {
-            InventoryService.ResetKnifeSkin(steamid, team);
             if (PlayerService.TryGetPlayer(steamid, out var player))
             {
                 Core.Scheduler.NextWorldUpdate(() =>
@@ -329,14 +353,13 @@ public class HookInventoryUpdateService : IInventoryUpdateService
     {
         if (DataService.GloveDataService.TryRemoveGlove(steamid, team))
         {
-            InventoryService.ResetGloveSkin(steamid, team);
             if (PlayerService.TryGetPlayer(steamid, out var player))
             {
                 Core.Scheduler.NextWorldUpdate(() =>
                 {
                     if (player.IsAlive())
                     {
-                        player.RegiveGlove(InventoryService.Get(steamid));
+                        ApplyPlayerGlove(player);
                     }
                 });
             }
@@ -438,7 +461,7 @@ public class HookInventoryUpdateService : IInventoryUpdateService
 
         var useLegacy = EconService
             .WeaponToPaintkits[Core.Helpers.GetClassnameByDefinitionIndex(item.ItemDefinitionIndex)]
-            .Where(p => p.Index == skin.Paintkit).FirstOrDefault().UseLegacyModel;
+            .FirstOrDefault(p => p.Index == skin.Paintkit).UseLegacyModel;
         weapon.AcceptInputAsync("SetBodygroup", value: $"body,{(useLegacy ? 1 : 0)}");
 
         if (skin.Quality == EconItemQuality.StatTrak)
@@ -513,7 +536,9 @@ public class HookInventoryUpdateService : IInventoryUpdateService
             item.AttributeList.SetOrAddAttribute("kill eater score type", 0);
             item.NetworkedDynamicAttributes.SetOrAddAttribute("kill eater", val);
             item.NetworkedDynamicAttributes.SetOrAddAttribute("kill eater score type", 0);
-        } else {
+        }
+        else
+        {
             item.AttributeList.Attributes.RemoveAll();
             item.NetworkedDynamicAttributes.Attributes.RemoveAll();
         }
@@ -560,5 +585,27 @@ public class HookInventoryUpdateService : IInventoryUpdateService
                 pawn.AcceptInput("SetBodygroup", "first_or_third_person,1");
             });
         });
+    }
+
+    public void UpdateMusicKit(ulong steamid, int musicKitIndex)
+    {
+        if (PlayerService.TryGetPlayer(steamid, out var player))
+        {
+            player.Controller.MusicKitID = musicKitIndex;
+            player.Controller.MusicKitIDUpdated();
+            player.Controller.InventoryServices.MusicID = (ushort)musicKitIndex;
+            player.Controller.InventoryServices.MusicIDUpdated();
+        }
+    }
+
+    public void ResetMusicKit(ulong steamid)
+    {
+        if (PlayerService.TryGetPlayer(steamid, out var player))
+        {
+            player.Controller.MusicKitID = 0;
+            player.Controller.MusicKitIDUpdated();
+            player.Controller.InventoryServices.MusicID = 0;
+            player.Controller.InventoryServices.MusicIDUpdated();
+        }
     }
 }

@@ -6,14 +6,14 @@ namespace WeaponSkins;
 
 public static class StickerFixService
 {
-    private static Dictionary<ulong /* steamid */, Dictionary<int /* key hash */, int /* sticker hash */>> _stickerHashes = new();
+    private static readonly Dictionary<ulong /* steamid */, Dictionary<int /* key hash */, int /* sticker hash */>> _stickerHashes = new();
 
     [SwiftlyInject]
     private static ISwiftlyCore Core { get; set; } = null!;
 
     public static void Initialize()
     {
-        foreach(var player in Core.PlayerManager.GetAllPlayers())
+        foreach (var player in Core.PlayerManager.GetAllPlayers())
         {
             _stickerHashes[player.SteamID] = new();
         }
@@ -21,12 +21,14 @@ public static class StickerFixService
         Core.Event.OnClientSteamAuthorize += (@event) =>
         {
             var player = Core.PlayerManager.GetPlayer(@event.PlayerId);
+            if (player == null) return;
             _stickerHashes[player.SteamID] = new();
         };
 
         Core.Event.OnClientDisconnected += (@event) =>
         {
             var player = Core.PlayerManager.GetPlayer(@event.PlayerId);
+            if (player == null) return;
             _stickerHashes[player.SteamID] = new();
         };
     }

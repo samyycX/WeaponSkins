@@ -15,10 +15,15 @@ public partial class MenuService
             if (TryGetWeaponDataInHand(args.Player, out var weaponInHand))
             {
                 var menu = Core.MenusAPI.GetCurrentMenu(args.Player);
-                menu.MoveToOption(args.Player,
-                    menu.Options.FirstOrDefault(o =>
-                        o.Tag is int tag &&
-                        tag == weaponInHand.Paintkit)!);
+                if (menu != null)
+                {
+                    var option = menu.Options.FirstOrDefault(o =>
+                            o.Tag is int tag &&
+                            tag == weaponInHand.Paintkit);
+
+                    if (option != null)
+                        menu.MoveToOption(args.Player, option);
+                }
             }
         });
         return ValueTask.CompletedTask;
@@ -43,7 +48,7 @@ public partial class MenuService
                 skinMenu.Design.SetMenuTitleVisible(false);
                 var sorted = paintkits.OrderByDescending(p => p.Rarity.Id).ToList();
                 var resetOption = new ButtonMenuOption(LocalizationService[player].MenuReset);
-                
+
                 resetOption.Click += (_,
                     args) =>
                 {
@@ -97,10 +102,15 @@ public partial class MenuService
                 if (Utilities.IsWeaponDefinitionIndex(weaponInHand.AttributeManager.Item.ItemDefinitionIndex))
                 {
                     var menu = Core.MenusAPI.GetCurrentMenu(args.Player);
-                    menu.MoveToOption(args.Player,
-                        menu.Options.FirstOrDefault(o =>
-                            o.Tag is ushort tag &&
-                            tag == weaponInHand.AttributeManager.Item.ItemDefinitionIndex));
+                    if (menu != null)
+                    {
+                        var option = menu.Options.FirstOrDefault(o =>
+                                o.Tag is ushort tag &&
+                                tag == weaponInHand.AttributeManager.Item.ItemDefinitionIndex);
+
+                        if (option != null)
+                            menu.MoveToOption(args.Player, option);
+                    }
                 }
             }
         });

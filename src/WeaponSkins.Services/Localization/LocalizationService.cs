@@ -32,7 +32,7 @@ public class PlayerLocalizationService
         Localizer = localizer;
     }
 
-    public IPlayer Player { get; init; }
+    public IPlayer Player { get; init; } = null!;
 
 
     public string MenuTitle => Localizer["menu.title"];

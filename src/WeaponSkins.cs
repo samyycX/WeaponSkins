@@ -36,7 +36,7 @@ namespace WeaponSkins;
 )]
 public partial class WeaponSkins : BasePlugin
 {
-    private ServiceProvider _provider;
+    private ServiceProvider _provider = null!;
 
     public WeaponSkins(ISwiftlyCore core) : base(core)
     {

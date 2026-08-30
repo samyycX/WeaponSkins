@@ -22,7 +22,7 @@ namespace WeaponSkins.Econ;
 public class EconService
 {
     private ISwiftlyCore Core { get; init; }
-    private KVObject Root { get; set; }
+    private KVObject Root { get; set; } = null!;
     private ILogger<EconService> Logger { get; init; }
     private MainConfigModel Config { get; init; }
     private string _PrimaryLanguage { get; set; } = "english";
@@ -332,7 +332,7 @@ public class EconService
 
         foreach (var (languageName, tokens) in Languages)
         {
-            if (_RequiredLanguages.Count > 0 &&!_RequiredLanguages.Contains(languageName)
+            if (_RequiredLanguages.Count > 0 && !_RequiredLanguages.Contains(languageName)
                 && languageName != _PrimaryLanguage && languageName != "english")
             {
                 continue;
@@ -365,7 +365,9 @@ public class EconService
             if (fallbackSource1 != null)
             {
                 localizedNames[string.Intern(notfoundLanguage)] = fallbackSource1;
-            } else if (fallbackSource2 != null) {
+            }
+            else if (fallbackSource2 != null)
+            {
                 // hard-coded english fallback
                 localizedNames[string.Intern(_PrimaryLanguage)] = fallbackSource2;
                 localizedNames[string.Intern(notfoundLanguage)] = fallbackSource2;

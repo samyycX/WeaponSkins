@@ -111,7 +111,9 @@ public class HookInventoryUpdateService : IInventoryUpdateService
 
     private HookResult OnPlayerSpawn(EventPlayerSpawn @event)
     {
-        IPlayer player = @event.UserIdPlayer;
+        IPlayer? player = @event.UserIdPlayer;
+
+        if (player == null) return HookResult.Continue;
 
         Core.Scheduler.NextWorldUpdate(() =>
         {
@@ -459,10 +461,13 @@ public class HookInventoryUpdateService : IInventoryUpdateService
         item.AttributeList.SetOrAddAttribute("set item texture seed", skin.PaintkitSeed);
         item.AttributeList.SetOrAddAttribute("set item texture wear", skin.PaintkitWear);
 
+        var classname = Core.Helpers.GetClassnameByDefinitionIndex(item.ItemDefinitionIndex);
+        if (string.IsNullOrWhiteSpace(classname)) return;
+
         var useLegacy = EconService
-            .WeaponToPaintkits[Core.Helpers.GetClassnameByDefinitionIndex(item.ItemDefinitionIndex)]
-            .FirstOrDefault(p => p.Index == skin.Paintkit).UseLegacyModel;
-        weapon.AcceptInputAsync("SetBodygroup", value: $"body,{(useLegacy ? 1 : 0)}");
+            .WeaponToPaintkits[classname]
+            .FirstOrDefault(p => p.Index == skin.Paintkit)?.UseLegacyModel;
+        weapon.AcceptInputAsync("SetBodygroup", value: $"body,{(useLegacy == true ? 1 : 0)}");
 
         if (skin.Quality == EconItemQuality.StatTrak)
         {
@@ -593,8 +598,11 @@ public class HookInventoryUpdateService : IInventoryUpdateService
         {
             player.Controller.MusicKitID = musicKitIndex;
             player.Controller.MusicKitIDUpdated();
-            player.Controller.InventoryServices.MusicID = (ushort)musicKitIndex;
-            player.Controller.InventoryServices.MusicIDUpdated();
+            if (player.Controller.InventoryServices != null)
+            {
+                player.Controller.InventoryServices.MusicID = (ushort)musicKitIndex;
+                player.Controller.InventoryServices.MusicIDUpdated();
+            }
         }
     }
 
@@ -604,8 +612,11 @@ public class HookInventoryUpdateService : IInventoryUpdateService
         {
             player.Controller.MusicKitID = 0;
             player.Controller.MusicKitIDUpdated();
-            player.Controller.InventoryServices.MusicID = 0;
-            player.Controller.InventoryServices.MusicIDUpdated();
+            if (player.Controller.InventoryServices != null)
+            {
+                player.Controller.InventoryServices.MusicID = 0;
+                player.Controller.InventoryServices.MusicIDUpdated();
+            }
         }
     }
 }

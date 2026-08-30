@@ -16,6 +16,7 @@ public partial class MenuService
         main.Design.SetMenuTitle(LocalizationService[player].MenuTitleKeychainProperties);
 
         var keychain = data.GetKeychain(slot);
+        if (keychain == null) return main.Build();
 
         var seedOption = new InputMenuOption(
             LocalizationService[player].MenuSkinPropertiesSeed,
@@ -137,6 +138,7 @@ public partial class MenuService
         if (!ItemPermissionService.CanUseKeychains(player.SteamID)) return null;
         if (!data.HasKeychain(slot)) return null;
         var keychain = data.GetKeychain(slot);
+        if (keychain == null) return null;
         var keychainName = GetKeychainName(keychain, player.PlayerLanguage.Value);
         if (keychainName == null) return null;
         return new SubmenuMenuOption(LocalizationService[player].MenuSkinPropertiesSetKeychain(slot, keychainName),

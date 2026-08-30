@@ -19,7 +19,7 @@ namespace WeaponSkins.Database;
 
 public partial class DatabaseService : IStorageProvider
 {
-    private IFreeSql fsql { get; set; }
+    private IFreeSql fsql { get; set; } = null!;
     private ISwiftlyCore Core { get; set; }
 
     public string Name => "WeaponSkins.Database";
@@ -33,7 +33,7 @@ public partial class DatabaseService : IStorageProvider
     {
         // var conn = core.Database.GetConnection("weaponskins");
         // var connString = core.Database.GetConnectionString("weaponskins");
-        
+
         var protocol = dbService.GetConnectionInfo("weaponskins").Driver switch
         {
             "mysql" => DataType.MySql,

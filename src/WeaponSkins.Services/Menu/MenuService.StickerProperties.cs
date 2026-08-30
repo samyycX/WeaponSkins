@@ -16,6 +16,7 @@ public partial class MenuService
         main.Design.SetMenuTitle(LocalizationService[player].MenuTitleStickerProperties);
 
         var sticker = data.GetSticker(slot);
+        if (sticker == null) return main.Build();
 
         var wearOption = new InputMenuOption(
             LocalizationService[player].MenuSkinPropertiesWear,

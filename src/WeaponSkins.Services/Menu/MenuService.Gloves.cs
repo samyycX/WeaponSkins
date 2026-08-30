@@ -16,10 +16,15 @@ public partial class MenuService
                 if (Utilities.IsGloveDefinitionIndex(gloveInHand.DefinitionIndex))
                 {
                     var menu = Core.MenusAPI.GetCurrentMenu(args.Player);
-                    menu.MoveToOption(args.Player,
-                        menu.Options.FirstOrDefault(o =>
-                            o.Tag is int tag &&
-                            tag == gloveInHand.Paintkit));
+                    if (menu != null)
+                    {
+                        var option = menu.Options.FirstOrDefault(o =>
+                                o.Tag is int tag &&
+                                tag == gloveInHand.Paintkit);
+
+                        if (option != null)
+                            menu.MoveToOption(args.Player, option);
+                    }
                 }
             }
         });
@@ -95,10 +100,15 @@ public partial class MenuService
                 Core.Scheduler.NextWorldUpdate(() =>
                 {
                     var menu = Core.MenusAPI.GetCurrentMenu(args.Player);
-                    menu.MoveToOption(args.Player,
-                        menu.Options.FirstOrDefault(o =>
-                            o.Tag is ushort tag &&
-                            tag == gloveInHand.DefinitionIndex));
+                    if (menu != null)
+                    {
+                        var option = menu.Options.FirstOrDefault(o =>
+                                o.Tag is ushort tag &&
+                                tag == gloveInHand.DefinitionIndex);
+
+                        if (option != null)
+                            menu.MoveToOption(args.Player, option);
+                    }
                 });
             }
 

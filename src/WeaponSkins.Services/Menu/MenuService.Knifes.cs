@@ -11,7 +11,7 @@ public partial class MenuService
 {
     private ValueTask OnKnifeSkinOptionClick(object? sender, MenuOptionClickEventArgs args)
     {
-        Core.Scheduler.NextWorldUpdate(() =>
+        Core.Scheduler.NextTick(() =>
         {
             if (TryGetKnifeDataInHand(args.Player, out var knifeInHand))
             {
@@ -91,7 +91,7 @@ public partial class MenuService
 
     private ValueTask OnKnifeMenuSkinOptionClick(object? sender, MenuOptionClickEventArgs args)
     {
-        Core.Scheduler.NextWorldUpdate(() =>
+        Core.Scheduler.NextTick(() =>
         {
             if (TryGetKnifeDataInHand(args.Player, out var knifeInHand))
             {

@@ -9,7 +9,7 @@ public partial class MenuService
 {
     private ValueTask OnGloveSkinOptionClick(object? sender, MenuOptionClickEventArgs args)
     {
-        Core.Scheduler.NextWorldUpdate(() =>
+        Core.Scheduler.NextTick(() =>
         {
             if (TryGetGloveDataInHand(args.Player, out var gloveInHand))
             {
@@ -93,11 +93,11 @@ public partial class MenuService
 
     private ValueTask OnGloveMenuSkinOptionClick(object? sender, MenuOptionClickEventArgs args)
     {
-        Core.Scheduler.NextWorldUpdate(() =>
+        Core.Scheduler.NextTick(() =>
         {
             if (TryGetGloveDataInHand(args.Player, out var gloveInHand))
             {
-                Core.Scheduler.NextWorldUpdate(() =>
+                Core.Scheduler.NextTick(() =>
                 {
                     var menu = Core.MenusAPI.GetCurrentMenu(args.Player);
                     if (menu != null)

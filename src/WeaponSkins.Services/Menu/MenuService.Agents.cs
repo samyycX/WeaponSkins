@@ -110,7 +110,7 @@ public partial class MenuService
     {
         if (!player.IsAlive()) return;
 
-        Core.Scheduler.NextWorldUpdate(() =>
+        Core.Scheduler.NextTick(() =>
         {
             if (!player.IsAlive()) return;
             var pawn = player.PlayerPawn!;
@@ -126,7 +126,7 @@ public partial class MenuService
                 pawn.SetModel(current);
             }
 
-            Core.Scheduler.NextWorldUpdate(() =>
+            Core.Scheduler.NextTick(() =>
             {
                 if (!player.IsAlive()) return;
                 pawn.SetModel(modelPath);

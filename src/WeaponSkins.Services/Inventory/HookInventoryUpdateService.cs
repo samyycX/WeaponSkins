@@ -115,7 +115,7 @@ public class HookInventoryUpdateService : IInventoryUpdateService
 
         if (player == null) return HookResult.Continue;
 
-        Core.Scheduler.NextWorldUpdate(() =>
+        Core.Scheduler.NextTick(() =>
         {
             ApplyPlayerGlove(player);
             ApplyPlayerAgent(player);
@@ -151,7 +151,7 @@ public class HookInventoryUpdateService : IInventoryUpdateService
     {
         if (!player.IsAlive()) return;
 
-        Core.Scheduler.NextWorldUpdate(() =>
+        Core.Scheduler.NextTick(() =>
         {
             if (!player.IsAlive()) return;
 
@@ -174,7 +174,7 @@ public class HookInventoryUpdateService : IInventoryUpdateService
                         pawn.SetModel(current);
                     }
 
-                    Core.Scheduler.NextWorldUpdate(() =>
+                    Core.Scheduler.NextTick(() =>
                     {
                         if (!player.IsAlive()) return;
                         pawn.SetModel(modelPath);
@@ -191,7 +191,7 @@ public class HookInventoryUpdateService : IInventoryUpdateService
                     pawn.SetModel(current);
                 }
 
-                Core.Scheduler.NextWorldUpdate(() =>
+                Core.Scheduler.NextTick(() =>
                 {
                     if (!player.IsAlive()) return;
                     pawn.SetModel(defaultModel);
@@ -230,7 +230,7 @@ public class HookInventoryUpdateService : IInventoryUpdateService
                             if (weapon.Value!.AttributeManager.Item.ItemDefinitionIndex == skin.DefinitionIndex &&
                                 player.Controller.Team == skin.Team)
                             {
-                                Core.Scheduler.NextWorldUpdate(() =>
+                                Core.Scheduler.NextTick(() =>
                                 {
                                     player.RegiveWeapon(weapon.Value, skin.DefinitionIndex);
                                 });
@@ -272,7 +272,7 @@ public class HookInventoryUpdateService : IInventoryUpdateService
                             if (weapon.Value!.AttributeManager.Item.ItemDefinitionIndex == knife.DefinitionIndex &&
                                 player.Controller.Team == knife.Team)
                             {
-                                Core.Scheduler.NextWorldUpdate(() =>
+                                Core.Scheduler.NextTick(() =>
                                 {
                                     player.RegiveKnife();
                                 });
@@ -318,7 +318,7 @@ public class HookInventoryUpdateService : IInventoryUpdateService
         {
             if (PlayerService.TryGetPlayer(steamid, out var player))
             {
-                Core.Scheduler.NextWorldUpdate(() =>
+                Core.Scheduler.NextTick(() =>
                 {
                     if (player.IsAlive())
                     {
@@ -339,7 +339,7 @@ public class HookInventoryUpdateService : IInventoryUpdateService
         {
             if (PlayerService.TryGetPlayer(steamid, out var player))
             {
-                Core.Scheduler.NextWorldUpdate(() =>
+                Core.Scheduler.NextTick(() =>
                 {
                     if (player.IsAlive())
                     {
@@ -357,7 +357,7 @@ public class HookInventoryUpdateService : IInventoryUpdateService
         {
             if (PlayerService.TryGetPlayer(steamid, out var player))
             {
-                Core.Scheduler.NextWorldUpdate(() =>
+                Core.Scheduler.NextTick(() =>
                 {
                     if (player.IsAlive())
                     {
@@ -573,7 +573,7 @@ public class HookInventoryUpdateService : IInventoryUpdateService
     private void ApplyGlove(CCSPlayerPawn pawn,
         GloveData glove)
     {
-        Core.Scheduler.NextWorldUpdate(() =>
+        Core.Scheduler.NextTick(() =>
         {
             var econGloves = pawn.EconGloves;
             econGloves.ItemDefinitionIndex = glove.DefinitionIndex;

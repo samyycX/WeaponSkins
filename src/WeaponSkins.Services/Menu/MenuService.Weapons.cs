@@ -10,7 +10,7 @@ public partial class MenuService
     private ValueTask OnWeaponSkinOptionClick(object? sender,
         MenuOptionClickEventArgs args)
     {
-        Core.Scheduler.NextWorldUpdate(() =>
+        Core.Scheduler.NextTick(() =>
         {
             if (TryGetWeaponDataInHand(args.Player, out var weaponInHand))
             {
@@ -95,7 +95,7 @@ public partial class MenuService
     private ValueTask OnWeaponMenuSkinOptionClick(object? sender,
         MenuOptionClickEventArgs args)
     {
-        Core.Scheduler.NextWorldUpdate(() =>
+        Core.Scheduler.NextTick(() =>
         {
             if (TryGetWeaponInHand(args.Player, out var weaponInHand))
             {

@@ -16,34 +16,54 @@ public static class PlayerExtensions
     }
 
     public static void RegiveWeapon(this IPlayer player,
-        CBasePlayerWeapon weapon,
+        CBasePlayerWeapon? weapon,
         ushort newIndex)
     {
+        if (weapon is not { IsValid: true } || !player.IsAlive()) return;
+
         if (newIndex == Core.Helpers.GetDefinitionIndexByClassname("weapon_taser"))
         {
             player.RegiveTaser(weapon);
             return;
         }
 
-        var name = Core.Helpers.GetClassnameByDefinitionIndex(newIndex)!;
+        var pawn = player.PlayerPawn;
+        if (pawn is not { IsValid: true }) return;
+        if (pawn.WeaponServices is not { IsValid: true } weaponServices ||
+            pawn.ItemServices is not { IsValid: true } itemServices) return;
+
+        var name = Core.Helpers.GetClassnameByDefinitionIndex(newIndex);
+        if (string.IsNullOrWhiteSpace(name)) return;
+
         var clip1 = weapon.Clip1;
         var reservedAmmo = weapon.ReserveAmmo[0];
-        player.PlayerPawn!.WeaponServices!.RemoveWeapon(weapon);
-        var newWeapon = player.PlayerPawn!.ItemServices!.GiveItem<CBasePlayerWeapon>(name);
+        weaponServices.RemoveWeapon(weapon);
+        var newWeapon = itemServices.GiveItem<CBasePlayerWeapon>(name);
+        if (newWeapon is not { IsValid: true }) return;
+
         newWeapon.Clip1 = clip1;
         newWeapon.ReserveAmmo[0] = reservedAmmo;
     }
 
     public static void RegiveTaser(this IPlayer player,
-        CBasePlayerWeapon weapon)
+        CBasePlayerWeapon? weapon)
     {
+        if (weapon is not { IsValid: true } || !player.IsAlive()) return;
+
+        var pawn = player.PlayerPawn;
+        if (pawn is not { IsValid: true }) return;
+        if (pawn.WeaponServices is not { IsValid: true } weaponServices ||
+            pawn.ItemServices is not { IsValid: true } itemServices) return;
+
         var oldTaser = weapon.As<CWeaponTaser>();
         var clip1 = oldTaser.Clip1;
         var reservedAmmo = oldTaser.ReserveAmmo[0];
         var fireTime = oldTaser.FireTime.Value;
         var lastAttackTick = oldTaser.LastAttackTick;
-        player.PlayerPawn!.WeaponServices!.RemoveWeapon(weapon);
-        var newWeapon = player.PlayerPawn!.ItemServices!.GiveItem<CWeaponTaser>("weapon_taser");
+        weaponServices.RemoveWeapon(weapon);
+        var newWeapon = itemServices.GiveItem<CWeaponTaser>("weapon_taser");
+        if (newWeapon is not { IsValid: true }) return;
+
         newWeapon.Clip1 = clip1;
         newWeapon.ReserveAmmo[0] = reservedAmmo;
         newWeapon.FireTime.Value = fireTime;

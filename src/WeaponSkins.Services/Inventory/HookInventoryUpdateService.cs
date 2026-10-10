@@ -14,8 +14,9 @@ using WeaponSkins.Shared;
 
 namespace WeaponSkins.Services;
 
-public class HookInventoryUpdateService : IInventoryUpdateService
+public class HookInventoryUpdateService : IInventoryUpdateService, IDisposable
 {
+    private readonly Dictionary<ulong, (int MusicKitId, ushort? InventoryMusicId)> _originalMusicKits = new();
     private ISwiftlyCore Core { get; }
     private PlayerService PlayerService { get; }
     private NativeService NativeService { get; }
@@ -48,6 +49,12 @@ public class HookInventoryUpdateService : IInventoryUpdateService
         Core.GameEvent.HookPre<EventRoundStart>(OnRoundStart);
         Core.GameEvent.HookPre<EventRoundMvp>(OnRoundMvp);
 
+        Core.Event.OnClientDisconnected += (@event) =>
+        {
+            var player = Core.PlayerManager.GetPlayer(@event.PlayerId);
+            if (player != null) _originalMusicKits.Remove(player.SessionId);
+        };
+
         foreach (var player in Core.PlayerManager.GetAllPlayers())
         {
             if (player.Controller is { IsValid: true, InventoryServices.IsValid: true } controller)
@@ -71,7 +78,32 @@ public class HookInventoryUpdateService : IInventoryUpdateService
             if (!controllerHandle.IsValid) return;
             var controller = controllerHandle.Value;
             if (controller == null || !controller.IsValid) return;
-            ApplyWeaponSkin(controller.SteamID, controller.Team, weapon);
+            var steamId = controller.SteamID;
+            var team = controller.Team;
+            if (weapon.Identity is not { IsValid: true } identity) return;
+            var weaponHandle = identity.EntityHandle;
+            // GiveItem can still initialize attributes after this hook. Apply once it has finished.
+            Core.Scheduler.NextTick(() =>
+            {
+                try
+                {
+                    var currentWeapon = weaponHandle.Value?.As<CBasePlayerWeapon>();
+                    var currentOwner = ownerHandle.Value?.As<CCSPlayerPawn>();
+                    var currentController = controllerHandle.Value;
+                    if (currentWeapon is not { IsValid: true } || currentOwner is not { IsValid: true } ||
+                        currentController is not { IsValid: true } || currentController.SteamID != steamId ||
+                        currentController.Team != team || currentWeapon.OwnerEntity.Value?.Address != currentOwner.Address)
+                    {
+                        return;
+                    }
+
+                    ApplyWeaponSkin(steamId, team, currentWeapon);
+                }
+                catch (Exception error)
+                {
+                    Logger.LogError(error, "Error applying a newly given weapon");
+                }
+            });
         }
         catch (Exception e)
         {
@@ -227,12 +259,16 @@ public class HookInventoryUpdateService : IInventoryUpdateService
                     {
                         foreach (var weapon in player.PlayerPawn!.WeaponServices!.MyWeapons)
                         {
-                            if (weapon.Value!.AttributeManager.Item.ItemDefinitionIndex == skin.DefinitionIndex &&
+                            if (weapon.Value is { IsValid: true } currentWeapon &&
+                                currentWeapon.AttributeManager.Item.ItemDefinitionIndex == skin.DefinitionIndex &&
                                 player.Controller.Team == skin.Team)
                             {
                                 Core.Scheduler.NextTick(() =>
                                 {
-                                    player.RegiveWeapon(weapon.Value, skin.DefinitionIndex);
+                                    if (player.IsAlive() && player.Controller.Team == skin.Team)
+                                    {
+                                        player.RegiveWeapon(weapon.Value, skin.DefinitionIndex);
+                                    }
                                 });
                             }
                         }
@@ -371,7 +407,8 @@ public class HookInventoryUpdateService : IInventoryUpdateService
     private void ApplyWeaponSkins(IPlayer player,
         IEnumerable<WeaponSkinData> skins)
     {
-        var weaponMap = skins.ToDictionary(s => s.DefinitionIndex, s => s);
+        var weaponMap = skins.Where(s => s.Team == player.Controller.Team)
+            .ToDictionary(s => s.DefinitionIndex, s => s);
         foreach (var handle in player.PlayerPawn!.WeaponServices!.MyWeapons)
         {
             var weapon = handle.Value;
@@ -402,6 +439,7 @@ public class HookInventoryUpdateService : IInventoryUpdateService
 
     private void ApplyPlayerWeapons(IPlayer player)
     {
+        if (!player.IsAlive()) return;
         if (!Api.TryGetWeaponSkins(player.SteamID, out var weaponSkins) &&
             !Api.TryGetKnifeSkins(player.SteamID, out var knifeSkins))
         {
@@ -450,69 +488,16 @@ public class HookInventoryUpdateService : IInventoryUpdateService
     private void ApplyWeaponAttributes(CBasePlayerWeapon weapon,
         WeaponSkinData skin)
     {
-        StickerFixService.FixSticker(skin);
-        var item = weapon.AttributeManager.Item;
-        item.ItemDefinitionIndex = skin.DefinitionIndex;
-        item.EntityQuality = (int)skin.Quality;
-        item.NetworkedDynamicAttributes.SetOrAddAttribute("set item texture prefab", skin.Paintkit);
-        item.NetworkedDynamicAttributes.SetOrAddAttribute("set item texture seed", skin.PaintkitSeed);
-        item.NetworkedDynamicAttributes.SetOrAddAttribute("set item texture wear", skin.PaintkitWear);
-        item.AttributeList.SetOrAddAttribute("set item texture prefab", skin.Paintkit);
-        item.AttributeList.SetOrAddAttribute("set item texture seed", skin.PaintkitSeed);
-        item.AttributeList.SetOrAddAttribute("set item texture wear", skin.PaintkitWear);
+        WeaponAppearance.Apply(weapon, skin);
+        var classname = Core.Helpers.GetClassnameByDefinitionIndex(skin.DefinitionIndex);
+        if (string.IsNullOrWhiteSpace(classname) || !EconService.WeaponToPaintkits.TryGetValue(classname, out var paintkits))
+        {
+            classname = EconService.Items.FirstOrDefault(item => item.Value.Index == skin.DefinitionIndex).Key;
+            if (classname == null || !EconService.WeaponToPaintkits.TryGetValue(classname, out paintkits)) return;
+        }
 
-        var classname = Core.Helpers.GetClassnameByDefinitionIndex(item.ItemDefinitionIndex);
-        if (string.IsNullOrWhiteSpace(classname)) return;
-
-        var useLegacy = EconService
-            .WeaponToPaintkits[classname]
-            .FirstOrDefault(p => p.Index == skin.Paintkit)?.UseLegacyModel;
+        var useLegacy = paintkits.FirstOrDefault(p => p.Index == skin.Paintkit)?.UseLegacyModel;
         weapon.AcceptInputAsync("SetBodygroup", value: $"body,{(useLegacy == true ? 1 : 0)}");
-
-        if (skin.Quality == EconItemQuality.StatTrak)
-        {
-            var val = BitConverter.Int32BitsToSingle(skin.StattrakCount);
-            item.AttributeList.SetOrAddAttribute("kill eater", val);
-            item.AttributeList.SetOrAddAttribute("kill eater score type", 0);
-            item.NetworkedDynamicAttributes.SetOrAddAttribute("kill eater", val);
-            item.NetworkedDynamicAttributes.SetOrAddAttribute("kill eater score type", 0);
-        }
-
-        if (skin.Nametag != null)
-        {
-            item.CustomName = skin.Nametag;
-        }
-
-        for (var i = 0; i < 6; i++)
-        {
-            var sticker = skin.GetSticker(i);
-            if (sticker == null) continue;
-            item.NetworkedDynamicAttributes.SetOrAddAttribute($"sticker slot {i} id",
-                BitConverter.Int32BitsToSingle(sticker.Id));
-            if (sticker.Schema != 1337)
-            {
-                item.NetworkedDynamicAttributes.SetOrAddAttribute($"sticker slot {i} schema",
-                    BitConverter.Int32BitsToSingle(sticker.Schema));
-                item.NetworkedDynamicAttributes.SetOrAddAttribute($"sticker slot {i} offset x", sticker.OffsetX);
-                item.NetworkedDynamicAttributes.SetOrAddAttribute($"sticker slot {i} offset y", sticker.OffsetY);
-            }
-
-            item.NetworkedDynamicAttributes.SetOrAddAttribute($"sticker slot {i} wear", sticker.Wear);
-            item.NetworkedDynamicAttributes.SetOrAddAttribute($"sticker slot {i} scale", sticker.Scale);
-            item.NetworkedDynamicAttributes.SetOrAddAttribute($"sticker slot {i} rotation", sticker.Rotation);
-        }
-
-        var keychain = skin.Keychain0;
-        if (keychain != null)
-        {
-            item.NetworkedDynamicAttributes.SetOrAddAttribute("keychain slot 0 id",
-                BitConverter.Int32BitsToSingle(keychain.Id));
-            item.NetworkedDynamicAttributes.SetOrAddAttribute("keychain slot 0 offset x", keychain.OffsetX);
-            item.NetworkedDynamicAttributes.SetOrAddAttribute("keychain slot 0 offset y", keychain.OffsetY);
-            item.NetworkedDynamicAttributes.SetOrAddAttribute("keychain slot 0 offset z", keychain.OffsetZ);
-            item.NetworkedDynamicAttributes.SetOrAddAttribute("keychain slot 0 seed",
-                BitConverter.Int32BitsToSingle(keychain.Seed));
-        }
     }
 
     private void ApplyKnifeAttributes(CBasePlayerWeapon weapon,
@@ -596,6 +581,13 @@ public class HookInventoryUpdateService : IInventoryUpdateService
     {
         if (PlayerService.TryGetPlayer(steamid, out var player))
         {
+            if (!_originalMusicKits.TryGetValue(player.SessionId, out var original))
+            {
+                original = (player.Controller.MusicKitID, null);
+            }
+            _originalMusicKits[player.SessionId] = (original.MusicKitId,
+                original.InventoryMusicId ?? player.Controller.InventoryServices?.MusicID);
+
             player.Controller.MusicKitID = musicKitIndex;
             player.Controller.MusicKitIDUpdated();
             if (player.Controller.InventoryServices != null)
@@ -608,15 +600,71 @@ public class HookInventoryUpdateService : IInventoryUpdateService
 
     public void ResetMusicKit(ulong steamid)
     {
-        if (PlayerService.TryGetPlayer(steamid, out var player))
+        if (PlayerService.TryGetPlayer(steamid, out var player) &&
+            _originalMusicKits.Remove(player.SessionId, out var original))
         {
-            player.Controller.MusicKitID = 0;
+            player.Controller.MusicKitID = original.MusicKitId;
             player.Controller.MusicKitIDUpdated();
-            if (player.Controller.InventoryServices != null)
+            if (player.Controller.InventoryServices != null && original.InventoryMusicId is { } inventoryMusicId)
             {
-                player.Controller.InventoryServices.MusicID = 0;
+                player.Controller.InventoryServices.MusicID = inventoryMusicId;
                 player.Controller.InventoryServices.MusicIDUpdated();
             }
         }
+    }
+
+    public void RefreshPlayer(ulong steamId,
+        bool resetGlove)
+    {
+        if (!PlayerService.TryGetPlayer(steamId, out var player)) return;
+
+        if (DataService.MusicKitDataService.TryGetMusicKit(steamId, out var musicKit))
+        {
+            UpdateMusicKit(steamId, musicKit);
+        }
+        else
+        {
+            ResetMusicKit(steamId);
+        }
+
+        if (!player.IsAlive()) return;
+        var pawn = player.PlayerPawn;
+        if (pawn?.WeaponServices is not { IsValid: true } weapons) return;
+
+        // Recreate held weapons even when their stored skin was removed.
+        foreach (var handle in weapons.MyWeapons.ToArray())
+        {
+            var weapon = handle.Value;
+            if (weapon is not { IsValid: true }) continue;
+            var definition = weapon.AttributeManager.Item.ItemDefinitionIndex;
+            if (Utilities.IsKnifeDefinitionIndex(definition))
+            {
+                player.RegiveKnife();
+            }
+            else if (Utilities.IsWeaponDefinitionIndex(definition))
+            {
+                player.RegiveWeapon(weapon, definition);
+            }
+        }
+
+        if (resetGlove && !Api.TryGetGloveSkin(steamId, player.Controller.Team, out _))
+        {
+            ApplyGlove(player, new GloveData { SteamID = steamId, Team = player.Controller.Team, DefinitionIndex = 0 });
+        }
+        else
+        {
+            ApplyPlayerGlove(player);
+        }
+        ApplyPlayerAgent(player);
+    }
+
+    public void Dispose()
+    {
+        foreach (var sessionId in _originalMusicKits.Keys.ToArray())
+        {
+            var player = Core.PlayerManager.GetPlayerFromSessionId(sessionId);
+            if (player is { IsValid: true, Controller.IsValid: true }) ResetMusicKit(player.SteamID);
+        }
+        _originalMusicKits.Clear();
     }
 }

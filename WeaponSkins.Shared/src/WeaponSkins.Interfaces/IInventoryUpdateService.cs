@@ -14,5 +14,5 @@ public interface IInventoryUpdateService
     void ResetGloveSkin(ulong steamid, Team team);
     void UpdateMusicKit(ulong steamid, int musicKitIndex);
     void ResetMusicKit(ulong steamid);
+    void RefreshPlayer(ulong steamId, bool resetGlove);
 }
-

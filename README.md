@@ -67,6 +67,10 @@ Leave a value empty or remove it to keep the feature available to everyone. Play
 
 ## Showcase
 [Youtube](https://youtu.be/MRa8JIRLysE)
+
+## Reloading saved skins
+
+Use `!wp` to reload your saved cosmetics from the configured storage provider. The command refreshes held equipment when alive; saved selections also apply to newly given weapons. Unsaved temporary selections are replaced by the stored values.
   
 ## Building
 

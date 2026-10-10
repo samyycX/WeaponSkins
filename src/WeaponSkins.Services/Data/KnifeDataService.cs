@@ -53,4 +53,9 @@ public class KnifeDataService
     {
         return _playerKnives.TryGetValue(steamId, out var teamKnives) && teamKnives.TryRemove(team, out _);
     }
+
+    public void RemovePlayer(ulong steamId)
+    {
+        _playerKnives.TryRemove(steamId, out _);
+    }
 }

@@ -49,6 +49,7 @@ public partial class DatabaseService
                     skin) =>
                 knife.SteamID == skin.SteamID &&
                 knife.Team == skin.Team)
+            .Where((knife, skin) => knife.SteamID == steamId.ToString())
             .ToListAsync((Knife,
                 Skin) => new { Knife, Skin });
 

@@ -48,7 +48,7 @@ public partial class MenuService
             {
                 if (float.TryParse(value, out var result))
                 {
-                    return true;
+                    return float.IsFinite(result);
                 }
 
                 return false;
@@ -72,7 +72,7 @@ public partial class MenuService
             {
                 if (float.TryParse(value, out var result))
                 {
-                    return true;
+                    return float.IsFinite(result);
                 }
 
                 return false;
@@ -96,7 +96,7 @@ public partial class MenuService
             {
                 if (float.TryParse(value, out var result))
                 {
-                    return true;
+                    return float.IsFinite(result);
                 }
 
                 return false;

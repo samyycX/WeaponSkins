@@ -14,7 +14,7 @@ using WeaponSkins.Shared;
 
 namespace WeaponSkins.Services;
 
-public class HookInventoryUpdateService : IInventoryUpdateService
+public class HookInventoryUpdateService : IInventoryUpdateService, IDisposable
 {
     private readonly Dictionary<ulong, (int MusicKitId, ushort? InventoryMusicId)> _originalMusicKits = new();
     private ISwiftlyCore Core { get; }
@@ -656,5 +656,15 @@ public class HookInventoryUpdateService : IInventoryUpdateService
             ApplyPlayerGlove(player);
         }
         ApplyPlayerAgent(player);
+    }
+
+    public void Dispose()
+    {
+        foreach (var sessionId in _originalMusicKits.Keys.ToArray())
+        {
+            var player = Core.PlayerManager.GetPlayerFromSessionId(sessionId);
+            if (player is { IsValid: true, Controller.IsValid: true }) ResetMusicKit(player.SteamID);
+        }
+        _originalMusicKits.Clear();
     }
 }

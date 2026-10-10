@@ -53,7 +53,6 @@ public record SkinModel
         var id = int.Parse(parts[0], CultureInfo.InvariantCulture);
         if (id == 0) return null;
         var scale = ParseFloat(parts[5]);
-        if (scale <= 0) throw new FormatException("Sticker scale must be positive.");
         return new StickerData
         {
             Id = id,
@@ -61,7 +60,7 @@ public record SkinModel
             OffsetX = ParseFloat(parts[2]),
             OffsetY = ParseFloat(parts[3]),
             Wear = ParseFloat(parts[4]),
-            Scale = scale,
+            Scale = scale > 0 ? scale : 1f,
             Rotation = ParseFloat(parts[6]),
         };
     }
@@ -107,7 +106,8 @@ public record SkinModel
             return result;
         }
 
-        throw new FormatException("Invalid cosmetic floating-point value.");
+        // Invalid legacy values must not interrupt synchronization for other players.
+        return 0f;
     }
 
     public WeaponSkinData ToDataModel()

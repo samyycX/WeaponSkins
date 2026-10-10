@@ -601,7 +601,18 @@ public class HookInventoryUpdateService : IInventoryUpdateService
     public void RefreshPlayer(ulong steamId,
         bool resetGlove)
     {
-        if (!PlayerService.TryGetPlayer(steamId, out var player) || !player.IsAlive()) return;
+        if (!PlayerService.TryGetPlayer(steamId, out var player)) return;
+
+        if (DataService.MusicKitDataService.TryGetMusicKit(steamId, out var musicKit))
+        {
+            UpdateMusicKit(steamId, musicKit);
+        }
+        else
+        {
+            ResetMusicKit(steamId);
+        }
+
+        if (!player.IsAlive()) return;
         var pawn = player.PlayerPawn;
         if (pawn?.WeaponServices is not { IsValid: true } weapons) return;
 
@@ -630,13 +641,5 @@ public class HookInventoryUpdateService : IInventoryUpdateService
             ApplyPlayerGlove(player);
         }
         ApplyPlayerAgent(player);
-        if (DataService.MusicKitDataService.TryGetMusicKit(steamId, out var musicKit))
-        {
-            UpdateMusicKit(steamId, musicKit);
-        }
-        else
-        {
-            ResetMusicKit(steamId);
-        }
     }
 }

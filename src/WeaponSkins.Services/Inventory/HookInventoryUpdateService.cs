@@ -16,6 +16,7 @@ namespace WeaponSkins.Services;
 
 public class HookInventoryUpdateService : IInventoryUpdateService
 {
+    private readonly Dictionary<ulong, (int MusicKitId, ushort? InventoryMusicId)> _originalMusicKits = new();
     private ISwiftlyCore Core { get; }
     private PlayerService PlayerService { get; }
     private NativeService NativeService { get; }
@@ -47,6 +48,12 @@ public class HookInventoryUpdateService : IInventoryUpdateService
         Core.GameEvent.HookPost<EventPlayerSpawn>(OnPlayerSpawn);
         Core.GameEvent.HookPre<EventRoundStart>(OnRoundStart);
         Core.GameEvent.HookPre<EventRoundMvp>(OnRoundMvp);
+
+        Core.Event.OnClientDisconnected += (@event) =>
+        {
+            var player = Core.PlayerManager.GetPlayer(@event.PlayerId);
+            if (player != null) _originalMusicKits.Remove(player.SessionId);
+        };
 
         foreach (var player in Core.PlayerManager.GetAllPlayers())
         {
@@ -574,6 +581,13 @@ public class HookInventoryUpdateService : IInventoryUpdateService
     {
         if (PlayerService.TryGetPlayer(steamid, out var player))
         {
+            if (!_originalMusicKits.TryGetValue(player.SessionId, out var original))
+            {
+                original = (player.Controller.MusicKitID, null);
+            }
+            _originalMusicKits[player.SessionId] = (original.MusicKitId,
+                original.InventoryMusicId ?? player.Controller.InventoryServices?.MusicID);
+
             player.Controller.MusicKitID = musicKitIndex;
             player.Controller.MusicKitIDUpdated();
             if (player.Controller.InventoryServices != null)
@@ -586,13 +600,14 @@ public class HookInventoryUpdateService : IInventoryUpdateService
 
     public void ResetMusicKit(ulong steamid)
     {
-        if (PlayerService.TryGetPlayer(steamid, out var player))
+        if (PlayerService.TryGetPlayer(steamid, out var player) &&
+            _originalMusicKits.Remove(player.SessionId, out var original))
         {
-            player.Controller.MusicKitID = 0;
+            player.Controller.MusicKitID = original.MusicKitId;
             player.Controller.MusicKitIDUpdated();
-            if (player.Controller.InventoryServices != null)
+            if (player.Controller.InventoryServices != null && original.InventoryMusicId is { } inventoryMusicId)
             {
-                player.Controller.InventoryServices.MusicID = 0;
+                player.Controller.InventoryServices.MusicID = inventoryMusicId;
                 player.Controller.InventoryServices.MusicIDUpdated();
             }
         }

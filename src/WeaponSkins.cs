@@ -50,7 +50,6 @@ public partial class WeaponSkins : BasePlugin
                 builder.AddTomlFile("config.toml", false, true);
             });
 
-        StickerFixService.Initialize();
         var collection = new ServiceCollection()
             .AddSwiftly(Core)
             .AddDataService()

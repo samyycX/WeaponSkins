@@ -4,16 +4,15 @@ using System.Runtime.InteropServices;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 
-using SwiftlyS2.Shared.Plugins;
 using SwiftlyS2.Shared;
-using SwiftlyS2.Shared.Players;
 using SwiftlyS2.Shared.Commands;
+using SwiftlyS2.Shared.Natives;
+using SwiftlyS2.Shared.Players;
+using SwiftlyS2.Shared.Plugins;
+using SwiftlyS2.Shared.SchemaDefinitions;
 using SwiftlyS2.Shared.SteamAPI;
 
 using Tomlyn.Extensions.Configuration;
-
-using SwiftlyS2.Shared.Natives;
-using SwiftlyS2.Shared.SchemaDefinitions;
 
 using WeaponSkins.Configuration;
 using WeaponSkins.Injections;
@@ -89,6 +88,7 @@ public partial class WeaponSkins : BasePlugin
 
     public override void Unload()
     {
+        _provider.Dispose();
     }
 
     public override void ConfigureSharedInterface(IInterfaceManager interfaceManager)

@@ -597,4 +597,46 @@ public class HookInventoryUpdateService : IInventoryUpdateService
             }
         }
     }
+
+    public void RefreshPlayer(ulong steamId,
+        bool resetGlove)
+    {
+        if (!PlayerService.TryGetPlayer(steamId, out var player) || !player.IsAlive()) return;
+        var pawn = player.PlayerPawn;
+        if (pawn?.WeaponServices is not { IsValid: true } weapons) return;
+
+        // Recreate held weapons even when their stored skin was removed.
+        foreach (var handle in weapons.MyWeapons.ToArray())
+        {
+            var weapon = handle.Value;
+            if (weapon is not { IsValid: true }) continue;
+            var definition = weapon.AttributeManager.Item.ItemDefinitionIndex;
+            if (Utilities.IsKnifeDefinitionIndex(definition))
+            {
+                player.RegiveKnife();
+            }
+            else if (Utilities.IsWeaponDefinitionIndex(definition))
+            {
+                player.RegiveWeapon(weapon, definition);
+            }
+        }
+
+        if (resetGlove && !Api.TryGetGloveSkin(steamId, player.Controller.Team, out _))
+        {
+            ApplyGlove(player, new GloveData { SteamID = steamId, Team = player.Controller.Team, DefinitionIndex = 0 });
+        }
+        else
+        {
+            ApplyPlayerGlove(player);
+        }
+        ApplyPlayerAgent(player);
+        if (DataService.MusicKitDataService.TryGetMusicKit(steamId, out var musicKit))
+        {
+            UpdateMusicKit(steamId, musicKit);
+        }
+        else
+        {
+            ResetMusicKit(steamId);
+        }
+    }
 }

@@ -99,8 +99,9 @@ public record SkinModel
 
     private static float ParseFloat(string value)
     {
-        // Older records used the server culture's decimal separator, without grouping.
-        if (float.TryParse(value.Replace(',', '.'), NumberStyles.Float, CultureInfo.InvariantCulture, out var result) &&
+        // Older records used the server culture's number format, without grouping.
+        if ((float.TryParse(value.Replace(',', '.'), NumberStyles.Float, CultureInfo.InvariantCulture, out var result) ||
+             float.TryParse(value, NumberStyles.Float, CultureInfo.CurrentCulture, out result)) &&
             float.IsFinite(result))
         {
             return result;

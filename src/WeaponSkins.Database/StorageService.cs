@@ -115,7 +115,7 @@ public class StorageService : IDisposable
             return;
         }
 
-        if (!reloads.TryAdd(player.SteamID, 0))
+        if (!reloads.TryAdd(player.SessionId, 0))
         {
             reply?.Invoke("Your skins are already being reloaded.");
             return;
@@ -136,7 +136,8 @@ public class StorageService : IDisposable
             string message;
             try
             {
-                if (!await DatabaseSynchronizeService.ReloadPlayerAsync(storage, steamId, sessionId, stopping)) return;
+                if (!await Task.Run(() => DatabaseSynchronizeService.ReloadPlayerAsync(storage, steamId, sessionId, stopping),
+                        stopping)) return;
                 message = "Your skins have been reloaded.";
             }
             catch (OperationCanceledException) when (stopping.IsCancellationRequested)
@@ -166,7 +167,7 @@ public class StorageService : IDisposable
         }
         finally
         {
-            reloads.TryRemove(steamId, out _);
+            reloads.TryRemove(sessionId, out _);
         }
     }
 
@@ -176,7 +177,7 @@ public class StorageService : IDisposable
         var stopping = lifetime.Token;
         try
         {
-            await DatabaseSynchronizeService.SynchronizeAsync(storage, stopping);
+            await Task.Run(() => DatabaseSynchronizeService.SynchronizeAsync(storage, stopping), stopping);
             Logger.LogInformation("Data synchronized from {Provider}.", storage.Name);
         }
         catch (OperationCanceledException) when (stopping.IsCancellationRequested)

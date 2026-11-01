@@ -249,31 +249,45 @@ public class HookInventoryUpdateService : IInventoryUpdateService, IDisposable
 
         foreach (var (steamID, updatedSkins) in updatedSkinMaps)
         {
-            if (PlayerService.TryGetPlayer(steamID, out var player))
+            if (!PlayerService.TryGetPlayer(steamID, out var player) || !player.IsAlive())
             {
-                if (player.IsAlive())
-                {
-                    ApplyWeaponSkins(player, updatedSkins);
+                continue;
+            }
 
-                    foreach (var skin in updatedSkins)
+            // Remake held weapons so OnGiveNamedItemPost applies paint. In-place
+            // attribute writes alone do not refresh the client finish.
+            foreach (var skin in updatedSkins)
+            {
+                if (player.Controller.Team != skin.Team)
+                {
+                    continue;
+                }
+
+                var definitionIndex = skin.DefinitionIndex;
+                var team = skin.Team;
+                Core.Scheduler.NextTick(() =>
+                {
+                    if (!player.IsAlive() || player.Controller.Team != team)
                     {
-                        foreach (var weapon in player.PlayerPawn!.WeaponServices!.MyWeapons)
+                        return;
+                    }
+
+                    var weapons = player.PlayerPawn?.WeaponServices?.MyWeapons;
+                    if (weapons == null)
+                    {
+                        return;
+                    }
+
+                    foreach (var handle in weapons)
+                    {
+                        if (handle.Value is { IsValid: true } weapon &&
+                            weapon.AttributeManager.Item.ItemDefinitionIndex == definitionIndex)
                         {
-                            if (weapon.Value is { IsValid: true } currentWeapon &&
-                                currentWeapon.AttributeManager.Item.ItemDefinitionIndex == skin.DefinitionIndex &&
-                                player.Controller.Team == skin.Team)
-                            {
-                                Core.Scheduler.NextTick(() =>
-                                {
-                                    if (player.IsAlive() && player.Controller.Team == skin.Team)
-                                    {
-                                        player.RegiveWeapon(weapon.Value, skin.DefinitionIndex);
-                                    }
-                                });
-                            }
+                            player.RegiveWeapon(weapon, definitionIndex);
+                            break;
                         }
                     }
-                }
+                });
             }
         }
     }
@@ -294,28 +308,29 @@ public class HookInventoryUpdateService : IInventoryUpdateService, IDisposable
 
         foreach (var (steamID, updatedKnives) in updatedKnifeMaps)
         {
-
-            if (PlayerService.TryGetPlayer(steamID, out var player))
+            if (!PlayerService.TryGetPlayer(steamID, out var player) || !player.IsAlive())
             {
-                if (player.IsAlive())
-                {
-                    ApplyKnifeSkins(player, updatedKnives);
+                continue;
+            }
 
-                    foreach (var knife in updatedKnives)
-                    {
-                        foreach (var weapon in player.PlayerPawn!.WeaponServices!.MyWeapons)
-                        {
-                            if (weapon.Value!.AttributeManager.Item.ItemDefinitionIndex == knife.DefinitionIndex &&
-                                player.Controller.Team == knife.Team)
-                            {
-                                Core.Scheduler.NextTick(() =>
-                                {
-                                    player.RegiveKnife();
-                                });
-                            }
-                        }
-                    }
+            // Always remake the knife. Applying ChangeSubclass in-place can swap the
+            // knife type without the paint kit; !wp works because it only RegiveKnife's.
+            foreach (var knife in updatedKnives)
+            {
+                if (player.Controller.Team != knife.Team)
+                {
+                    continue;
                 }
+
+                var team = knife.Team;
+                Core.Scheduler.NextTick(() =>
+                {
+                    if (player.IsAlive() && player.Controller.Team == team)
+                    {
+                        player.RegiveKnife();
+                    }
+                });
+                break;
             }
         }
     }
@@ -404,39 +419,6 @@ public class HookInventoryUpdateService : IInventoryUpdateService, IDisposable
         }
     }
 
-    private void ApplyWeaponSkins(IPlayer player,
-        IEnumerable<WeaponSkinData> skins)
-    {
-        var weaponMap = skins.Where(s => s.Team == player.Controller.Team)
-            .ToDictionary(s => s.DefinitionIndex, s => s);
-        foreach (var handle in player.PlayerPawn!.WeaponServices!.MyWeapons)
-        {
-            var weapon = handle.Value;
-            if (weapon == null || !weapon.IsValid) continue;
-            var def = weapon.AttributeManager.Item.ItemDefinitionIndex;
-            if (weaponMap.TryGetValue(def, out var skin))
-            {
-                ApplyWeaponAttributes(weapon, skin);
-            }
-        }
-    }
-
-    private void ApplyKnifeSkins(IPlayer player,
-        IEnumerable<KnifeSkinData> knives)
-    {
-        foreach (var handle in player.PlayerPawn!.WeaponServices!.MyWeapons)
-        {
-            var weapon = handle.Value;
-            if (weapon == null || !weapon.IsValid) continue;
-            if (!Utilities.IsKnifeDefinitionIndex(weapon.AttributeManager.Item.ItemDefinitionIndex)) continue;
-            var knife = knives.LastOrDefault(k => k.Team == player.Controller.Team);
-            if (knife != null)
-            {
-                ApplyKnifeAttributes(weapon, knife);
-            }
-        }
-    }
-
     private void ApplyPlayerWeapons(IPlayer player)
     {
         if (!player.IsAlive()) return;
@@ -504,20 +486,36 @@ public class HookInventoryUpdateService : IInventoryUpdateService, IDisposable
         KnifeSkinData knife)
     {
         var item = weapon.AttributeManager.Item;
-        item.EntityQuality = (int)knife.Quality;
-
-        if (knife.Nametag != null)
-        {
-            item.CustomName = knife.Nametag;
-        }
-
         if (item.ItemDefinitionIndex != knife.DefinitionIndex)
         {
             weapon.AcceptInputAsync("ChangeSubclass", knife.DefinitionIndex.ToString());
         }
 
+        var itemId = (ulong)Random.Shared.NextInt64(1, long.MaxValue);
+        item.ItemID = itemId;
+        item.ItemIDLow = (uint)itemId;
+        item.ItemIDHigh = (uint)(itemId >> 32);
+        item.AccountID = (uint)knife.SteamID;
+        item.Initialized = true;
         item.ItemDefinitionIndex = knife.DefinitionIndex;
+        item.EntityQuality = (int)knife.Quality;
+        item.CustomName = knife.Nametag ?? string.Empty;
 
+        weapon.OriginalOwnerXuidLow = (uint)knife.SteamID;
+        weapon.OriginalOwnerXuidHigh = (uint)(knife.SteamID >> 32);
+        weapon.FallbackPaintKit = knife.Paintkit;
+        weapon.FallbackSeed = knife.PaintkitSeed;
+        weapon.FallbackWear = knife.PaintkitWear;
+        weapon.FallbackStatTrak = knife.Quality == EconItemQuality.StatTrak ? knife.StattrakCount : -1;
+
+        item.AttributeList.Attributes.RemoveAll();
+        item.NetworkedDynamicAttributes.Attributes.RemoveAll();
+        item.NetworkedDynamicAttributes.SetOrAddAttribute("set item texture prefab", knife.Paintkit);
+        item.NetworkedDynamicAttributes.SetOrAddAttribute("set item texture seed", knife.PaintkitSeed);
+        item.NetworkedDynamicAttributes.SetOrAddAttribute("set item texture wear", knife.PaintkitWear);
+        item.AttributeList.SetOrAddAttribute("set item texture prefab", knife.Paintkit);
+        item.AttributeList.SetOrAddAttribute("set item texture seed", knife.PaintkitSeed);
+        item.AttributeList.SetOrAddAttribute("set item texture wear", knife.PaintkitWear);
 
         if (knife.Quality == EconItemQuality.StatTrak)
         {
@@ -527,18 +525,18 @@ public class HookInventoryUpdateService : IInventoryUpdateService, IDisposable
             item.NetworkedDynamicAttributes.SetOrAddAttribute("kill eater", val);
             item.NetworkedDynamicAttributes.SetOrAddAttribute("kill eater score type", 0);
         }
-        else
-        {
-            item.AttributeList.Attributes.RemoveAll();
-            item.NetworkedDynamicAttributes.Attributes.RemoveAll();
-        }
 
-        item.NetworkedDynamicAttributes.SetOrAddAttribute("set item texture prefab", knife.Paintkit);
-        item.NetworkedDynamicAttributes.SetOrAddAttribute("set item texture seed", knife.PaintkitSeed);
-        item.NetworkedDynamicAttributes.SetOrAddAttribute("set item texture wear", knife.PaintkitWear);
-        item.AttributeList.SetOrAddAttribute("set item texture prefab", knife.Paintkit);
-        item.AttributeList.SetOrAddAttribute("set item texture seed", knife.PaintkitSeed);
-        item.AttributeList.SetOrAddAttribute("set item texture wear", knife.PaintkitWear);
+        item.ItemIDLowUpdated();
+        item.ItemIDHighUpdated();
+        item.AccountIDUpdated();
+        item.InitializedUpdated();
+        item.CustomNameUpdated();
+        item.AttributeListUpdated();
+        item.NetworkedDynamicAttributesUpdated();
+        weapon.FallbackPaintKitUpdated();
+        weapon.FallbackSeedUpdated();
+        weapon.FallbackWearUpdated();
+        weapon.FallbackStatTrakUpdated();
     }
 
     private void ApplyGlove(IPlayer player,

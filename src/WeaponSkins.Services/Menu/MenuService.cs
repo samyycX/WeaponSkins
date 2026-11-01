@@ -1,11 +1,12 @@
-using System;
+using System.Collections.Concurrent;
 using System.Diagnostics.CodeAnalysis;
+using System.Globalization;
 
 using Microsoft.Extensions.Logging;
 
-using SwiftlyS2.Core.Menus.OptionsBase;
 using SwiftlyS2.Shared;
-using SwiftlyS2.Shared.Menus;
+using SwiftlyS2.Shared.Menu;
+using SwiftlyS2.Shared.Menu.Components;
 using SwiftlyS2.Shared.Players;
 using SwiftlyS2.Shared.SchemaDefinitions;
 using SwiftlyS2.Shared.Translation;
@@ -45,8 +46,8 @@ public partial class MenuService
 
     public void OpenMainMenu(IPlayer player)
     {
-        var main = Core.MenusAPI.CreateBuilder();
-        main.Design.SetMenuTitle(LocalizationService[player].MenuTitle);
+        var main = Core.Menu.CreateMenu("weaponskins.main")
+            .WithTitle(LocalizationService[player].MenuTitle);
 
         AddMenuOption(main, ItemPermissionService.CanUseWeaponSkins(player.SteamID),
             () => GetWeaponSkinMenuSubmenuOption(player), LocalizationService[player].MenuTitleSkins);
@@ -70,9 +71,10 @@ public partial class MenuService
         AddMenuOption(main, ItemPermissionService.CanUseMusicKits(player.SteamID),
             () => GetMusicKitMenuSubmenuOption(player), LocalizationService[player].MenuTitleMusicKits);
 
-        Core.MenusAPI.OpenMenuForPlayer(player, main.Build());
+        var menu = main.Build();
+        TrackFocus(menu);
+        menu.Open(player);
     }
-
     public bool TryGetWeaponInHand(IPlayer player,
         [MaybeNullWhen(false)] out CBasePlayerWeapon weaponInHand)
     {
@@ -134,24 +136,120 @@ public partial class MenuService
             : agent.LocalizedNames.GetValueOrDefault("english") ?? agent.Name;
     }
 
-    private static void AddMenuOption(IMenuBuilderAPI builder,
+    private static void AddMenuOption(IMenuBuilder builder,
         bool enabled,
-        Func<IMenuOption> optionFactory,
+        Func<IMenuComponent> optionFactory,
         string title)
     {
-        if (enabled)
-        {
-            builder.AddOption(optionFactory());
-            return;
-        }
-
-        builder.AddOption(CreateDisabledOption(title));
+        builder.Add(enabled ? optionFactory() : CreateDisabledOption(title));
     }
 
-    private static TextMenuOption CreateDisabledOption(string title)
+    private static TextComponent CreateDisabledOption(string title)
     {
-        var option = new TextMenuOption(title);
-        option.Enabled = false;
-        return option;
+        return new TextComponent(title) { Enabled = false };
+    }
+
+    private static IMenu BuildEmptyMenu(ISwiftlyCore core, string id, string title)
+    {
+        return core.Menu.CreateMenu(id).WithTitle(title).Build();
+    }
+
+    private static ButtonComponent CreateButton(string text, Action<IPlayer> onSelect)
+    {
+        return new ButtonComponent(text, ctx =>
+        {
+            onSelect(ctx.Player);
+            return ValueTask.CompletedTask;
+        });
+    }
+
+    private static ButtonComponent CreateRarityButton(string text, string hexColor, Action<IPlayer> onSelect)
+    {
+        var button = CreateButton(text, onSelect);
+        button.Style = MenuTextStyle.Default.WithSize(MenuTextSize.SmallMedium).WithColor(NormalizeHex(hexColor));
+        return button;
+    }
+
+    private static string NormalizeHex(string hex)
+    {
+        return hex.StartsWith('#') ? hex : "#" + hex;
+    }
+
+    private static InputComponent CreateFloatInput(string text, float value, Func<float, bool> isValid, Action<IPlayer, float> apply)
+    {
+        return new InputComponent(text, value.ToString(CultureInfo.InvariantCulture),
+            input => TryParseFloat(input, out var parsed) && isValid(parsed),
+            ctx =>
+            {
+                if (TryParseFloat(ctx.NewValue, out var parsed))
+                {
+                    apply(ctx.Player, parsed);
+                }
+            });
+    }
+
+    private static InputComponent CreateIntInput(string text, int value, Func<int, bool> isValid, Action<IPlayer, int> apply)
+    {
+        return new InputComponent(text, value.ToString(CultureInfo.InvariantCulture),
+            input => int.TryParse(input, NumberStyles.Integer, CultureInfo.InvariantCulture, out var parsed) && isValid(parsed),
+            ctx =>
+            {
+                if (int.TryParse(ctx.NewValue, NumberStyles.Integer, CultureInfo.InvariantCulture, out var parsed))
+                {
+                    apply(ctx.Player, parsed);
+                }
+            });
+    }
+
+    private static bool TryParseFloat(string input, out float value)
+    {
+        return float.TryParse(input, NumberStyles.Float, CultureInfo.InvariantCulture, out value);
+    }
+
+    // Stands in for the legacy MoveToOption click handlers: back-navigation restores the last row,
+    // a fresh open lands on the row whose Tag matches what the player is holding.
+    private void TrackFocus(IMenu menu, Func<IPlayer, object?>? inHandTag = null)
+    {
+        var remembered = new ConcurrentDictionary<int, int>();
+
+        menu.Closed += session => remembered[session.Player.PlayerID] = session.FocusedIndex;
+        menu.Opened += session =>
+        {
+            if (remembered.TryRemove(session.Player.PlayerID, out var index))
+            {
+                session.SetFocus(index);
+                return;
+            }
+
+            if (inHandTag == null)
+            {
+                return;
+            }
+
+            Core.Scheduler.NextTick(() =>
+            {
+                if (!session.IsOpen || !session.Player.IsValid || inHandTag(session.Player) is not { } tag)
+                {
+                    return;
+                }
+
+                var position = 0;
+                foreach (var component in menu.GetComponents(MenuRegion.Body))
+                {
+                    if (!component.IsFocusable || !component.IsVisible(session))
+                    {
+                        continue;
+                    }
+
+                    if (component is MenuComponentBase { Tag: { } componentTag } && componentTag.Equals(tag))
+                    {
+                        session.SetFocus(position);
+                        return;
+                    }
+
+                    position++;
+                }
+            });
+        };
     }
 }

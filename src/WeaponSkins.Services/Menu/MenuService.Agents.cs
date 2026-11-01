@@ -1,6 +1,5 @@
-using SwiftlyS2.Core.Menus.OptionsBase;
-using SwiftlyS2.Shared;
-using SwiftlyS2.Shared.Menus;
+using SwiftlyS2.Shared.Menu;
+using SwiftlyS2.Shared.Menu.Components;
 using SwiftlyS2.Shared.Players;
 
 using WeaponSkins.Extensions;
@@ -9,45 +8,39 @@ namespace WeaponSkins;
 
 public partial class MenuService
 {
-    public IMenuOption GetAgentMenuSubmenuOption(IPlayer player)
+    public IMenuComponent GetAgentMenuSubmenuOption(IPlayer player)
     {
         if (!ItemPermissionService.CanUseAgents(player.SteamID))
         {
             return CreateDisabledOption(LocalizationService[player].MenuTitleAgents);
         }
 
-        var option = new SubmenuMenuOption(LocalizationService[player].MenuTitleAgents, () => Task.FromResult(BuildAgentMenu(player)));
-        return option;
+        return new SubmenuComponent(LocalizationService[player].MenuTitleAgents, _ => BuildAgentMenu(player));
     }
 
-    private IMenuAPI BuildAgentMenu(IPlayer player)
+    private IMenu BuildAgentMenu(IPlayer player)
     {
-        var main = Core.MenusAPI.CreateBuilder();
-        main.Design.SetMenuTitle(LocalizationService[player].MenuTitleAgents);
+        var main = Core.Menu.CreateMenu("weaponskins.agents")
+            .WithTitle(LocalizationService[player].MenuTitleAgents);
 
-        var reset = new ButtonMenuOption(LocalizationService[player].MenuReset);
-        reset.Click += (_, args) =>
+        main.Add(CreateButton(LocalizationService[player].MenuReset, p =>
         {
-            var team = args.Player.Controller.Team;
-            DataService.AgentDataService.TryRemoveAgent(args.Player.SteamID, team);
-            if (DataService.AgentDataService.TryGetDefaultModel(args.Player.SteamID, team, out var defaultModel))
+            var team = p.Controller.Team;
+            DataService.AgentDataService.TryRemoveAgent(p.SteamID, team);
+            if (DataService.AgentDataService.TryGetDefaultModel(p.SteamID, team, out var defaultModel))
             {
-                ApplyAgentModel(args.Player, defaultModel);
+                ApplyAgentModel(p, defaultModel);
             }
 
-            Api.ResetAgentSkin(args.Player.SteamID, team, true);
-
-            return ValueTask.CompletedTask;
-        };
-        main.AddOption(reset);
+            Api.ResetAgentSkin(p.SteamID, team, true);
+        }));
 
         var team = player.Controller.Team;
-        
-        // Filter agents by team: CT agents start with "ctm_", T agents start with "tm_"
-        // Team 3 = CT, Team 2 = T
+
+        // Team 3 = CT ("ctm_" models), team 2 = T ("tm_" models).
         var teamPrefix = (int)team == 3 ? "ctm_" : "tm_";
         var agents = EconService.Agents.Values
-            .Where(a => a.ModelPath.Contains($"/{teamPrefix}", StringComparison.OrdinalIgnoreCase) || 
+            .Where(a => a.ModelPath.Contains($"/{teamPrefix}", StringComparison.OrdinalIgnoreCase) ||
                        a.ModelPath.StartsWith(teamPrefix, StringComparison.OrdinalIgnoreCase))
             .OrderByDescending(a => a.Rarity.Id)
             .ThenBy(a => EconService.GetLocalizedName(a.LocalizedNames, player.PlayerLanguage.Value))
@@ -56,35 +49,29 @@ public partial class MenuService
         foreach (var agent in agents)
         {
             var title = EconService.GetLocalizedName(agent.LocalizedNames, player.PlayerLanguage.Value);
-            var coloredTitle = HtmlGradient.GenerateGradientText(title, agent.Rarity.Color.HexColor);
-            var option = new ButtonMenuOption(coloredTitle);
-            option.Click += (_, args) =>
+            main.Add(CreateRarityButton(title, agent.Rarity.Color.HexColor, p =>
             {
-                var team = args.Player.Controller.Team;
+                var team = p.Controller.Team;
 
-                if (args.Player.IsAlive())
+                if (p.IsAlive())
                 {
-                    var pawn = args.Player.PlayerPawn!;
+                    var pawn = p.PlayerPawn!;
                     var current = pawn.CBodyComponent!.SceneNode!.GetSkeletonInstance()
                         .ModelState
                         .ModelName;
-                    DataService.AgentDataService.CaptureDefaultModel(args.Player.SteamID, team, current);
+                    DataService.AgentDataService.CaptureDefaultModel(p.SteamID, team, current);
                 }
 
-                DataService.AgentDataService.SetAgent(args.Player.SteamID, team, agent.Index);
-                ApplyAgentModel(args.Player, agent.ModelPath);
+                DataService.AgentDataService.SetAgent(p.SteamID, team, agent.Index);
+                ApplyAgentModel(p, agent.ModelPath);
 
-                Api.UpdateAgentSkin(args.Player.SteamID, team, agent.Index, true);
+                Api.UpdateAgentSkin(p.SteamID, team, agent.Index, true);
 
                 Core.Scheduler.DelayBySeconds(0.1f, () =>
                 {
-                    ApplyAgentModel(args.Player, agent.ModelPath);
+                    ApplyAgentModel(p, agent.ModelPath);
                 });
-
-                return ValueTask.CompletedTask;
-            };
-
-            main.AddOption(option);
+            }));
         }
 
         return main.Build();

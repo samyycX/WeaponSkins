@@ -1,5 +1,5 @@
-using SwiftlyS2.Core.Menus.OptionsBase;
-using SwiftlyS2.Shared.Menus;
+using SwiftlyS2.Shared.Menu;
+using SwiftlyS2.Shared.Menu.Components;
 using SwiftlyS2.Shared.Players;
 
 using WeaponSkins.Shared;
@@ -8,177 +8,65 @@ namespace WeaponSkins;
 
 public partial class MenuService
 {
-    public IMenuAPI BuildSkinPropertiesMenu(IPlayer player,
+    public IMenu BuildSkinPropertiesMenu(IPlayer player,
         WeaponSkinData weaponInHand)
     {
-        var main = Core.MenusAPI.CreateBuilder();
-        main.Design.SetMenuTitle(LocalizationService[player].MenuTitleSkinProperties);
+        var main = Core.Menu.CreateMenu("weaponskins.skinproperties")
+            .WithTitle(LocalizationService[player].MenuTitleSkinProperties);
 
-        var wearOption = new InputMenuOption(
-            LocalizationService[player].MenuSkinPropertiesWear,
-            validator: (value) =>
+        void Update(Action<WeaponSkinData> apply) =>
+            Api.UpdateWeaponSkin(weaponInHand.SteamID, weaponInHand.Team, weaponInHand.DefinitionIndex, apply, true);
+
+        main.Add(CreateFloatInput(LocalizationService[player].MenuSkinPropertiesWear, weaponInHand.PaintkitWear,
+            value => value is >= 0.0f and <= 1.0f,
+            (_, value) =>
             {
-                if (float.TryParse(value, out var result))
-                {
-                    return result is >= 0.0f and <= 1.0f;
-                }
+                weaponInHand.PaintkitWear = value;
+                Update(skin => skin.PaintkitWear = value);
+            }));
 
-                return false;
-            }
-        );
+        main.Add(CreateIntInput(LocalizationService[player].MenuSkinPropertiesSeed, weaponInHand.PaintkitSeed,
+            value => value >= 0,
+            (_, value) =>
+            {
+                weaponInHand.PaintkitSeed = value;
+                Update(skin => skin.PaintkitSeed = value);
+            }));
 
-        wearOption.SetValue(player, weaponInHand.PaintkitWear.ToString());
-
-        wearOption.ValueChanged += (_,
-            args) =>
+        main.Add(new InputComponent(LocalizationService[player].MenuSkinPropertiesNametag,
+            weaponInHand.Nametag ?? LocalizationService[player].MenuSkinPropertiesNametagNone,
+            null,
+            ctx => Update(skin => skin.Nametag = ctx.NewValue))
         {
-            weaponInHand.PaintkitWear = float.Parse(args.NewValue);
-            Api.UpdateWeaponSkin(weaponInHand.SteamID, weaponInHand.Team, weaponInHand.DefinitionIndex, skin =>
+            MaxLength = 32
+        });
+
+        main.Add(CreateButton(LocalizationService[player].MenuSkinPropertiesNametagUnset,
+            _ => Update(skin => skin.Nametag = null)));
+        main.Add(CreateButton(LocalizationService[player].MenuSkinPropertiesSetStattrak,
+            _ => Update(skin => skin.Quality = EconItemQuality.StatTrak)));
+        main.Add(CreateButton(LocalizationService[player].MenuSkinPropertiesUnsetStattrak,
+            _ => Update(skin => skin.Quality = EconItemQuality.Normal)));
+        main.Add(CreateButton(LocalizationService[player].MenuSkinPropertiesSetSouvenir,
+            _ => Update(skin => skin.Quality = EconItemQuality.Souvenir)));
+        main.Add(CreateButton(LocalizationService[player].MenuSkinPropertiesUnsetSouvenir,
+            _ => Update(skin => skin.Quality = EconItemQuality.Normal)));
+
+        main.Add(CreateIntInput(LocalizationService[player].MenuSkinPropertiesStattrakCount(weaponInHand.StattrakCount),
+            weaponInHand.StattrakCount,
+            value => value >= 0,
+            (_, value) =>
             {
-                skin.PaintkitWear = weaponInHand.PaintkitWear;
-            }, true);
-        };
-
-        main.AddOption(wearOption);
-
-        var seedOption = new InputMenuOption(
-            LocalizationService[player].MenuSkinPropertiesSeed,
-            validator: (value) =>
-            {
-                if (int.TryParse(value, out var result))
-                {
-                    return result >= 0;
-                }
-
-                return false;
-            }
-        );
-        seedOption.SetValue(player, weaponInHand.PaintkitSeed.ToString());
-        seedOption.ValueChanged += (_,
-            args) =>
-        {
-            weaponInHand.PaintkitSeed = int.Parse(args.NewValue);
-            Api.UpdateWeaponSkin(weaponInHand.SteamID, weaponInHand.Team, weaponInHand.DefinitionIndex, skin =>
-            {
-                skin.PaintkitSeed = weaponInHand.PaintkitSeed;
-            }, true);
-        };
-
-        main.AddOption(seedOption);
-
-
-        var nametagOption = new InputMenuOption(
-            LocalizationService[player].MenuSkinPropertiesNametag
-        );
-
-        nametagOption.SetValue(player,
-            weaponInHand.Nametag ?? LocalizationService[player].MenuSkinPropertiesNametagNone);
-
-        nametagOption.ValueChanged += (_,
-            args) =>
-        {
-            Api.UpdateWeaponSkin(weaponInHand.SteamID, weaponInHand.Team, weaponInHand.DefinitionIndex, skin =>
-            {
-                skin.Nametag = args.NewValue;
-            }, true);
-        };
-
-        main.AddOption(nametagOption);
-
-        var unsetNametagOption = new ButtonMenuOption(LocalizationService[player].MenuSkinPropertiesNametagUnset);
-        unsetNametagOption.Click += (_,
-            args) =>
-        {
-            Api.UpdateWeaponSkin(weaponInHand.SteamID, weaponInHand.Team, weaponInHand.DefinitionIndex, skin =>
-            {
-                skin.Nametag = null;
-            }, true);
-            return ValueTask.CompletedTask;
-        };
-
-        main.AddOption(unsetNametagOption);
-
-        var setStattrakOption = new ButtonMenuOption(LocalizationService[player].MenuSkinPropertiesSetStattrak);
-        setStattrakOption.Click += (_,
-            args) =>
-        {
-            Api.UpdateWeaponSkin(weaponInHand.SteamID, weaponInHand.Team, weaponInHand.DefinitionIndex, skin =>
-            {
-                skin.Quality = EconItemQuality.StatTrak;
-            }, true);
-            return ValueTask.CompletedTask;
-        };
-
-        main.AddOption(setStattrakOption);
-
-        var unsetStattrakOption = new ButtonMenuOption(LocalizationService[player].MenuSkinPropertiesUnsetStattrak);
-        unsetStattrakOption.Click += (_,
-            args) =>
-        {
-            Api.UpdateWeaponSkin(weaponInHand.SteamID, weaponInHand.Team, weaponInHand.DefinitionIndex, skin =>
-            {
-                skin.Quality = EconItemQuality.Normal;
-            }, true);
-            return ValueTask.CompletedTask;
-        };
-
-        main.AddOption(unsetStattrakOption);
-
-        var setSouvenirOption = new ButtonMenuOption(LocalizationService[player].MenuSkinPropertiesSetSouvenir);
-        setSouvenirOption.Click += (_,
-            args) =>
-        {
-            Api.UpdateWeaponSkin(weaponInHand.SteamID, weaponInHand.Team, weaponInHand.DefinitionIndex, skin =>
-            {
-                skin.Quality = EconItemQuality.Souvenir;
-            }, true);
-            return ValueTask.CompletedTask;
-        };
-        main.AddOption(setSouvenirOption);
-
-        var unsetSouvenirOption = new ButtonMenuOption(LocalizationService[player].MenuSkinPropertiesUnsetSouvenir);
-        unsetSouvenirOption.Click += (_,
-            args) =>
-        {
-            Api.UpdateWeaponSkin(weaponInHand.SteamID, weaponInHand.Team, weaponInHand.DefinitionIndex, skin =>
-            {
-                skin.Quality = EconItemQuality.Normal;
-            }, true);
-            return ValueTask.CompletedTask;
-        };
-
-        main.AddOption(unsetSouvenirOption);
-
-        var setStattrakCountOption = new InputMenuOption(
-            LocalizationService[player].MenuSkinPropertiesStattrakCount(weaponInHand.StattrakCount),
-            validator: (value) =>
-            {
-                if (int.TryParse(value, out var result))
-                {
-                    return result >= 0;
-                }
-
-                return false;
-            }
-        );
-        setStattrakCountOption.SetValue(player, weaponInHand.StattrakCount.ToString());
-        setStattrakCountOption.ValueChanged += (_,
-            args) =>
-        {
-            weaponInHand.StattrakCount = int.Parse(args.NewValue);
-            Api.UpdateWeaponSkin(weaponInHand.SteamID, weaponInHand.Team, weaponInHand.DefinitionIndex, skin =>
-            {
-                skin.StattrakCount = weaponInHand.StattrakCount;
-            }, true);
-        };
-        main.AddOption(setStattrakCountOption);
+                weaponInHand.StattrakCount = value;
+                Update(skin => skin.StattrakCount = value);
+            }));
 
         for (int i = 0; i < 6; i++)
         {
             var option = GetStickerPropertiesMenuSubmenuOption(player, weaponInHand, i);
             if (option != null)
             {
-                main.AddOption(option);
+                main.Add(option);
             }
         }
 
@@ -187,14 +75,14 @@ public partial class MenuService
             var option = GetKeychainPropertiesMenuSubmenuOption(player, weaponInHand, i);
             if (option != null)
             {
-                main.AddOption(option);
+                main.Add(option);
             }
         }
 
         return main.Build();
     }
 
-    public IMenuOption GetSkinPropertiesMenuSubmenuOption(IPlayer player)
+    public IMenuComponent GetSkinPropertiesMenuSubmenuOption(IPlayer player)
     {
         if (!ItemPermissionService.CanUseWeaponSkins(player.SteamID))
         {
@@ -206,7 +94,7 @@ public partial class MenuService
             return CreateDisabledOption(LocalizationService[player].MenuTitleSkinProperties);
         }
 
-        return new SubmenuMenuOption(LocalizationService[player].MenuTitleSkinProperties,
-            () => Task.FromResult(BuildSkinPropertiesMenu(player, weaponInHand)));
+        return new SubmenuComponent(LocalizationService[player].MenuTitleSkinProperties,
+            _ => BuildSkinPropertiesMenu(player, weaponInHand));
     }
 }

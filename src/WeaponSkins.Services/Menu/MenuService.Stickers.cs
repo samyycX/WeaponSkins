@@ -1,10 +1,8 @@
-using System.Diagnostics.CodeAnalysis;
+using System.Collections.Concurrent;
 
-using SwiftlyS2.Core.Menus.OptionsBase;
-using SwiftlyS2.Shared;
-using SwiftlyS2.Shared.Menus;
+using SwiftlyS2.Shared.Menu;
+using SwiftlyS2.Shared.Menu.Components;
 using SwiftlyS2.Shared.Players;
-using SwiftlyS2.Shared.SchemaDefinitions;
 
 using WeaponSkins.Econ;
 using WeaponSkins.Shared;
@@ -13,8 +11,8 @@ namespace WeaponSkins;
 
 public partial class MenuService
 {
-    private Dictionary<int, StickerDefinition> StickerDefinitions { get; set; } = new();
-    private Dictionary<ulong /* steamid */, WeaponSkinData> _stickerOperatingWeaponSkins = new();
+    private ConcurrentDictionary<int, StickerDefinition> StickerDefinitions { get; set; } = new();
+    private readonly ConcurrentDictionary<ulong /* steamid */, WeaponSkinData> _stickerOperatingWeaponSkins = new();
 
     private string? GetStickerName(StickerData? data,
         string language)
@@ -42,91 +40,71 @@ public partial class MenuService
         return EconService.GetLocalizedName(definition.LocalizedNames, language);
     }
 
-    private IMenuAPI BuildStickerMenuBySlot(IPlayer player,
+    private void UpdateOperatingSticker(IPlayer player, int slot, StickerData? sticker)
+    {
+        if (!_stickerOperatingWeaponSkins.TryGetValue(player.SteamID, out var dataInHand))
+        {
+            return;
+        }
+
+        Api.UpdateWeaponSkin(player.SteamID, player.Controller.Team, dataInHand.DefinitionIndex,
+            skin => skin.SetSticker(slot, sticker), true);
+    }
+
+    private IMenu BuildStickerMenuBySlot(IPlayer player,
         int slot,
         string language,
         string title)
     {
-        var main = Core.MenusAPI.CreateBuilder();
+        var main = Core.Menu.CreateMenu($"weaponskins.stickers.slot{slot}")
+            .WithTitle(title);
 
-        main.Design.SetMenuTitle(title);
-        var resetOption = new ButtonMenuOption(LocalizationService[player].MenuReset);
-        resetOption.Click += (_,
-            args) =>
-        {
-            if (!_stickerOperatingWeaponSkins.TryGetValue(args.Player.SteamID, out var dataInHand))
-            {
-                return ValueTask.CompletedTask;
-            }
+        main.Add(CreateButton(LocalizationService[player].MenuReset, p => UpdateOperatingSticker(p, slot, null)));
 
-            Api.UpdateWeaponSkin(args.Player.SteamID, args.Player.Controller.Team, dataInHand.DefinitionIndex,
-                skin =>
-                {
-                    skin.SetSticker(slot, null);
-                }, true);
-            return ValueTask.CompletedTask;
-        };
-
-        main.AddOption(resetOption);
         foreach (var (_, stickerCollection) in EconService.StickerCollections)
         {
-            main.AddOption(new SubmenuMenuOption(EconService.GetLocalizedName(stickerCollection.LocalizedNames, language), () =>
+            var collectionName = EconService.GetLocalizedName(stickerCollection.LocalizedNames, language);
+            main.Add(new SubmenuComponent(collectionName, _ =>
             {
-                var stickerMenu = Core.MenusAPI.CreateBuilder();
-                stickerMenu.Design.SetMenuTitle(EconService.GetLocalizedName(stickerCollection.LocalizedNames, language));
+                var stickerMenu = Core.Menu.CreateMenu($"weaponskins.stickers.slot{slot}.collection")
+                    .WithTitle(collectionName);
 
                 foreach (var sticker in stickerCollection.Stickers)
                 {
                     if (sticker.Index == 0) continue;
-                    var option = new ButtonMenuOption(HtmlGradient.GenerateGradientText(
+                    var stickerIndex = sticker.Index;
+                    stickerMenu.Add(CreateRarityButton(
                         EconService.GetLocalizedName(sticker.LocalizedNames, language),
-                        sticker.Rarity.Color.HexColor));
-                    option.Click += (_,
-                        args) =>
-                    {
-                        if (!_stickerOperatingWeaponSkins.TryGetValue(args.Player.SteamID, out var dataInHand))
-                        {
-                            return ValueTask.CompletedTask;
-                        }
-
-                        Api.UpdateWeaponSkin(args.Player.SteamID, args.Player.Controller.Team,
-                            dataInHand.DefinitionIndex,
-                            skin =>
-                            {
-                                skin.SetSticker(slot, new StickerData { Id = sticker.Index, });
-                            }, true);
-                        return ValueTask.CompletedTask;
-                    };
-                    stickerMenu.AddOption(option);
+                        sticker.Rarity.Color.HexColor,
+                        p => UpdateOperatingSticker(p, slot, new StickerData { Id = stickerIndex })));
                 }
 
-                return Task.FromResult(stickerMenu.Build());
+                return stickerMenu.Build();
             }));
         }
 
         return main.Build();
     }
 
-    public IMenuAPI BuildStickerMenu(IPlayer player)
+    public IMenu BuildStickerMenu(IPlayer player)
     {
-        var main = Core.MenusAPI.CreateBuilder();
-        main.Design.SetMenuTitle(LocalizationService[player].MenuTitleStickers);
+        var main = Core.Menu.CreateMenu("weaponskins.stickers")
+            .WithTitle(LocalizationService[player].MenuTitleStickers);
 
         for (int i = 0; i < 6; i++)
         {
-            var title =
-                $"[{i + 1}] Slot";
+            var title = $"[{i + 1}] Slot";
             var slot = i;
-            main.AddOption(new SubmenuMenuOption(title,
-                () => Task.FromResult(BuildStickerMenuBySlot(player, slot, player.PlayerLanguage.Value, title))));
+            main.Add(new SubmenuComponent(title,
+                _ => BuildStickerMenuBySlot(player, slot, player.PlayerLanguage.Value, title)));
         }
 
         var menu = main.Build();
+        TrackFocus(menu);
         return menu;
     }
 
-
-    public IMenuOption GetStickerMenuSubmenuOption(IPlayer player)
+    public IMenuComponent GetStickerMenuSubmenuOption(IPlayer player)
     {
         if (!ItemPermissionService.CanUseStickers(player.SteamID))
         {
@@ -139,7 +117,7 @@ public partial class MenuService
         }
 
         _stickerOperatingWeaponSkins[player.SteamID] = dataInHand;
-        return new SubmenuMenuOption(LocalizationService[player].MenuTitleStickers,
-            () => Task.FromResult(BuildStickerMenu(player)));
+        return new SubmenuComponent(LocalizationService[player].MenuTitleStickers,
+            _ => BuildStickerMenu(player));
     }
 }

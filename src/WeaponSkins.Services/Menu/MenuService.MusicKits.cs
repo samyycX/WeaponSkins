@@ -10,18 +10,20 @@ public partial class MenuService
     {
         return new SubmenuComponent(LocalizationService[player].MenuTitleMusicKits, _ =>
         {
-            var menu = Core.Menu.CreateMenu("weaponskins.musickits")
+            var menu = CreateMenu("weaponskins.musickits")
                 .WithTitle(LocalizationService[player].MenuTitleMusicKits);
 
             menu.Add(CreateButton(LocalizationService[player].MenuReset, p => Api.ResetMusicKit(p.SteamID)));
 
+            var typeLabel = LocalizationService[player].MenuTypeMusicKit;
             foreach (var musicKit in EconService.MusicKits.Values.OrderBy(mk => mk.Index))
             {
                 var musicKitName = EconService.GetLocalizedName(musicKit.LocalizedNames, player.PlayerLanguage.Value);
                 var truncatedName = musicKitName.Length > 30 ? musicKitName.Substring(0, 27) + "..." : musicKitName;
                 var index = musicKit.Index;
 
-                menu.Add(CreateButton(truncatedName, p => Api.SetMusicKit(p.SteamID, index)));
+                menu.Add(CreateButton(truncatedName, p => Api.SetMusicKit(p.SteamID, index),
+                    EconService.GetImageKey("music", musicKit.Name), typeLabel));
             }
 
             return menu.Build();

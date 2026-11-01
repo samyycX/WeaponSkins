@@ -52,12 +52,15 @@ public class EconService
 
     public Dictionary<string /* Name */, MusicKitDefinition> MusicKits { get; set; } = new(StringComparer.OrdinalIgnoreCase);
 
+    // Kept off the WeaponSkins.Shared records so the public contract does not change for a menu-only detail.
+    private Dictionary<string /* "agent:"/"music:"/"keychain:" + Name */, string /* panorama/images/econ-relative key */> ImageKeys { get; set; } = new();
+
     private Dictionary<string /* Language */, Dictionary<string /* Key */, string /* Value */>> Languages { get; } =
         new(StringComparer.OrdinalIgnoreCase);
 
     private Dictionary<string, string> RevolvingLootLists { get; } = new(StringComparer.OrdinalIgnoreCase);
 
-    private const int SchemaVersion = 25;
+    private const int SchemaVersion = 26;
 
     public EconService(ISwiftlyCore core,
         ILogger<EconService> logger,
@@ -94,7 +97,7 @@ public class EconService
                     File.ReadAllText(Path.Combine(Core.PluginDataDirectory, "version.lock")));
             if (new HashSet<string>(itemLanguages).SetEquals(lockVersion?.ItemLanguages ?? []) && lockVersion?.EconDataVersion == version && lockVersion.SchemaVersion == SchemaVersion)
             {
-                var files = new[] { "items.json", "agents.json", "weapon_to_paintkits.json", "sticker_collections.json", "keychains.json", "musickits.json" };
+                var files = new[] { "items.json", "agents.json", "weapon_to_paintkits.json", "sticker_collections.json", "keychains.json", "musickits.json", "image_keys.json" };
                 var allFilesExist = files.All(f => File.Exists(Path.Combine(Core.PluginDataDirectory, f)));
 
                 if (allFilesExist)
@@ -114,6 +117,8 @@ public class EconService
                         File.ReadAllText(Path.Combine(Core.PluginDataDirectory, "keychains.json")))!;
                     MusicKits = JsonSerializer.Deserialize<Dictionary<string, MusicKitDefinition>>(
                         File.ReadAllText(Path.Combine(Core.PluginDataDirectory, "musickits.json")))!;
+                    ImageKeys = JsonSerializer.Deserialize<Dictionary<string, string>>(
+                        File.ReadAllText(Path.Combine(Core.PluginDataDirectory, "image_keys.json")))!;
 
                     // TrimLanguages(allowedLanguages);
                     GC.Collect();
@@ -238,6 +243,9 @@ public class EconService
 
         File.WriteAllText(Path.Combine(dataDirectory, "musickits.json"),
             JsonSerializer.Serialize(MusicKits, options));
+
+        File.WriteAllText(Path.Combine(dataDirectory, "image_keys.json"),
+            JsonSerializer.Serialize(ImageKeys, options));
 
         Stickers.Clear();
         ClientLootLists.Clear();
@@ -643,6 +651,7 @@ public class EconService
                 };
 
                 Agents[definition.Name] = definition;
+                AddImageKey("agent:" + definition.Name, item.HasSubKey("image_inventory") ? item.Value["image_inventory"].EToString() : null);
             }
         }
 
@@ -689,6 +698,7 @@ public class EconService
                 };
 
                 MusicKits[definition.Name] = definition;
+                AddImageKey("music:" + definition.Name, musicKit.HasSubKey("image_inventory") ? musicKit.Value["image_inventory"].EToString() : null);
             }
         }
 
@@ -1171,8 +1181,23 @@ public class EconService
                         Rarity = rarity
                     };
                     Keychains[definition.Name] = definition;
+                    AddImageKey("keychain:" + definition.Name, keychain.HasSubKey("image_inventory") ? keychain.Value["image_inventory"].EToString() : null);
                 }
             }
         }
     }
+
+    private void AddImageKey(string key, string? imageInventory)
+    {
+        if (string.IsNullOrWhiteSpace(imageInventory))
+        {
+            return;
+        }
+
+        var path = imageInventory.Replace('\\', '/');
+        ImageKeys[key] = path.StartsWith("econ/", StringComparison.OrdinalIgnoreCase) ? path["econ/".Length..] : path;
+    }
+
+    public string? GetImageKey(string kind, string name) =>
+        ImageKeys.TryGetValue(kind + ":" + name, out var key) ? key : null;
 }

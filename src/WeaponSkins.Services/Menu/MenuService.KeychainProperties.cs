@@ -16,7 +16,7 @@ public partial class MenuService
         var keychain = data.GetKeychain(slot);
         if (keychain == null) return BuildEmptyMenu(Core, $"weaponskins.keychainproperties.slot{slot}", title);
 
-        var main = Core.Menu.CreateMenu($"weaponskins.keychainproperties.slot{slot}")
+        var main = CreateMenu($"weaponskins.keychainproperties.slot{slot}")
             .WithTitle(title);
 
         void Update(Action<WeaponSkinData> apply) =>

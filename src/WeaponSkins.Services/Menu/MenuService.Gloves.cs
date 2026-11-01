@@ -8,7 +8,7 @@ public partial class MenuService
 {
     public IMenu BuildGloveSkinMenu(IPlayer player)
     {
-        var main = Core.Menu.CreateMenu("weaponskins.gloves")
+        var main = CreateMenu("weaponskins.gloves")
             .WithTitle(LocalizationService[player].MenuTitleGloves);
 
         foreach (var (glove, paintkits) in EconService.WeaponToPaintkits)
@@ -20,9 +20,11 @@ public partial class MenuService
             }
 
             var itemName = EconService.GetLocalizedName(item.LocalizedNames, player.PlayerLanguage.Value);
-            var submenuOption = new SubmenuComponent(itemName, _ =>
+            // CS2 ships no per-type glove render, so the type borrows its first finish's.
+            var preview = paintkits.OrderByDescending(p => p.Rarity.Id).FirstOrDefault();
+            var submenuOption = CreateSubmenu(itemName, _ =>
             {
-                var skinMenu = Core.Menu.CreateMenu("weaponskins.gloves.paintkits").WithTitle(itemName);
+                var skinMenu = CreateMenu("weaponskins.gloves.paintkits").WithTitle(itemName);
                 skinMenu.Add(CreateButton(LocalizationService[player].MenuReset,
                     p => Api.ResetGloveSkin(p.SteamID, p.Controller.Team, true)));
 
@@ -35,7 +37,9 @@ public partial class MenuService
                         {
                             glove.DefinitionIndex = (ushort)item.Index;
                             glove.Paintkit = paintkit.Index;
-                        }, true));
+                        }, true),
+                        PaintkitImageKey(glove, paintkit),
+                        itemName);
                     option.Tag = paintkit.Index;
                     skinMenu.Add(option);
                 }
@@ -43,7 +47,7 @@ public partial class MenuService
                 var built = skinMenu.Build();
                 TrackFocus(built, p => TryGetGloveDataInHand(p, out var inHand) && Utilities.IsGloveDefinitionIndex(inHand.DefinitionIndex) ? inHand.Paintkit : null);
                 return built;
-            });
+            }, preview is null ? null : PaintkitImageKey(glove, preview));
 
             submenuOption.Tag = (ushort)item.Index;
             main.Add(submenuOption);

@@ -8,7 +8,7 @@ public partial class MenuService
 {
     public IMenu BuildWeaponSkinMenu(IPlayer player)
     {
-        var main = Core.Menu.CreateMenu("weaponskins.weapons")
+        var main = CreateMenu("weaponskins.weapons")
             .WithTitle(LocalizationService[player].MenuTitleSkins);
 
         foreach (var (weapon, paintkits) in EconService.WeaponToPaintkits)
@@ -20,9 +20,9 @@ public partial class MenuService
             }
 
             var itemName = EconService.GetLocalizedName(item.LocalizedNames, player.PlayerLanguage.Value);
-            var submenuOption = new SubmenuComponent(itemName, _ =>
+            var submenuOption = CreateSubmenu(itemName, _ =>
             {
-                var skinMenu = Core.Menu.CreateMenu("weaponskins.weapons.paintkits").WithTitle(itemName);
+                var skinMenu = CreateMenu("weaponskins.weapons.paintkits").WithTitle(itemName);
                 skinMenu.Add(CreateButton(LocalizationService[player].MenuReset,
                     p => Api.ResetWeaponSkin(p.SteamID, p.Controller.Team, (ushort)item.Index, true)));
 
@@ -31,7 +31,9 @@ public partial class MenuService
                     var option = CreateRarityButton(
                         EconService.GetLocalizedName(paintkit.LocalizedNames, player.PlayerLanguage.Value),
                         paintkit.Rarity.Color.HexColor,
-                        p => Api.UpdateWeaponSkin(p.SteamID, p.Controller.Team, (ushort)item.Index, skin => skin.Paintkit = paintkit.Index, true));
+                        p => Api.UpdateWeaponSkin(p.SteamID, p.Controller.Team, (ushort)item.Index, skin => skin.Paintkit = paintkit.Index, true),
+                        PaintkitImageKey(weapon, paintkit),
+                        itemName);
                     option.Tag = paintkit.Index;
                     skinMenu.Add(option);
                 }
@@ -39,7 +41,7 @@ public partial class MenuService
                 var built = skinMenu.Build();
                 TrackFocus(built, p => TryGetWeaponDataInHand(p, out var inHand) ? inHand.Paintkit : null);
                 return built;
-            });
+            }, BaseWeaponImageKey(weapon));
 
             submenuOption.Tag = (ushort)item.Index;
             main.Add(submenuOption);

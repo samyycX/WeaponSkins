@@ -1,38 +1,15 @@
-using SwiftlyS2.Core.Menus.OptionsBase;
-using SwiftlyS2.Shared;
-using SwiftlyS2.Shared.Menus;
+using SwiftlyS2.Shared.Menu;
+using SwiftlyS2.Shared.Menu.Components;
 using SwiftlyS2.Shared.Players;
 
 namespace WeaponSkins;
 
 public partial class MenuService
 {
-    private ValueTask OnWeaponSkinOptionClick(object? sender,
-        MenuOptionClickEventArgs args)
+    public IMenu BuildWeaponSkinMenu(IPlayer player)
     {
-        Core.Scheduler.NextTick(() =>
-        {
-            if (TryGetWeaponDataInHand(args.Player, out var weaponInHand))
-            {
-                var menu = Core.MenusAPI.GetCurrentMenu(args.Player);
-                if (menu != null)
-                {
-                    var option = menu.Options.FirstOrDefault(o =>
-                            o.Tag is int tag &&
-                            tag == weaponInHand.Paintkit);
-
-                    if (option != null)
-                        menu.MoveToOption(args.Player, option);
-                }
-            }
-        });
-        return ValueTask.CompletedTask;
-    }
-
-    public IMenuAPI BuildWeaponSkinMenu(IPlayer player)
-    {
-        var main = Core.MenusAPI.CreateBuilder();
-        main.Design.SetMenuTitle(LocalizationService[player].MenuTitleSkins);
+        var main = Core.Menu.CreateMenu("weaponskins.weapons")
+            .WithTitle(LocalizationService[player].MenuTitleSkins);
 
         foreach (var (weapon, paintkits) in EconService.WeaponToPaintkits)
         {
@@ -42,93 +19,44 @@ public partial class MenuService
                 continue;
             }
 
-            var submenuOption = new SubmenuMenuOption(EconService.GetLocalizedName(EconService.Items[weapon].LocalizedNames, player.PlayerLanguage.Value), () =>
+            var itemName = EconService.GetLocalizedName(item.LocalizedNames, player.PlayerLanguage.Value);
+            var submenuOption = new SubmenuComponent(itemName, _ =>
             {
-                var skinMenu = Core.MenusAPI.CreateBuilder();
-                skinMenu.Design.SetMenuTitleVisible(false);
-                var sorted = paintkits.OrderByDescending(p => p.Rarity.Id).ToList();
-                var resetOption = new ButtonMenuOption(LocalizationService[player].MenuReset);
+                var skinMenu = Core.Menu.CreateMenu("weaponskins.weapons.paintkits").WithTitle(itemName);
+                skinMenu.Add(CreateButton(LocalizationService[player].MenuReset,
+                    p => Api.ResetWeaponSkin(p.SteamID, p.Controller.Team, (ushort)item.Index, true)));
 
-                resetOption.Click += (_,
-                    args) =>
+                foreach (var paintkit in paintkits.OrderByDescending(p => p.Rarity.Id))
                 {
-                    Api.ResetWeaponSkin(args.Player.SteamID, args.Player.Controller.Team, (ushort)item.Index, true);
-                    return ValueTask.CompletedTask;
-                };
-
-                skinMenu.AddOption(resetOption);
-                foreach (var paintkit in sorted)
-                {
-                    var option = new ButtonMenuOption(HtmlGradient.GenerateGradientText(
+                    var option = CreateRarityButton(
                         EconService.GetLocalizedName(paintkit.LocalizedNames, player.PlayerLanguage.Value),
-                        paintkit.Rarity.Color.HexColor));
-
-                    option.Click += (_,
-                        args) =>
-                    {
-                        Api.UpdateWeaponSkin(
-                            args.Player.SteamID, args.Player.Controller.Team, (ushort)item.Index, skin =>
-                            {
-                                skin.Paintkit = paintkit.Index;
-                            }, true);
-
-                        return ValueTask.CompletedTask;
-                    };
-
+                        paintkit.Rarity.Color.HexColor,
+                        p => Api.UpdateWeaponSkin(p.SteamID, p.Controller.Team, (ushort)item.Index, skin => skin.Paintkit = paintkit.Index, true));
                     option.Tag = paintkit.Index;
-
-                    skinMenu.AddOption(option);
+                    skinMenu.Add(option);
                 }
 
-                return Task.FromResult(skinMenu.Build());
+                var built = skinMenu.Build();
+                TrackFocus(built, p => TryGetWeaponDataInHand(p, out var inHand) ? inHand.Paintkit : null);
+                return built;
             });
 
             submenuOption.Tag = (ushort)item.Index;
-            submenuOption.Click += OnWeaponSkinOptionClick;
-            main.AddOption(submenuOption);
+            main.Add(submenuOption);
         }
 
         var menu = main.Build();
+        TrackFocus(menu, p => TryGetWeaponInHand(p, out var weapon) && Utilities.IsWeaponDefinitionIndex(weapon.AttributeManager.Item.ItemDefinitionIndex) ? (ushort)weapon.AttributeManager.Item.ItemDefinitionIndex : null);
         return menu;
     }
 
-    private ValueTask OnWeaponMenuSkinOptionClick(object? sender,
-        MenuOptionClickEventArgs args)
-    {
-        Core.Scheduler.NextTick(() =>
-        {
-            if (TryGetWeaponInHand(args.Player, out var weaponInHand))
-            {
-                if (Utilities.IsWeaponDefinitionIndex(weaponInHand.AttributeManager.Item.ItemDefinitionIndex))
-                {
-                    var menu = Core.MenusAPI.GetCurrentMenu(args.Player);
-                    if (menu != null)
-                    {
-                        var option = menu.Options.FirstOrDefault(o =>
-                                o.Tag is ushort tag &&
-                                tag == weaponInHand.AttributeManager.Item.ItemDefinitionIndex);
-
-                        if (option != null)
-                            menu.MoveToOption(args.Player, option);
-                    }
-                }
-            }
-        });
-        return ValueTask.CompletedTask;
-    }
-
-    public IMenuOption GetWeaponSkinMenuSubmenuOption(IPlayer player)
+    public IMenuComponent GetWeaponSkinMenuSubmenuOption(IPlayer player)
     {
         if (!ItemPermissionService.CanUseWeaponSkins(player.SteamID))
         {
             return CreateDisabledOption(LocalizationService[player].MenuTitleSkins);
         }
 
-        var skinOption = new SubmenuMenuOption(LocalizationService[player].MenuTitleSkins,
-            () => Task.FromResult(BuildWeaponSkinMenu(player)));
-
-        skinOption.Click += OnWeaponMenuSkinOptionClick;
-
-        return skinOption;
+        return new SubmenuComponent(LocalizationService[player].MenuTitleSkins, _ => BuildWeaponSkinMenu(player));
     }
 }

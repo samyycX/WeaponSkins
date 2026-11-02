@@ -245,7 +245,7 @@ public class HookInventoryUpdateService : IInventoryUpdateService, IDisposable
             }
         }
 
-        // Remake only, as !wp does: painting the held weapon first left the remake unpainted (upstream #43).
+        // Remade rather than painted in place: a weapon the client has drawn keeps that finish (upstream #43).
         foreach (var (steamId, targets) in changed)
         {
             Core.Scheduler.NextTick(() => RemakeWeapons(steamId, targets));
@@ -278,13 +278,14 @@ public class HookInventoryUpdateService : IInventoryUpdateService, IDisposable
         if (player.PlayerPawn?.WeaponServices is not { IsValid: true } weapons) return;
 
         var team = player.Controller.Team;
+        var paint = PaintBeforeSelect(steamId, team);
         foreach (var handle in weapons.MyWeapons.ToArray())
         {
             if (handle.Value is not { IsValid: true } weapon) continue;
             var definition = weapon.AttributeManager.Item.ItemDefinitionIndex;
             if (targets.Contains((team, definition)))
             {
-                player.RegiveWeapon(weapon, definition);
+                player.RegiveWeapon(weapon, definition, paint);
             }
         }
     }
@@ -300,9 +301,24 @@ public class HookInventoryUpdateService : IInventoryUpdateService, IDisposable
         if (weapons.MyWeapons.ToArray().Any(handle => handle.Value is { IsValid: true } weapon &&
                 Utilities.IsKnifeDefinitionIndex(weapon.AttributeManager.Item.ItemDefinitionIndex)))
         {
-            player.RegiveKnife();
+            player.RegiveKnife(PaintBeforeSelect(steamId, team));
         }
     }
+
+    // OnGiveNamedItemPost paints a tick after the give, by which time a regive has
+    // already selected the weapon; see RegiveWeapon.
+    private Action<CBasePlayerWeapon> PaintBeforeSelect(ulong steamId,
+        Team team) => weapon =>
+    {
+        try
+        {
+            ApplyWeaponSkin(steamId, team, weapon);
+        }
+        catch (Exception error)
+        {
+            Logger.LogError(error, "Error painting a regiven weapon");
+        }
+    };
 
     public void UpdateGloveSkins(IEnumerable<GloveData> gloves)
     {
@@ -562,6 +578,7 @@ public class HookInventoryUpdateService : IInventoryUpdateService, IDisposable
         if (pawn?.WeaponServices is not { IsValid: true } weapons) return;
 
         // Recreate held weapons even when their stored skin was removed.
+        var paint = PaintBeforeSelect(steamId, player.Controller.Team);
         foreach (var handle in weapons.MyWeapons.ToArray())
         {
             var weapon = handle.Value;
@@ -569,11 +586,11 @@ public class HookInventoryUpdateService : IInventoryUpdateService, IDisposable
             var definition = weapon.AttributeManager.Item.ItemDefinitionIndex;
             if (Utilities.IsKnifeDefinitionIndex(definition))
             {
-                player.RegiveKnife();
+                player.RegiveKnife(paint);
             }
             else if (Utilities.IsWeaponDefinitionIndex(definition))
             {
-                player.RegiveWeapon(weapon, definition);
+                player.RegiveWeapon(weapon, definition, paint);
             }
         }
 

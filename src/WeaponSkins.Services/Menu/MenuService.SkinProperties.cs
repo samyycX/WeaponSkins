@@ -8,93 +8,86 @@ namespace WeaponSkins;
 
 public partial class MenuService
 {
-    public IMenu BuildSkinPropertiesMenu(IPlayer player,
-        WeaponSkinData weaponInHand)
+    // Weapons only, never knives or gloves, that the player has a skin applied to on their current team.
+    public IMenu BuildWeaponPropertiesMenu(IPlayer player)
     {
-        var main = CreateMenu("weaponskins.skinproperties")
-            .WithTitle(LocalizationService[player].MenuTitleSkinProperties);
+        var loc = LocalizationService[player];
+        var team = player.Controller.Team;
+        var language = player.PlayerLanguage.Value;
+        var main = CreateMenu("weaponskins.weaponproperties")
+            .WithTitle(loc.MenuTitleWeaponProperties);
 
-        void Update(Action<WeaponSkinData> apply) =>
-            Api.UpdateWeaponSkin(weaponInHand.SteamID, weaponInHand.Team, weaponInHand.DefinitionIndex, apply, true);
+        var skins = Api.TryGetWeaponSkins(player.SteamID, out var stored)
+            ? stored.Where(skin => skin.Team == team && Utilities.IsWeaponDefinitionIndex(skin.DefinitionIndex))
+                .OrderBy(skin => skin.DefinitionIndex)
+                .ToList()
+            : [];
 
-        main.Add(CreateFloatInput(LocalizationService[player].MenuSkinPropertiesWear, weaponInHand.PaintkitWear,
-            value => value is >= 0.0f and <= 1.0f,
-            (_, value) =>
-            {
-                weaponInHand.PaintkitWear = value;
-                Update(skin => skin.PaintkitWear = value);
-            }));
-
-        main.Add(CreateIntInput(LocalizationService[player].MenuSkinPropertiesSeed, weaponInHand.PaintkitSeed,
-            value => value >= 0,
-            (_, value) =>
-            {
-                weaponInHand.PaintkitSeed = value;
-                Update(skin => skin.PaintkitSeed = value);
-            }));
-
-        main.Add(new InputComponent(LocalizationService[player].MenuSkinPropertiesNametag,
-            weaponInHand.Nametag ?? LocalizationService[player].MenuSkinPropertiesNametagNone,
-            null,
-            ctx => Update(skin => skin.Nametag = ctx.NewValue))
+        var added = 0;
+        foreach (var skin in skins)
         {
-            MaxLength = 32
-        });
-
-        main.Add(CreateButton(LocalizationService[player].MenuSkinPropertiesNametagUnset,
-            _ => Update(skin => skin.Nametag = null)));
-        main.Add(CreateButton(LocalizationService[player].MenuSkinPropertiesSetStattrak,
-            _ => Update(skin => skin.Quality = EconItemQuality.StatTrak)));
-        main.Add(CreateButton(LocalizationService[player].MenuSkinPropertiesUnsetStattrak,
-            _ => Update(skin => skin.Quality = EconItemQuality.Normal)));
-        main.Add(CreateButton(LocalizationService[player].MenuSkinPropertiesSetSouvenir,
-            _ => Update(skin => skin.Quality = EconItemQuality.Souvenir)));
-        main.Add(CreateButton(LocalizationService[player].MenuSkinPropertiesUnsetSouvenir,
-            _ => Update(skin => skin.Quality = EconItemQuality.Normal)));
-
-        main.Add(CreateIntInput(LocalizationService[player].MenuSkinPropertiesStattrakCount(weaponInHand.StattrakCount),
-            weaponInHand.StattrakCount,
-            value => value >= 0,
-            (_, value) =>
+            var (weapon, item) = EconService.Items.FirstOrDefault(entry => entry.Value.Index == skin.DefinitionIndex);
+            if (item is null)
             {
-                weaponInHand.StattrakCount = value;
-                Update(skin => skin.StattrakCount = value);
-            }));
-
-        for (int i = 0; i < 6; i++)
-        {
-            var option = GetStickerPropertiesMenuSubmenuOption(player, weaponInHand, i);
-            if (option != null)
-            {
-                main.Add(option);
+                continue;
             }
+
+            var weaponName = EconService.GetLocalizedName(item.LocalizedNames, language);
+            var paintkit = EconService.WeaponToPaintkits.TryGetValue(weapon, out var paintkits)
+                ? paintkits.FirstOrDefault(p => p.Index == skin.Paintkit)
+                : null;
+            var title = paintkit is null
+                ? weaponName
+                : $"{weaponName} | {EconService.GetLocalizedName(paintkit.LocalizedNames, language)}";
+            var definition = skin.DefinitionIndex;
+
+            main.Add(CreateSubmenu(title, _ => BuildSkinPropertiesMenu(player, team, definition, title),
+                paintkit is null ? BaseWeaponImageKey(weapon) : PaintkitImageKey(weapon, paintkit),
+                paintkit?.Rarity.Color.HexColor));
+            added++;
         }
 
-        for (int i = 0; i < 1; i++)
+        if (added == 0)
         {
-            var option = GetKeychainPropertiesMenuSubmenuOption(player, weaponInHand, i);
-            if (option != null)
-            {
-                main.Add(option);
-            }
+            AddEmptyNotice(main, loc);
         }
 
         return main.Build();
     }
 
-    public IMenuComponent GetSkinPropertiesMenuSubmenuOption(IPlayer player)
+    public IMenu BuildSkinPropertiesMenu(IPlayer player,
+        Team team,
+        ushort definition,
+        string title)
     {
-        if (!ItemPermissionService.CanUseWeaponSkins(player.SteamID))
+        var loc = LocalizationService[player];
+        var steamId = player.SteamID;
+        var main = CreateMenu("weaponskins.skinproperties")
+            .WithTitle(title);
+
+        if (!Api.TryGetWeaponSkin(steamId, team, definition, out var skin))
         {
-            return CreateDisabledOption(LocalizationService[player].MenuTitleSkinProperties);
+            AddEmptyNotice(main, loc);
+            return main.Build();
         }
 
-        if (!TryGetWeaponDataInHand(player, out var weaponInHand))
-        {
-            return CreateDisabledOption(LocalizationService[player].MenuTitleSkinProperties);
-        }
+        void Update(Action<WeaponSkinData> apply) =>
+            Api.UpdateWeaponSkin(steamId, team, definition, apply, true);
 
-        return new SubmenuComponent(LocalizationService[player].MenuTitleSkinProperties,
-            _ => BuildSkinPropertiesMenu(player, weaponInHand));
+        main.Add(CreateHero(loc, player.PlayerLanguage.Value, definition, skin.Paintkit));
+        AddNametag(main, loc, skin.Nametag, nametag => Update(s => s.Nametag = nametag));
+        AddWear(main, loc, skin.PaintkitWear, wear => Update(s => s.PaintkitWear = wear));
+        main.Add(CreateSeedInput(loc, skin.PaintkitSeed, seed => Update(s => s.PaintkitSeed = seed)));
+        AddStattrak(main, loc, skin.StattrakCount, skin.Quality,
+            count => Update(s => s.StattrakCount = count),
+            quality => Update(s => s.Quality = quality),
+            withSouvenir: true);
+
+        main.Add(CreateCategory(ItemPermissionService.CanUseStickers(steamId), loc.MenuTitleStickers,
+            "weaponskins.stickers", () => BuildStickerMenu(player, team, definition)));
+        main.Add(CreateCategory(ItemPermissionService.CanUseKeychains(steamId), loc.MenuTitleKeychains,
+            "weaponskins.keychains", () => BuildKeychainMenu(player, team, definition)));
+
+        return main.Build();
     }
 }

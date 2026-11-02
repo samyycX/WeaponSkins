@@ -1,87 +1,263 @@
 <div align="center">
-  <img src="https://pan.samyyc.dev/s/VYmMXE" />
-  <h2><strong>WeaponSkins (Beta)</strong></h2>
-  <h3>A powerful swiftlys2 plugin to change player's weapon skins, knifes and gloves.</h3>
+  <img src="https://pan.samyyc.dev/s/VYmMXE" alt="WeaponSkins" />
+  <h1><strong>WeaponSkins</strong></h1>
+  <p>Players pick weapon skins, knives, gloves, stickers, charms, agents and music kits for CS2 from an in-game menu.</p>
 </div>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/build-passing-brightgreen" alt="Build Status">
-  <img src="https://img.shields.io/github/downloads/samyycX/WeaponSkins/total" alt="Downloads">
-  <img src="https://img.shields.io/github/stars/samyycX/WeaponSkins?style=flat&logo=github" alt="Stars">
-  <img src="https://img.shields.io/github/license/samyycX/WeaponSkins" alt="License">
+  <a href="https://github.com/samyycX/WeaponSkins/actions/workflows/build-and-release.yml"><img src="https://img.shields.io/github/actions/workflow/status/samyycX/WeaponSkins/build-and-release.yml?branch=main&style=flat&logo=github&cacheSeconds=3600" alt="Build Status"></a>
+  <a href="https://github.com/samyycX/WeaponSkins/releases/latest"><img src="https://img.shields.io/github/v/release/samyycX/WeaponSkins?style=flat&logo=github&cacheSeconds=3600" alt="Latest Release"></a>
+  <img src="https://img.shields.io/github/downloads/samyycX/WeaponSkins/total?style=flat&logo=github&cacheSeconds=3600" alt="Downloads">
+  <img src="https://img.shields.io/github/stars/samyycX/WeaponSkins?style=flat&logo=github&cacheSeconds=3600" alt="Stars">
+  <img src="https://img.shields.io/github/license/samyycX/WeaponSkins?style=flat&cacheSeconds=3600" alt="License">
+  <img src="https://img.shields.io/badge/status-beta-orange?style=flat" alt="Beta">
 </p>
 
-## Features
-- MySQL & sqlite database support
-- Fully functioning in-game skin menu
-- Compatible with CounterStrikeSharp WeaponPaints database
-- Long-term stattrak tracking
-- Player-based skin name localization
-- Completely game-based econ data dumping (no network required)
+> [!NOTE]
+> **Switching from WeaponPaints?** Your players keep their skins, knives and gloves. Follow [Switching from WeaponPaints](#-switching-from-weaponpaints) **before** you start the server with WeaponSkins.
 
-## Main Configuration
-The `config.toml` should have the following structure in `Main` section:
+---
+
+## ✨ Features
+
+- 🎨 **Skins, knives and gloves** — plus stickers, charms, agents and music kits
+- 🔧 **Fine-tune each item** — wear, pattern, name tag, souvenir, and StatTrak™ that counts kills
+- 👥 **Separate T and CT loadouts**
+- 🌍 **Item names in each player's own game language**
+- 🔒 **VIP-only options** — e.g. knives and gloves only for players with a permission
+- 💾 **Saves to MySQL, MariaDB, PostgreSQL or a simple file**
+- 📦 **New CS2 items appear automatically** — read straight from the game, with no gamedata files to update
+- 🧩 **Works with other plugins** — they can read and change players' skins
+
+📺 **[Watch the showcase](https://youtu.be/MRa8JIRLysE)**
+
+## 📦 Installation
+
+1. Install [SwiftlyS2](https://swiftlys2.net/docs/installation).
+2. Download the latest `WeaponSkins-v….zip` from [Releases](https://github.com/samyycX/WeaponSkins/releases/latest).
+3. Unzip it into `game/csgo/addons/swiftlys2/plugins/`, so you get a `plugins/WeaponSkins/` folder.
+4. Start the server once to create WeaponSkins' settings file. The first start takes a little longer. If no database is set up yet, WeaponSkins shows a database error and doesn't load — the next step fixes that.
+5. Set up [storage](#-storage-setup).
+
+**Updating:** delete the old `plugins/WeaponSkins/` folder, then unzip the new version. Your settings and saved skins are stored elsewhere, so they stay.
+
+## 💾 Storage setup
+
+There are three ways to store players' skins. Pick one and follow its steps:
+
+1. **[Locally](#1-locally-sqlite)** — no database needed
+2. **[Per server](#2-per-server-default-database)** — uses your server's own SwiftlyS2 database
+3. **[Dedicated skins database](#3-dedicated-skins-database)** — a separate database just for skins, which several servers can share
+
+### 1. Locally (SQLite)
+
+No database needed.
+
+1. Open `addons/swiftlys2/configs/plugins/WeaponSkins/config.toml`.
+2. Change `StorageBackend` to `"sqlite"`:
+
+   ```toml
+   StorageBackend = "sqlite"
+   ```
+
+3. Save the file and restart the server.
+
+### 2. Per server (default database)
+
+Uses this server's own SwiftlyS2 database — the `default` connection.
+
+1. Open `addons/swiftlys2/configs/database.jsonc`.
+2. Replace the `"default"` line with your database's details, like this, and save:
+
+   ```jsonc
+   {
+       "default_connection": "default",
+       "connections": {
+           "default": {
+               "driver": "mysql",
+               "host": "localhost",
+               "database": "swiftlys2",
+               "user": "root",
+               "pass": "",
+               "port": 3306,
+               "timeout": 30
+           },
+           // ...your other connections stay as they are...
+       }
+   }
+   ```
+
+   Put your database's address, name, login and password in `host`, `database`, `user` and `pass`. For MariaDB keep `"driver": "mysql"`; for PostgreSQL use `"postgresql"` and port `5432`.
+
+3. In WeaponSkins' `config.toml`, keep `StorageBackend = "inherit"` — it's the default.
+4. Restart the server.
+
+### 3. Dedicated skins database
+
+A separate database just for skins, which several servers can share.
+
+1. Create an empty database in your hosting or database panel, for example `weaponskins`.
+2. Open `addons/swiftlys2/configs/database.jsonc`. Right after the `"connections": {` line, add a `weaponskins` connection with that database's details, and save:
+
+   ```jsonc
+   {
+       "default_connection": "default",
+       "connections": {
+           "weaponskins": {
+               "driver": "mysql",
+               "host": "localhost",
+               "database": "weaponskins",
+               "user": "root",
+               "pass": "",
+               "port": 3306,
+               "timeout": 30
+           },
+           // ...your other connections stay as they are...
+       }
+   }
+   ```
+
+   Put your database's address, name, login and password in `host`, `database`, `user` and `pass`. For MariaDB keep `"driver": "mysql"`; for PostgreSQL use `"postgresql"` and port `5432`. Write the name `weaponskins` exactly like that, in lowercase.
+
+3. In WeaponSkins' `config.toml`, keep `StorageBackend = "inherit"` — it's the default.
+4. Restart the server.
+
+**Same skins on several servers?** Add the same `weaponskins` connection on each server, and set `SyncFromDatabaseWhenPlayerJoin = true` on each, so a player's changes on one server show up on the others.
+
+If you switch to another setup later, skins saved with the old one aren't copied over.
+
+## 🔄 Switching from WeaponPaints
+
+Players keep their saved skins, knives and gloves. Agents and music kits aren't carried over, so players pick those again.
+
+Follow these steps in order. Steps 1 and 2 use phpMyAdmin, or your host's database tool.
+
+1. **Back up your WeaponPaints database.** Select it, click **Export**, then **Go**.
+2. **Prepare the database.** Select the WeaponPaints database, open the **SQL** tab, paste this and click **Go**:
+
+   ```sql
+   ALTER TABLE wp_player_skins ADD COLUMN weapon_sticker_5 VARCHAR(128) NOT NULL DEFAULT '0;0;0;0;0;0;0';
+   RENAME TABLE wp_player_agents TO wp_player_agents_weaponpaints;
+   RENAME TABLE wp_player_music TO wp_player_music_weaponpaints;
+   ```
+
+3. **Install WeaponSkins** — [Installation](#-installation) steps 1–3. Don't start the server yet.
+4. **Make WeaponSkins use the WeaponPaints database.** If it's already your server's default connection, there's nothing to do — that's [setup 2](#2-per-server-default-database). Otherwise, follow [setup 3](#3-dedicated-skins-database), skipping its step 1 since the database already exists, with the details from `addons/counterstrikesharp/configs/plugins/WeaponPaints/WeaponPaints.json`:
+
+   | In `WeaponPaints.json` | In `database.jsonc` |
+   |------------------------|---------------------|
+   | `DatabaseHost` | `host` |
+   | `DatabaseName` | `database` |
+   | `DatabaseUser` | `user` |
+   | `DatabasePassword` | `pass` |
+   | `DatabasePort` | `port` |
+
+5. **Remove WeaponPaints** — delete the `addons/counterstrikesharp/plugins/WeaponPaints/` folder.
+6. **Start the server.**
+
+> [!WARNING]
+> **Started WeaponSkins on the WeaponPaints database before step 2?** It won't load. Do step 2, then run `DELETE FROM __weaponskins_version_info WHERE version = 3;` the same way, and restart the server.
+
+## 💬 Commands
+
+| Command | Who | What it does |
+|---------|-----|--------------|
+| `!ws` | Players | Opens the skins menu |
+| `!wp` | Players | Reloads your saved skins |
+| `sw_wp_admin <SteamID64>` | Server console / RCON | Reloads a connected player's saved skins |
+
+In the `!ws` menu, players choose weapon skins, knives, gloves, agents and music kits. Wear, pattern, name tag, StatTrak™, stickers and charms are under **Weapon Properties**, **Knife Properties** and **Glove Properties**. Choices are saved straight away, separately for T and CT — music kits count for both. Options a player has no permission for are greyed out.
+
+With [CustomHUD](https://github.com/shmitzas/CustomHUD) in mouse mode, the properties pages show item pictures.
+
+## ⚙️ Settings
+
+All settings are in `addons/swiftlys2/configs/plugins/WeaponSkins/config.toml`. Changes apply when you save the file, except `ItemLanguages`, which needs a restart. The defaults:
+
 ```toml
 [Main]
 StorageBackend = "inherit"
 InventoryUpdateBackend = "hook"
 SyncFromDatabaseWhenPlayerJoin = false
 ItemLanguages = []
-```
 
-#### `StorageBackend`
-When set to `inherit`, the plugin use the database configuration from swiftlys2 database configuration.
-
-When set to `sqlite`, the plugin use its own file-based sqlite database.
-
-#### `InventoryUpdateBackend`
-Recommended to set to `hook` for now. Another option is `inventory` but its deprecated.
-
-#### `SyncFromDatabaseWhenPlayerJoin`
-When set to true, the plugin will automatically synchronize skin data from database when a player join.
-
-The update is asynchronous so it won't introduce lags in theory.
-
-### `ItemLanguages`
-When unset or set to empty list, the plugin will load item and skin names in all languages.
-
-When set to a list of language, the **first** language will be used as default fallback language, and only  languages in this list will be loaded and set for player based on their game language.
-
-This configuration helps optimizing your memory usage, reducing 80MB at max.
-
-Check the `Code` column in this table for all available languages: 
-[Available language codes](https://swiftlys2.net/docs/development/translations/#language-codes)
-
-## Item Permissions
-Gate entire feature groups with a single permission string in `config.toml`:
-```toml
 [Main.ItemPermissions]
-WeaponSkins = "vip"
-KnifeSkins = "vip"
-GloveSkins = "vip"
-Stickers = "vip"
-Keychains = "vip"
-Agents = "vip"
+WeaponSkins = ""
+KnifeSkins = ""
+GloveSkins = ""
+Stickers = ""
+Keychains = ""   # charms
+Agents = ""
+MusicKits = ""
 ```
-Leave a value empty or remove it to keep the feature available to everyone. Players without the required permission cannot open the related menus, and any equipped cosmetics of that type are hidden until they regain access.
 
-## Showcase
-[Youtube](https://youtu.be/MRa8JIRLysE)
+| Setting | What it does |
+|---------|--------------|
+| `StorageBackend` | `"sqlite"` or `"inherit"` — see [Storage setup](#-storage-setup). `"external"` is only for plugins that store skins themselves |
+| `InventoryUpdateBackend` | Leave it as `"hook"` |
+| `SyncFromDatabaseWhenPlayerJoin` | `true` reloads a player's skins from the database each time they join. Turn it on if several servers or a website use the same database |
+| `ItemLanguages` | Languages for item names. `[]` loads all of them; to save memory (up to ~80 MB), list only the ones you need, e.g. `["en", "ru"]`. Players with any other language see the first one |
+| `ItemPermissions` | VIP-only features — see below |
 
-## Reloading saved skins
+**Language codes** — type them exactly as shown; a wrong one stops WeaponSkins from loading:
+`ar` `bg` `cs` `da` `de` `el` `en` `es` `es-419` `fi` `fr` `hu` `id` `it` `ja` `ko` `nl` `no` `pl` `pt` `pt-BR` `ro` `ru` `sv` `th` `tr` `uk` `vn` `zh-CN` `zh-TW`
 
-Use `!wp` to reload your saved cosmetics from the configured storage provider. The command refreshes held equipment when alive; saved selections also apply to newly given weapons. Unsaved temporary selections are replaced by the stored values.
+### VIP-only features
 
-Use `sw_wp_admin <SteamID64>` from the server console/S2Panel RCON to reload an online player's skins without reconnecting.
+To limit a feature to players with a permission, put the permission next to it — for example, `KnifeSkins = "vip"` makes knives VIP-only. Empty (`""`) means everyone can use it.
 
-  
-## Building
+Players get permissions in SwiftlyS2's `addons/swiftlys2/configs/permissions.jsonc`, by adding their SteamID64 under `"Players"`, e.g. `"76561198000000000": ["vip"]`.
 
-- Open the project in your preferred .NET IDE (e.g., Visual Studio, Rider, VS Code).
-- Build the project. The output DLL and resources will be placed in the `build/` directory.
-- The publish process will also create a zip file for easy distribution.
+Without the permission, the menu entry is greyed out, and the player's saved items of that kind stop showing until they get it back. Agents and music kits are the exception: those keep showing.
 
-## Publishing
+## 🩺 Troubleshooting
 
-- Use the `dotnet publish -c Release` command to build and package your plugin.
-- Distribute the generated zip file or the contents of the `build/publish` directory.
+| Problem | Solution |
+|---------|----------|
+| WeaponSkins doesn't load, with a database error in the console | It can't reach its database. Check the connection details in `database.jsonc` — `default` for setup 2, `weaponskins` for setup 3 — and that the database exists. Or switch to [local storage](#1-locally-sqlite) |
+| WeaponSkins stopped loading after you changed `ItemLanguages` | A language code is wrong — copy it exactly from the list in Settings |
+| A properties page says *Nothing applied yet* | Choose a skin, knife or glove first. T and CT are separate |
+| Menus show only 5 items per page | That's SwiftlyS2's menu limit: raise `MaxVisibleLines` in `addons/swiftlys2/configs/menus/menus.jsonc` |
+| Skins changed on another server or a website don't show | Set `SyncFromDatabaseWhenPlayerJoin = true`, or type `!wp` |
+| `!wp` says storage isn't ready | Set `StorageBackend` to `"inherit"` or `"sqlite"` — `"external"` only works with a plugin that provides storage |
+| `Failed to load signature GiveNamedItem!` in the console | Old files are left over: delete `plugins/WeaponSkins/` and unzip the new version again |
+
+## 🧩 API for Plugin Developers
+
+Reference `WeaponSkins.Shared.dll` from the release's `resources/exports/` folder and request the `WeaponSkins.API` shared interface:
+
+```csharp
+using SwiftlyS2.Shared;
+using SwiftlyS2.Shared.Players;
+using WeaponSkins.Shared;
+
+private IWeaponSkinAPI? _weaponSkins;
+
+public override void UseSharedInterface(IInterfaceManager interfaceManager)
+{
+    interfaceManager.TryGetSharedInterface<IWeaponSkinAPI>("WeaponSkins.API", out _weaponSkins);
+}
+
+// AK-47 (definition index 7) in Case Hardened (paint kit 44) on the T side, for this session only.
+_weaponSkins?.UpdateWeaponSkin(steamId, Team.T, 7, skin => skin.Paintkit = 44, permanent: false);
+```
+
+| Members | Purpose |
+|---------|---------|
+| `TryGet*Skin(s)` | Read a player's weapon, knife, glove or agent selections |
+| `Set*Skins`, `Update*Skin`, `Reset*Skin` | Change or remove them; `permanent: true` also saves to storage. Item permissions still apply |
+| `Items`, `WeaponToPaintkits`, `StickerCollections`, `Keychains` | The parsed item catalog |
+| `SetExternalStorageProvider` | Provide the storage for `StorageBackend = "external"` |
+
+## 🛠️ Building
+
+```powershell
+dotnet build WeaponSkins.sln -c Release
+```
+
+The plugin builds to `build/net10.0/` and `WeaponSkins.Shared.dll` to `build/exports/net10.0/`. The [build workflow](.github/workflows/build-and-release.yml) packages both into a release on every push to `main` or `beta`.
+
+## 🤝 Support
+
+- **Issues**: [GitHub Issues](https://github.com/samyycX/WeaponSkins/issues)
+- **License**: [AGPL-3.0](LICENSE)

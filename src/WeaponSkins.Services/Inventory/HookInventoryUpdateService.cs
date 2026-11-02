@@ -3,8 +3,10 @@ using FluentMigrator.Runner;
 using Microsoft.Extensions.Logging;
 
 using SwiftlyS2.Shared;
+using SwiftlyS2.Shared.Events;
 using SwiftlyS2.Shared.GameEventDefinitions;
 using SwiftlyS2.Shared.Misc;
+using SwiftlyS2.Shared.Natives;
 using SwiftlyS2.Shared.Players;
 using SwiftlyS2.Shared.SchemaDefinitions;
 
@@ -19,7 +21,6 @@ public class HookInventoryUpdateService : IInventoryUpdateService, IDisposable
     private readonly Dictionary<ulong, (int MusicKitId, ushort? InventoryMusicId)> _originalMusicKits = new();
     private ISwiftlyCore Core { get; }
     private PlayerService PlayerService { get; }
-    private NativeService NativeService { get; }
     private ILogger<HookInventoryUpdateService> Logger { get; }
     private ItemPermissionService ItemPermissionService { get; }
     private WeaponSkinGetterAPI Api { get; }
@@ -29,7 +30,6 @@ public class HookInventoryUpdateService : IInventoryUpdateService, IDisposable
     public HookInventoryUpdateService(ISwiftlyCore core,
         WeaponSkinGetterAPI api,
         PlayerService playerService,
-        NativeService nativeService,
         ILogger<HookInventoryUpdateService> logger,
         ItemPermissionService itemPermissionService,
         DataService dataService,
@@ -38,13 +38,12 @@ public class HookInventoryUpdateService : IInventoryUpdateService, IDisposable
         Core = core;
         Api = api;
         PlayerService = playerService;
-        NativeService = nativeService;
         Logger = logger;
         ItemPermissionService = itemPermissionService;
         DataService = dataService;
         EconService = econService;
 
-        NativeService.OnGiveNamedItemPost += OnGiveNamedItemPost;
+        Core.Event.OnEntityCreated += OnEntityCreated;
         Core.GameEvent.HookPost<EventPlayerSpawn>(OnPlayerSpawn);
         Core.GameEvent.HookPre<EventRoundStart>(OnRoundStart);
         Core.GameEvent.HookPre<EventRoundMvp>(OnRoundMvp);
@@ -65,49 +64,35 @@ public class HookInventoryUpdateService : IInventoryUpdateService, IDisposable
         }
     }
 
-    private void OnGiveNamedItemPost(CCSPlayer_ItemServices services,
-        CBasePlayerWeapon weapon)
+    // Only new entities fire this, so a weapon picked up off the ground keeps its previous owner's finish.
+    private void OnEntityCreated(IOnEntityCreatedEvent @event)
     {
         try
         {
-            var ownerHandle = weapon.OwnerEntity;
-            if (!ownerHandle.IsValid) return;
-            var owner = ownerHandle.Value?.As<CCSPlayerPawn>();
-            if (owner == null || !owner.IsValid) return;
-            var controllerHandle = owner.Controller;
-            if (!controllerHandle.IsValid) return;
-            var controller = controllerHandle.Value;
-            if (controller == null || !controller.IsValid) return;
-            var steamId = controller.SteamID;
-            var team = controller.Team;
-            if (weapon.Identity is not { IsValid: true } identity) return;
-            var weaponHandle = identity.EntityHandle;
-            // GiveItem can still initialize attributes after this hook. Apply once it has finished.
-            Core.Scheduler.NextTick(() =>
-            {
-                try
-                {
-                    var currentWeapon = weaponHandle.Value?.As<CBasePlayerWeapon>();
-                    var currentOwner = ownerHandle.Value?.As<CCSPlayerPawn>();
-                    var currentController = controllerHandle.Value;
-                    if (currentWeapon is not { IsValid: true } || currentOwner is not { IsValid: true } ||
-                        currentController is not { IsValid: true } || currentController.SteamID != steamId ||
-                        currentController.Team != team || currentWeapon.OwnerEntity.Value?.Address != currentOwner.Address)
-                    {
-                        return;
-                    }
-
-                    ApplyWeaponSkin(steamId, team, currentWeapon);
-                }
-                catch (Exception error)
-                {
-                    Logger.LogError(error, "Error applying a newly given weapon");
-                }
-            });
+            var entity = @event.Entity;
+            if (!entity.DesignerName.StartsWith("weapon_", StringComparison.Ordinal)) return;
+            var handle = Core.EntitySystem.GetRefEHandle(entity.As<CBasePlayerWeapon>());
+            // The give that created it binds the owner and econ item before returning, so apply a tick later.
+            Core.Scheduler.NextTick(() => ApplyGivenWeapon(handle));
         }
         catch (Exception e)
         {
-            Logger.LogError(e, "Error in GiveNamedItemPost");
+            Logger.LogError(e, "Error in OnEntityCreated");
+        }
+    }
+
+    private void ApplyGivenWeapon(CHandle<CBasePlayerWeapon> handle)
+    {
+        try
+        {
+            if (handle.Value is not { IsValid: true } weapon) return;
+            if (weapon.OwnerEntity.Value?.As<CCSPlayerPawn>() is not { IsValid: true } owner) return;
+            if (owner.Controller.Value is not { IsValid: true } controller) return;
+            ApplyWeaponSkin(controller.SteamID, controller.Team, weapon);
+        }
+        catch (Exception error)
+        {
+            Logger.LogError(error, "Error applying a newly given weapon");
         }
     }
 
@@ -305,7 +290,7 @@ public class HookInventoryUpdateService : IInventoryUpdateService, IDisposable
         }
     }
 
-    // OnGiveNamedItemPost paints a tick after the give, by which time a regive has
+    // OnEntityCreated paints a tick after the give, by which time a regive has
     // already selected the weapon; see RegiveWeapon.
     private Action<CBasePlayerWeapon> PaintBeforeSelect(ulong steamId,
         Team team) => weapon =>
@@ -506,19 +491,37 @@ public class HookInventoryUpdateService : IInventoryUpdateService, IDisposable
     {
         Core.Scheduler.NextTick(() =>
         {
+            if (!pawn.IsValid) return;
             var econGloves = pawn.EconGloves;
+            var equipped = glove.DefinitionIndex != 0;
+            // A fresh item id per apply, so the client builds the finish anew instead of reusing the one it drew.
+            var itemId = equipped ? (ulong)Random.Shared.NextInt64(1, long.MaxValue) : 0;
             econGloves.ItemDefinitionIndex = glove.DefinitionIndex;
+            econGloves.ItemID = itemId;
+            econGloves.ItemIDLow = (uint)itemId;
+            econGloves.ItemIDHigh = (uint)(itemId >> 32);
+            econGloves.AccountID = equipped ? (uint)glove.SteamID : 0;
             econGloves.NetworkedDynamicAttributes.SetOrAddAttribute("set item texture prefab", glove.Paintkit);
             econGloves.NetworkedDynamicAttributes.SetOrAddAttribute("set item texture seed", glove.PaintkitSeed);
             econGloves.NetworkedDynamicAttributes.SetOrAddAttribute("set item texture wear", glove.PaintkitWear);
             econGloves.AttributeList.SetOrAddAttribute("set item texture prefab", glove.Paintkit);
             econGloves.AttributeList.SetOrAddAttribute("set item texture seed", glove.PaintkitSeed);
             econGloves.AttributeList.SetOrAddAttribute("set item texture wear", glove.PaintkitWear);
-            econGloves.Initialized = true;
+            econGloves.Initialized = equipped;
+            econGloves.ItemDefinitionIndexUpdated();
+            econGloves.ItemIDLowUpdated();
+            econGloves.ItemIDHighUpdated();
+            econGloves.AccountIDUpdated();
+            econGloves.InitializedUpdated();
+            econGloves.AttributeListUpdated();
+            econGloves.NetworkedDynamicAttributesUpdated();
+            // Moving this counter is the client's cue to re-apply the gloves from the item above.
+            pawn.EconGlovesChanged++;
+            pawn.EconGlovesChangedUpdated();
             pawn.AcceptInput("SetBodygroup", "first_or_third_person,0");
             Core.Scheduler.DelayBySeconds(0.2f, () =>
             {
-                pawn.AcceptInput("SetBodygroup", "first_or_third_person,1");
+                if (pawn.IsValid) pawn.AcceptInput("SetBodygroup", "first_or_third_person,1");
             });
         });
     }

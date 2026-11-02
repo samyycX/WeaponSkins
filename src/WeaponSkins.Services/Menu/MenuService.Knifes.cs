@@ -55,14 +55,4 @@ public partial class MenuService
         TrackFocus(menu, p => TryGetKnifeDataInHand(p, out var inHand) ? inHand.DefinitionIndex : null);
         return menu;
     }
-
-    public IMenuComponent GetKnifeSkinMenuSubmenuOption(IPlayer player)
-    {
-        if (!ItemPermissionService.CanUseKnifeSkins(player.SteamID))
-        {
-            return CreateDisabledOption(LocalizationService[player].MenuTitleKnifes);
-        }
-
-        return new SubmenuComponent(LocalizationService[player].MenuTitleKnifes, _ => BuildKnifeSkinMenu(player));
-    }
 }

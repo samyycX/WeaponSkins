@@ -57,14 +57,4 @@ public partial class MenuService
         TrackFocus(menu, p => TryGetGloveDataInHand(p, out var inHand) ? inHand.DefinitionIndex : null);
         return menu;
     }
-
-    public IMenuComponent GetGloveSkinMenuSubmenuOption(IPlayer player)
-    {
-        if (!ItemPermissionService.CanUseGloveSkins(player.SteamID))
-        {
-            return CreateDisabledOption(LocalizationService[player].MenuTitleGloves);
-        }
-
-        return new SubmenuComponent(LocalizationService[player].MenuTitleGloves, _ => BuildGloveSkinMenu(player));
-    }
 }

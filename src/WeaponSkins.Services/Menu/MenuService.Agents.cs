@@ -8,16 +8,6 @@ namespace WeaponSkins;
 
 public partial class MenuService
 {
-    public IMenuComponent GetAgentMenuSubmenuOption(IPlayer player)
-    {
-        if (!ItemPermissionService.CanUseAgents(player.SteamID))
-        {
-            return CreateDisabledOption(LocalizationService[player].MenuTitleAgents);
-        }
-
-        return new SubmenuComponent(LocalizationService[player].MenuTitleAgents, _ => BuildAgentMenu(player));
-    }
-
     private IMenu BuildAgentMenu(IPlayer player)
     {
         var main = CreateMenu("weaponskins.agents")

@@ -51,14 +51,4 @@ public partial class MenuService
         TrackFocus(menu, p => TryGetWeaponInHand(p, out var weapon) && Utilities.IsWeaponDefinitionIndex(weapon.AttributeManager.Item.ItemDefinitionIndex) ? (ushort)weapon.AttributeManager.Item.ItemDefinitionIndex : null);
         return menu;
     }
-
-    public IMenuComponent GetWeaponSkinMenuSubmenuOption(IPlayer player)
-    {
-        if (!ItemPermissionService.CanUseWeaponSkins(player.SteamID))
-        {
-            return CreateDisabledOption(LocalizationService[player].MenuTitleSkins);
-        }
-
-        return new SubmenuComponent(LocalizationService[player].MenuTitleSkins, _ => BuildWeaponSkinMenu(player));
-    }
 }

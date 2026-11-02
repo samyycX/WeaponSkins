@@ -20,7 +20,7 @@ public partial class MenuService
 
     private IMenu BuildAgentMenu(IPlayer player)
     {
-        var main = Core.Menu.CreateMenu("weaponskins.agents")
+        var main = CreateMenu("weaponskins.agents")
             .WithTitle(LocalizationService[player].MenuTitleAgents);
 
         main.Add(CreateButton(LocalizationService[player].MenuReset, p =>
@@ -39,6 +39,7 @@ public partial class MenuService
 
         // Team 3 = CT ("ctm_" models), team 2 = T ("tm_" models).
         var teamPrefix = (int)team == 3 ? "ctm_" : "tm_";
+        var typeLabel = (int)team == 3 ? LocalizationService[player].MenuTypeCtAgent : LocalizationService[player].MenuTypeTAgent;
         var agents = EconService.Agents.Values
             .Where(a => a.ModelPath.Contains($"/{teamPrefix}", StringComparison.OrdinalIgnoreCase) ||
                        a.ModelPath.StartsWith(teamPrefix, StringComparison.OrdinalIgnoreCase))
@@ -71,7 +72,7 @@ public partial class MenuService
                 {
                     ApplyAgentModel(p, agent.ModelPath);
                 });
-            }));
+            }, EconService.GetImageKey("agent", agent.Name), typeLabel));
         }
 
         return main.Build();

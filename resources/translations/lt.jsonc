@@ -34,5 +34,10 @@
   "menu.keychainproperties.offsety": "Poslinkis Y",
   "menu.keychainproperties.offsetz": "Poslinkis Z",
   "menu.keychainproperties.resetoffset": "Atstatyti poslinkį",
-  "menu.reset": "Atstatyti"
+  "menu.reset": "Atstatyti",
+  "menu.type.ctagent": "CT agentas",
+  "menu.type.tagent": "T agentas",
+  "menu.type.charm": "Pakabukas",
+  "menu.type.musickit": "Muzikos rinkinys",
+  "menu.type.sticker": "Lipdukas"
 }

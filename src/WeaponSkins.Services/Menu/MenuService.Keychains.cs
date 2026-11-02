@@ -45,18 +45,21 @@ public partial class MenuService
         string language,
         string title)
     {
-        var main = Core.Menu.CreateMenu($"weaponskins.keychains.slot{slot}")
+        var main = CreateMenu($"weaponskins.keychains.slot{slot}")
             .WithTitle(title);
 
         main.Add(CreateButton(LocalizationService[player].MenuReset, p => UpdateOperatingKeychain(p, slot, null)));
 
+        var typeLabel = LocalizationService[player].MenuTypeCharm;
         foreach (var (_, keychain) in EconService.Keychains.OrderByDescending(k => k.Value.Rarity.Id))
         {
             var keychainIndex = keychain.Index;
             main.Add(CreateRarityButton(
                 EconService.GetLocalizedName(keychain.LocalizedNames, language),
                 keychain.Rarity.Color.HexColor,
-                p => UpdateOperatingKeychain(p, slot, new KeychainData { Id = keychainIndex })));
+                p => UpdateOperatingKeychain(p, slot, new KeychainData { Id = keychainIndex }),
+                EconService.GetImageKey("keychain", keychain.Name),
+                typeLabel));
         }
 
         return main.Build();
@@ -64,7 +67,7 @@ public partial class MenuService
 
     public IMenu BuildKeychainMenu(IPlayer player)
     {
-        var main = Core.Menu.CreateMenu("weaponskins.keychains")
+        var main = CreateMenu("weaponskins.keychains")
             .WithTitle(LocalizationService[player].MenuTitleKeychains);
 
         for (int i = 0; i < 1; i++)

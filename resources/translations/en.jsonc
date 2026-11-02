@@ -34,5 +34,10 @@
   "menu.keychainproperties.offsety": "Offset Y",
   "menu.keychainproperties.offsetz": "Offset Z",
   "menu.keychainproperties.resetoffset": "Reset Offset",
-  "menu.reset": "Reset"
+  "menu.reset": "Reset",
+  "menu.type.ctagent": "CT Agent",
+  "menu.type.tagent": "T Agent",
+  "menu.type.charm": "Charm",
+  "menu.type.musickit": "Music Kit",
+  "menu.type.sticker": "Sticker"
 }

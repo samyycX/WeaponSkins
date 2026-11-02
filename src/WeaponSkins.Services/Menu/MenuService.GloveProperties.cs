@@ -11,7 +11,7 @@ public partial class MenuService
     public IMenu BuildGlovePropertiesMenu(IPlayer player,
         GloveData gloveInHand)
     {
-        var main = Core.Menu.CreateMenu("weaponskins.gloveproperties")
+        var main = CreateMenu("weaponskins.gloveproperties")
             .WithTitle(LocalizationService[player].MenuTitleGloveProperties);
 
         main.Add(CreateFloatInput(LocalizationService[player].MenuSkinPropertiesWear, gloveInHand.PaintkitWear,

@@ -11,7 +11,7 @@ public partial class MenuService
     public IMenu BuildKnifePropertiesMenu(IPlayer player,
         KnifeSkinData weaponInHand)
     {
-        var main = Core.Menu.CreateMenu("weaponskins.knifeproperties")
+        var main = CreateMenu("weaponskins.knifeproperties")
             .WithTitle(LocalizationService[player].MenuTitleKnifeProperties);
 
         void Update(Action<KnifeSkinData> apply) =>

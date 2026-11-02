@@ -16,7 +16,7 @@ public partial class MenuService
         var sticker = data.GetSticker(slot);
         if (sticker == null) return BuildEmptyMenu(Core, $"weaponskins.stickerproperties.slot{slot}", title);
 
-        var main = Core.Menu.CreateMenu($"weaponskins.stickerproperties.slot{slot}")
+        var main = CreateMenu($"weaponskins.stickerproperties.slot{slot}")
             .WithTitle(title);
 
         void Update(Action<WeaponSkinData> apply) =>

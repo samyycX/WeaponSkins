@@ -8,7 +8,7 @@ public partial class MenuService
 {
     public IMenu BuildKnifeSkinMenu(IPlayer player)
     {
-        var main = Core.Menu.CreateMenu("weaponskins.knifes")
+        var main = CreateMenu("weaponskins.knifes")
             .WithTitle(LocalizationService[player].MenuTitleKnifes);
 
         foreach (var (knife, paintkits) in EconService.WeaponToPaintkits)
@@ -20,9 +20,9 @@ public partial class MenuService
             }
 
             var itemName = EconService.GetLocalizedName(item.LocalizedNames, player.PlayerLanguage.Value);
-            var submenuOption = new SubmenuComponent(itemName, _ =>
+            var submenuOption = CreateSubmenu(itemName, _ =>
             {
-                var skinMenu = Core.Menu.CreateMenu("weaponskins.knifes.paintkits").WithTitle(itemName);
+                var skinMenu = CreateMenu("weaponskins.knifes.paintkits").WithTitle(itemName);
                 skinMenu.Add(CreateButton(LocalizationService[player].MenuReset,
                     p => Api.ResetKnifeSkin(p.SteamID, p.Controller.Team, true)));
 
@@ -35,7 +35,9 @@ public partial class MenuService
                         {
                             knife.DefinitionIndex = (ushort)item.Index;
                             knife.Paintkit = paintkit.Index;
-                        }, true));
+                        }, true),
+                        PaintkitImageKey(knife, paintkit),
+                        itemName);
                     option.Tag = paintkit.Index;
                     skinMenu.Add(option);
                 }
@@ -43,7 +45,7 @@ public partial class MenuService
                 var built = skinMenu.Build();
                 TrackFocus(built, p => TryGetKnifeDataInHand(p, out var inHand) ? inHand.Paintkit : null);
                 return built;
-            });
+            }, BaseWeaponImageKey(knife));
 
             submenuOption.Tag = (ushort)item.Index;
             main.Add(submenuOption);

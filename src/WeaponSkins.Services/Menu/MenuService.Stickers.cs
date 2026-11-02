@@ -56,7 +56,7 @@ public partial class MenuService
         string language,
         string title)
     {
-        var main = Core.Menu.CreateMenu($"weaponskins.stickers.slot{slot}")
+        var main = CreateMenu($"weaponskins.stickers.slot{slot}")
             .WithTitle(title);
 
         main.Add(CreateButton(LocalizationService[player].MenuReset, p => UpdateOperatingSticker(p, slot, null)));
@@ -66,9 +66,10 @@ public partial class MenuService
             var collectionName = EconService.GetLocalizedName(stickerCollection.LocalizedNames, language);
             main.Add(new SubmenuComponent(collectionName, _ =>
             {
-                var stickerMenu = Core.Menu.CreateMenu($"weaponskins.stickers.slot{slot}.collection")
+                var stickerMenu = CreateMenu($"weaponskins.stickers.slot{slot}.collection")
                     .WithTitle(collectionName);
 
+                var typeLabel = LocalizationService[player].MenuTypeSticker;
                 foreach (var sticker in stickerCollection.Stickers)
                 {
                     if (sticker.Index == 0) continue;
@@ -76,7 +77,8 @@ public partial class MenuService
                     stickerMenu.Add(CreateRarityButton(
                         EconService.GetLocalizedName(sticker.LocalizedNames, language),
                         sticker.Rarity.Color.HexColor,
-                        p => UpdateOperatingSticker(p, slot, new StickerData { Id = stickerIndex })));
+                        p => UpdateOperatingSticker(p, slot, new StickerData { Id = stickerIndex }),
+                        typeLabel: typeLabel));
                 }
 
                 return stickerMenu.Build();
@@ -88,7 +90,7 @@ public partial class MenuService
 
     public IMenu BuildStickerMenu(IPlayer player)
     {
-        var main = Core.Menu.CreateMenu("weaponskins.stickers")
+        var main = CreateMenu("weaponskins.stickers")
             .WithTitle(LocalizationService[player].MenuTitleStickers);
 
         for (int i = 0; i < 6; i++)

@@ -1,15 +1,18 @@
-using System;
+using System.Collections.Concurrent;
 using System.Diagnostics.CodeAnalysis;
+using System.Globalization;
 
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
-using SwiftlyS2.Core.Menus.OptionsBase;
 using SwiftlyS2.Shared;
-using SwiftlyS2.Shared.Menus;
+using SwiftlyS2.Shared.Menu;
+using SwiftlyS2.Shared.Menu.Components;
 using SwiftlyS2.Shared.Players;
 using SwiftlyS2.Shared.SchemaDefinitions;
 using SwiftlyS2.Shared.Translation;
 
+using WeaponSkins.Configuration;
 using WeaponSkins.Econ;
 using WeaponSkins.Services;
 using WeaponSkins.Shared;
@@ -25,6 +28,7 @@ public partial class MenuService
     private LocalizationService LocalizationService { get; init; }
     private ItemPermissionService ItemPermissionService { get; init; }
     private DataService DataService { get; init; }
+    private IOptionsMonitor<MainConfigModel> Options { get; init; }
 
     public MenuService(ISwiftlyCore core,
         ILogger<MenuService> logger,
@@ -32,7 +36,8 @@ public partial class MenuService
         EconService econService,
         LocalizationService localizationService,
         ItemPermissionService itemPermissionService,
-        DataService dataService)
+        DataService dataService,
+        IOptionsMonitor<MainConfigModel> options)
     {
         Core = core;
         Logger = logger;
@@ -41,12 +46,18 @@ public partial class MenuService
         LocalizationService = localizationService;
         ItemPermissionService = itemPermissionService;
         DataService = dataService;
+        Options = options;
+    }
+
+    private IMenuBuilder CreateMenu(string id)
+    {
+        return Core.Menu.CreateMenu(id).WithItemsPerPage(Options.CurrentValue.MenuItemsPerPage);
     }
 
     public void OpenMainMenu(IPlayer player)
     {
-        var main = Core.MenusAPI.CreateBuilder();
-        main.Design.SetMenuTitle(LocalizationService[player].MenuTitle);
+        var main = CreateMenu("weaponskins.main")
+            .WithTitle(LocalizationService[player].MenuTitle);
 
         AddMenuOption(main, ItemPermissionService.CanUseWeaponSkins(player.SteamID),
             () => GetWeaponSkinMenuSubmenuOption(player), LocalizationService[player].MenuTitleSkins);
@@ -70,9 +81,10 @@ public partial class MenuService
         AddMenuOption(main, ItemPermissionService.CanUseMusicKits(player.SteamID),
             () => GetMusicKitMenuSubmenuOption(player), LocalizationService[player].MenuTitleMusicKits);
 
-        Core.MenusAPI.OpenMenuForPlayer(player, main.Build());
+        var menu = main.Build();
+        TrackFocus(menu);
+        menu.Open(player);
     }
-
     public bool TryGetWeaponInHand(IPlayer player,
         [MaybeNullWhen(false)] out CBasePlayerWeapon weaponInHand)
     {
@@ -134,24 +146,183 @@ public partial class MenuService
             : agent.LocalizedNames.GetValueOrDefault("english") ?? agent.Name;
     }
 
-    private static void AddMenuOption(IMenuBuilderAPI builder,
+    private static void AddMenuOption(IMenuBuilder builder,
         bool enabled,
-        Func<IMenuOption> optionFactory,
+        Func<IMenuComponent> optionFactory,
         string title)
     {
-        if (enabled)
-        {
-            builder.AddOption(optionFactory());
-            return;
-        }
-
-        builder.AddOption(CreateDisabledOption(title));
+        builder.Add(enabled ? optionFactory() : CreateDisabledOption(title));
     }
 
-    private static TextMenuOption CreateDisabledOption(string title)
+    private static TextComponent CreateDisabledOption(string title)
     {
-        var option = new TextMenuOption(title);
-        option.Enabled = false;
-        return option;
+        return new TextComponent(title) { Enabled = false };
+    }
+
+    private static IMenu BuildEmptyMenu(ISwiftlyCore core, string id, string title)
+    {
+        return core.Menu.CreateMenu(id).WithTitle(title).Build();
+    }
+
+    private static ButtonComponent CreateButton(string text, Action<IPlayer> onSelect, string? imageKey = null, string? typeLabel = null)
+    {
+        return new ThumbButtonComponent(text, ctx =>
+        {
+            onSelect(ctx.Player);
+            return ValueTask.CompletedTask;
+        })
+        {
+            ImageKey = imageKey,
+            TypeLabel = typeLabel
+        };
+    }
+
+    private static ButtonComponent CreateRarityButton(string text, string hexColor, Action<IPlayer> onSelect, string? imageKey = null, string? typeLabel = null)
+    {
+        var button = CreateButton(text, onSelect, imageKey, typeLabel);
+        button.Style = MenuTextStyle.Default.WithSize(MenuTextSize.SmallMedium).WithColor(NormalizeHex(hexColor));
+        return button;
+    }
+
+    private static SubmenuComponent CreateSubmenu(string text, Func<IMenuSession, IMenu?> factory, string? imageKey)
+    {
+        return new ThumbSubmenuComponent(text, factory) { ImageKey = imageKey };
+    }
+
+    // ImageKey is a CS2 econ texture path under panorama/images/econ/ (no extension); TypeLabel is
+    // the caption drawn above the name. Only the CustomHUD renderer reads either; every other
+    // renderer ignores raw nodes addressed elsewhere.
+    private static MenuNode WithCustomHudMetadata(MenuNode node, string? imageKey, string? typeLabel)
+    {
+        const string customHudRendererId = "customhud.panorama";
+
+        var hasType = !string.IsNullOrWhiteSpace(typeLabel);
+        if (imageKey is null && !hasType) return node;
+
+        // `;` separates directives in the payload, so a localized label must not carry one.
+        var payload = string.Join(';', new[]
+        {
+            imageKey is null ? null : "image=" + imageKey,
+            hasType ? "type=" + typeLabel!.Replace(';', ',') : null
+        }.Where(p => p is not null));
+
+        var raw = new MenuRawNode(customHudRendererId, payload);
+        return node is MenuLineNode line
+            ? line with { Children = [.. line.Children, raw] }
+            : MenuLineNode.Of(node, raw);
+    }
+
+    private sealed class ThumbButtonComponent(string text, Func<MenuActionContext, ValueTask> onSelect)
+        : ButtonComponent(text, onSelect)
+    {
+        public string? ImageKey { get; init; }
+        public string? TypeLabel { get; init; }
+
+        public override MenuNode Render(IMenuComponentRenderContext context)
+            => WithCustomHudMetadata(base.Render(context), ImageKey, TypeLabel);
+    }
+
+    private sealed class ThumbSubmenuComponent(string text, Func<IMenuSession, IMenu?> factory)
+        : SubmenuComponent(text, factory)
+    {
+        public string? ImageKey { get; init; }
+
+        public override MenuNode Render(IMenuComponentRenderContext context)
+            => WithCustomHudMetadata(base.Render(context), ImageKey, null);
+    }
+
+    private static string NormalizeHex(string hex)
+    {
+        return hex.StartsWith('#') ? hex : "#" + hex;
+    }
+
+    // The pair EconService.ParseWeaponToPaintkits discovered, rendered at its
+    // cleanest (_light) wear.
+    private static string PaintkitImageKey(string weapon, PaintkitDefinition paintkit)
+    {
+        return $"default_generated/{weapon}_{paintkit.Name}_light";
+    }
+
+    private static string BaseWeaponImageKey(string weapon)
+    {
+        return $"weapons/base_weapons/{weapon}";
+    }
+
+    private static InputComponent CreateFloatInput(string text, float value, Func<float, bool> isValid, Action<IPlayer, float> apply)
+    {
+        return new InputComponent(text, value.ToString(CultureInfo.InvariantCulture),
+            input => TryParseFloat(input, out var parsed) && isValid(parsed),
+            ctx =>
+            {
+                if (TryParseFloat(ctx.NewValue, out var parsed))
+                {
+                    apply(ctx.Player, parsed);
+                }
+            });
+    }
+
+    private static InputComponent CreateIntInput(string text, int value, Func<int, bool> isValid, Action<IPlayer, int> apply)
+    {
+        return new InputComponent(text, value.ToString(CultureInfo.InvariantCulture),
+            input => int.TryParse(input, NumberStyles.Integer, CultureInfo.InvariantCulture, out var parsed) && isValid(parsed),
+            ctx =>
+            {
+                if (int.TryParse(ctx.NewValue, NumberStyles.Integer, CultureInfo.InvariantCulture, out var parsed))
+                {
+                    apply(ctx.Player, parsed);
+                }
+            });
+    }
+
+    private static bool TryParseFloat(string input, out float value)
+    {
+        return float.TryParse(input, NumberStyles.Float, CultureInfo.InvariantCulture, out value);
+    }
+
+    // Stands in for the legacy MoveToOption click handlers: back-navigation restores the last row,
+    // a fresh open lands on the row whose Tag matches what the player is holding.
+    private void TrackFocus(IMenu menu, Func<IPlayer, object?>? inHandTag = null)
+    {
+        var remembered = new ConcurrentDictionary<int, int>();
+
+        menu.Closed += session => remembered[session.Player.PlayerID] = session.FocusedIndex;
+        menu.Opened += session =>
+        {
+            if (remembered.TryRemove(session.Player.PlayerID, out var index))
+            {
+                session.SetFocus(index);
+                return;
+            }
+
+            if (inHandTag == null)
+            {
+                return;
+            }
+
+            Core.Scheduler.NextTick(() =>
+            {
+                if (!session.IsOpen || !session.Player.IsValid || inHandTag(session.Player) is not { } tag)
+                {
+                    return;
+                }
+
+                var position = 0;
+                foreach (var component in menu.GetComponents(MenuRegion.Body))
+                {
+                    if (!component.IsFocusable || !component.IsVisible(session))
+                    {
+                        continue;
+                    }
+
+                    if (component is MenuComponentBase { Tag: { } componentTag } && componentTag.Equals(tag))
+                    {
+                        session.SetFocus(position);
+                        return;
+                    }
+
+                    position++;
+                }
+            });
+        };
     }
 }

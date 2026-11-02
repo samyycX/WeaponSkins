@@ -67,6 +67,11 @@ public class PlayerLocalizationService
     public string MenuKeychainPropertiesOffsetZ => Localizer["menu.keychainproperties.offsetz"];
     public string MenuKeychainPropertiesResetOffset => Localizer["menu.keychainproperties.resetoffset"];
     public string MenuReset => Localizer["menu.reset"];
+    public string MenuTypeCtAgent => Localizer["menu.type.ctagent"];
+    public string MenuTypeTAgent => Localizer["menu.type.tagent"];
+    public string MenuTypeCharm => Localizer["menu.type.charm"];
+    public string MenuTypeMusicKit => Localizer["menu.type.musickit"];
+    public string MenuTypeSticker => Localizer["menu.type.sticker"];
 
     public string MenuSkinPropertiesStattrakCount(int stattrak) =>
         Localizer["menu.skinproperties.stattrakcount", stattrak];

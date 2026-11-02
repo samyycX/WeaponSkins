@@ -1,8 +1,8 @@
-using SwiftlyS2.Core.Menus.OptionsBase;
-using SwiftlyS2.Shared;
-using SwiftlyS2.Shared.Menus;
+using System.Collections.Concurrent;
+
+using SwiftlyS2.Shared.Menu;
+using SwiftlyS2.Shared.Menu.Components;
 using SwiftlyS2.Shared.Players;
-using SwiftlyS2.Shared.SchemaDefinitions;
 
 using WeaponSkins.Econ;
 using WeaponSkins.Shared;
@@ -11,8 +11,8 @@ namespace WeaponSkins;
 
 public partial class MenuService
 {
-    private Dictionary<int, KeychainDefinition> KeychainDefinitions { get; set; } = new();
-    private Dictionary<ulong /* steamid */, WeaponSkinData> _keychainOperatingWeaponSkins = new();
+    private ConcurrentDictionary<int, KeychainDefinition> KeychainDefinitions { get; set; } = new();
+    private readonly ConcurrentDictionary<ulong /* steamid */, WeaponSkinData> _keychainOperatingWeaponSkins = new();
 
     private string? GetKeychainName(KeychainData data,
         string language)
@@ -22,87 +22,66 @@ public partial class MenuService
         if (!KeychainDefinitions.TryGetValue(data.Id, out var definition))
         {
             definition = EconService.Keychains.Where(k => k.Value.Index == data.Id).FirstOrDefault().Value;
+            if (definition == null) return null;
             KeychainDefinitions[data.Id] = definition;
         }
 
         return EconService.GetLocalizedName(definition.LocalizedNames, language);
     }
 
-    private IMenuAPI BuildKeychainMenuBySlot(IPlayer player,
+    private void UpdateOperatingKeychain(IPlayer player, int slot, KeychainData? keychain)
+    {
+        if (!_keychainOperatingWeaponSkins.TryGetValue(player.SteamID, out var dataInHand))
+        {
+            return;
+        }
+
+        Api.UpdateWeaponSkin(player.SteamID, player.Controller.Team, dataInHand.DefinitionIndex,
+            skin => skin.SetKeychain(slot, keychain), true);
+    }
+
+    private IMenu BuildKeychainMenuBySlot(IPlayer player,
         int slot,
         string language,
         string title)
     {
-        var main = Core.MenusAPI.CreateBuilder();
+        var main = CreateMenu($"weaponskins.keychains.slot{slot}")
+            .WithTitle(title);
 
-        main.Design.SetMenuTitle(title);
+        main.Add(CreateButton(LocalizationService[player].MenuReset, p => UpdateOperatingKeychain(p, slot, null)));
 
-        var resetOption = new ButtonMenuOption(LocalizationService[player].MenuReset);
-        resetOption.Click += (_,
-            args) =>
+        var typeLabel = LocalizationService[player].MenuTypeCharm;
+        foreach (var (_, keychain) in EconService.Keychains.OrderByDescending(k => k.Value.Rarity.Id))
         {
-            if (!_keychainOperatingWeaponSkins.TryGetValue(args.Player.SteamID, out var dataInHand))
-            {
-                return ValueTask.CompletedTask;
-            }
-
-            Api.UpdateWeaponSkin(args.Player.SteamID, args.Player.Controller.Team, dataInHand.DefinitionIndex, skin =>
-            {
-                skin.SetKeychain(slot, null);
-            }, true);
-            return ValueTask.CompletedTask;
-        };
-        main.AddOption(resetOption);
-
-        var sorted = EconService.Keychains.OrderByDescending(k => k.Value.Rarity.Id).ToList();
-        foreach (var (index, keychain) in sorted)
-        {
-            main.Design.SetMenuTitle(EconService.GetLocalizedName(keychain.LocalizedNames, language));
-            var option = new ButtonMenuOption(HtmlGradient.GenerateGradientText(EconService.GetLocalizedName(keychain.LocalizedNames, language),
-                keychain.Rarity.Color.HexColor));
-            option.Click += (_,
-                args) =>
-            {
-                if (!_keychainOperatingWeaponSkins.TryGetValue(args.Player.SteamID, out var dataInHand))
-                {
-                    return ValueTask.CompletedTask;
-                }
-
-                Api.UpdateWeaponSkin(args.Player.SteamID, args.Player.Controller.Team, dataInHand.DefinitionIndex,
-                    skin =>
-                    {
-                        var keychainData = new KeychainData { Id = keychain.Index, };
-                        switch (slot)
-                        {
-                            case 0: skin.Keychain0 = keychainData; break;
-                        }
-                    }, true);
-                return ValueTask.CompletedTask;
-            };
-            main.AddOption(option);
+            var keychainIndex = keychain.Index;
+            main.Add(CreateRarityButton(
+                EconService.GetLocalizedName(keychain.LocalizedNames, language),
+                keychain.Rarity.Color.HexColor,
+                p => UpdateOperatingKeychain(p, slot, new KeychainData { Id = keychainIndex }),
+                EconService.GetImageKey("keychain", keychain.Name),
+                typeLabel));
         }
 
         return main.Build();
     }
 
-    public IMenuAPI BuildKeychainMenu(IPlayer player)
+    public IMenu BuildKeychainMenu(IPlayer player)
     {
-        var main = Core.MenusAPI.CreateBuilder();
-        main.Design.SetMenuTitle(LocalizationService[player].MenuTitleKeychains);
+        var main = CreateMenu("weaponskins.keychains")
+            .WithTitle(LocalizationService[player].MenuTitleKeychains);
+
         for (int i = 0; i < 1; i++)
         {
-            var title =
-                $"[{i + 1}] Slot";
+            var title = $"[{i + 1}] Slot";
             var slot = i;
-            main.AddOption(new SubmenuMenuOption(title,
-                () => Task.FromResult(BuildKeychainMenuBySlot(player, slot, player.PlayerLanguage.Value, title))));
+            main.Add(new SubmenuComponent(title,
+                _ => BuildKeychainMenuBySlot(player, slot, player.PlayerLanguage.Value, title)));
         }
 
-        var menu = main.Build();
-        return menu;
+        return main.Build();
     }
 
-    public IMenuOption GetKeychainMenuSubmenuOption(IPlayer player)
+    public IMenuComponent GetKeychainMenuSubmenuOption(IPlayer player)
     {
         if (!ItemPermissionService.CanUseKeychains(player.SteamID))
         {
@@ -115,7 +94,7 @@ public partial class MenuService
         }
 
         _keychainOperatingWeaponSkins[player.SteamID] = dataInHand;
-        return new SubmenuMenuOption(LocalizationService[player].MenuTitleKeychains,
-            () => Task.FromResult(BuildKeychainMenu(player)));
+        return new SubmenuComponent(LocalizationService[player].MenuTitleKeychains,
+            _ => BuildKeychainMenu(player));
     }
 }

@@ -32,5 +32,10 @@
   "menu.keychainproperties.offsety": "Y 偏移",
   "menu.keychainproperties.offsetz": "Z 偏移",
   "menu.keychainproperties.resetoffset": "重置偏移",
-  "menu.reset": "重置"
+  "menu.reset": "重置",
+  "menu.type.ctagent": "CT 探员",
+  "menu.type.tagent": "T 探员",
+  "menu.type.charm": "挂件",
+  "menu.type.musickit": "音乐盒",
+  "menu.type.sticker": "印花"
 }

@@ -234,20 +234,19 @@ public class HookInventoryUpdateService : IInventoryUpdateService, IDisposable
 
     public void UpdateWeaponSkins(IEnumerable<WeaponSkinData> skins)
     {
-        Dictionary<ulong, List<WeaponSkinData>> updatedSkinMaps = new();
+        Dictionary<ulong, HashSet<(Team Team, ushort Definition)>> changed = new();
 
         foreach (var skin in skins)
         {
-            if (ItemPermissionService.TryBuildWeaponSkinView(skin, out var runtimeSkin))
+            if (ItemPermissionService.TryBuildWeaponSkinView(skin, out var runtimeSkin) &&
+                (DataService.WeaponDataService.StoreSkin(skin) || !runtimeSkin.Equals(skin)))
             {
-                if (DataService.WeaponDataService.StoreSkin(skin) || !runtimeSkin.Equals(skin))
-                {
-                    updatedSkinMaps.GetOrAdd(skin.SteamID, () => new()).Add(runtimeSkin);
-                }
+                changed.GetOrAdd(skin.SteamID, () => new()).Add((skin.Team, skin.DefinitionIndex));
             }
         }
 
-        foreach (var (steamID, updatedSkins) in updatedSkinMaps)
+        // Remade rather than painted in place: a weapon the client has drawn keeps that finish (upstream #43).
+        foreach (var (steamId, targets) in changed)
         {
             if (!PlayerService.TryGetPlayer(steamID, out var player) || !player.IsAlive())
             {
@@ -289,24 +288,24 @@ public class HookInventoryUpdateService : IInventoryUpdateService, IDisposable
                     }
                 });
             }
+            Core.Scheduler.NextTick(() => RemakeWeapons(steamId, targets));
         }
     }
 
     public void UpdateKnifeSkins(IEnumerable<KnifeSkinData> knives)
     {
-        Dictionary<ulong, List<KnifeSkinData>> updatedKnifeMaps = new();
+        HashSet<(ulong SteamId, Team Team)> changed = new();
         foreach (var knife in knives)
         {
-            if (ItemPermissionService.TryBuildKnifeSkinView(knife, out var runtimeKnife))
+            if (ItemPermissionService.TryBuildKnifeSkinView(knife, out var runtimeKnife) &&
+                (DataService.KnifeDataService.StoreKnife(knife) || !runtimeKnife.Equals(knife)))
             {
-                if (DataService.KnifeDataService.StoreKnife(knife) || !runtimeKnife.Equals(knife))
-                {
-                    updatedKnifeMaps.GetOrAdd(knife.SteamID, () => new()).Add(runtimeKnife);
-                }
+                changed.Add((knife.SteamID, knife.Team));
             }
         }
 
-        foreach (var (steamID, updatedKnives) in updatedKnifeMaps)
+        // Likewise: an in-place ChangeSubclass swapped the model but not the finish.
+        foreach (var (steamId, team) in changed)
         {
             if (!PlayerService.TryGetPlayer(steamID, out var player) || !player.IsAlive())
             {
@@ -331,9 +330,58 @@ public class HookInventoryUpdateService : IInventoryUpdateService, IDisposable
                     }
                 });
                 break;
+            Core.Scheduler.NextTick(() => RemakeKnife(steamId, team));
+        }
+    }
+
+    private void RemakeWeapons(ulong steamId,
+        IReadOnlyCollection<(Team Team, ushort Definition)> targets)
+    {
+        if (!PlayerService.TryGetPlayer(steamId, out var player) || !player.IsAlive()) return;
+        if (player.PlayerPawn?.WeaponServices is not { IsValid: true } weapons) return;
+
+        var team = player.Controller.Team;
+        var paint = PaintBeforeSelect(steamId, team);
+        foreach (var handle in weapons.MyWeapons.ToArray())
+        {
+            if (handle.Value is not { IsValid: true } weapon) continue;
+            var definition = weapon.AttributeManager.Item.ItemDefinitionIndex;
+            if (targets.Contains((team, definition)))
+            {
+                player.RegiveWeapon(weapon, definition, paint);
             }
         }
     }
+
+    private void RemakeKnife(ulong steamId,
+        Team team)
+    {
+        if (!PlayerService.TryGetPlayer(steamId, out var player) || !player.IsAlive() ||
+            player.Controller.Team != team) return;
+        if (player.PlayerPawn?.WeaponServices is not { IsValid: true } weapons) return;
+
+        // RegiveKnife always hands one out; a player without a knife must not gain one.
+        if (weapons.MyWeapons.ToArray().Any(handle => handle.Value is { IsValid: true } weapon &&
+                Utilities.IsKnifeDefinitionIndex(weapon.AttributeManager.Item.ItemDefinitionIndex)))
+        {
+            player.RegiveKnife(PaintBeforeSelect(steamId, team));
+        }
+    }
+
+    // OnGiveNamedItemPost paints a tick after the give, by which time a regive has
+    // already selected the weapon; see RegiveWeapon.
+    private Action<CBasePlayerWeapon> PaintBeforeSelect(ulong steamId,
+        Team team) => weapon =>
+    {
+        try
+        {
+            ApplyWeaponSkin(steamId, team, weapon);
+        }
+        catch (Exception error)
+        {
+            Logger.LogError(error, "Error painting a regiven weapon");
+        }
+    };
 
     public void UpdateGloveSkins(IEnumerable<GloveData> gloves)
     {
@@ -367,19 +415,7 @@ public class HookInventoryUpdateService : IInventoryUpdateService, IDisposable
     {
         if (DataService.WeaponDataService.TryRemoveSkin(steamid, team, definitionIndex))
         {
-            if (PlayerService.TryGetPlayer(steamid, out var player))
-            {
-                Core.Scheduler.NextTick(() =>
-                {
-                    if (player.IsAlive())
-                    {
-                        player.RegiveWeapon(
-                            player.PlayerPawn!.WeaponServices!.MyWeapons.FirstOrDefault(w =>
-                                w.Value!.AttributeManager.Item.ItemDefinitionIndex == definitionIndex &&
-                                player.Controller.Team == team).Value!, definitionIndex);
-                    }
-                });
-            }
+            Core.Scheduler.NextTick(() => RemakeWeapons(steamid, [(team, definitionIndex)]));
         }
     }
 
@@ -388,16 +424,7 @@ public class HookInventoryUpdateService : IInventoryUpdateService, IDisposable
     {
         if (DataService.KnifeDataService.TryRemoveKnife(steamid, team))
         {
-            if (PlayerService.TryGetPlayer(steamid, out var player))
-            {
-                Core.Scheduler.NextTick(() =>
-                {
-                    if (player.IsAlive())
-                    {
-                        player.RegiveKnife();
-                    }
-                });
-            }
+            Core.Scheduler.NextTick(() => RemakeKnife(steamid, team));
         }
     }
 
@@ -630,6 +657,7 @@ public class HookInventoryUpdateService : IInventoryUpdateService, IDisposable
         if (pawn?.WeaponServices is not { IsValid: true } weapons) return;
 
         // Recreate held weapons even when their stored skin was removed.
+        var paint = PaintBeforeSelect(steamId, player.Controller.Team);
         foreach (var handle in weapons.MyWeapons.ToArray())
         {
             var weapon = handle.Value;
@@ -637,11 +665,11 @@ public class HookInventoryUpdateService : IInventoryUpdateService, IDisposable
             var definition = weapon.AttributeManager.Item.ItemDefinitionIndex;
             if (Utilities.IsKnifeDefinitionIndex(definition))
             {
-                player.RegiveKnife();
+                player.RegiveKnife(paint);
             }
             else if (Utilities.IsWeaponDefinitionIndex(definition))
             {
-                player.RegiveWeapon(weapon, definition);
+                player.RegiveWeapon(weapon, definition, paint);
             }
         }
 

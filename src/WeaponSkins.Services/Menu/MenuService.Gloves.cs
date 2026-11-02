@@ -1,40 +1,15 @@
-using SwiftlyS2.Core.Menus.OptionsBase;
-using SwiftlyS2.Shared;
-using SwiftlyS2.Shared.Menus;
+using SwiftlyS2.Shared.Menu;
+using SwiftlyS2.Shared.Menu.Components;
 using SwiftlyS2.Shared.Players;
 
 namespace WeaponSkins;
 
 public partial class MenuService
 {
-    private ValueTask OnGloveSkinOptionClick(object? sender, MenuOptionClickEventArgs args)
+    public IMenu BuildGloveSkinMenu(IPlayer player)
     {
-        Core.Scheduler.NextTick(() =>
-        {
-            if (TryGetGloveDataInHand(args.Player, out var gloveInHand))
-            {
-                if (Utilities.IsGloveDefinitionIndex(gloveInHand.DefinitionIndex))
-                {
-                    var menu = Core.MenusAPI.GetCurrentMenu(args.Player);
-                    if (menu != null)
-                    {
-                        var option = menu.Options.FirstOrDefault(o =>
-                                o.Tag is int tag &&
-                                tag == gloveInHand.Paintkit);
-
-                        if (option != null)
-                            menu.MoveToOption(args.Player, option);
-                    }
-                }
-            }
-        });
-        return ValueTask.CompletedTask;
-    }
-
-    public IMenuAPI BuildGloveSkinMenu(IPlayer player)
-    {
-        var main = Core.MenusAPI.CreateBuilder();
-        main.Design.SetMenuTitle(LocalizationService[player].MenuTitleGloves);
+        var main = CreateMenu("weaponskins.gloves")
+            .WithTitle(LocalizationService[player].MenuTitleGloves);
 
         foreach (var (glove, paintkits) in EconService.WeaponToPaintkits)
         {
@@ -44,93 +19,52 @@ public partial class MenuService
                 continue;
             }
 
-            var submenuOption = new SubmenuMenuOption(EconService.GetLocalizedName(EconService.Items[glove].LocalizedNames, player.PlayerLanguage.Value), () =>
+            var itemName = EconService.GetLocalizedName(item.LocalizedNames, player.PlayerLanguage.Value);
+            // CS2 ships no per-type glove render, so the type borrows its first finish's.
+            var preview = paintkits.OrderByDescending(p => p.Rarity.Id).FirstOrDefault();
+            var submenuOption = CreateSubmenu(itemName, _ =>
             {
-                var skinMenu = Core.MenusAPI.CreateBuilder();
-                skinMenu.Design.SetMenuTitleVisible(false);
-                var sorted = paintkits.OrderByDescending(p => p.Rarity.Id).ToList();
-                var resetOption = new ButtonMenuOption(LocalizationService[player].MenuReset);
-                resetOption.Click += (_,
-                    args) =>
-                {
-                    Api.ResetGloveSkin(args.Player.SteamID, args.Player.Controller.Team, true);
-                    return ValueTask.CompletedTask;
-                };
-                skinMenu.AddOption(resetOption);
-                foreach (var paintkit in sorted)
-                {
-                    var option = new ButtonMenuOption(HtmlGradient.GenerateGradientText(EconService.GetLocalizedName(paintkit.LocalizedNames, player.PlayerLanguage.Value),
-                        paintkit.Rarity.Color.HexColor));
+                var skinMenu = CreateMenu("weaponskins.gloves.paintkits").WithTitle(itemName);
+                skinMenu.Add(CreateButton(LocalizationService[player].MenuReset,
+                    p => Api.ResetGloveSkin(p.SteamID, p.Controller.Team, true)));
 
-                    option.Click += (_,
-                        args) =>
-                    {
-                        Api.UpdateGloveSkin(args.Player.SteamID, args.Player.Controller.Team, skin =>
+                foreach (var paintkit in paintkits.OrderByDescending(p => p.Rarity.Id))
+                {
+                    var option = CreateRarityButton(
+                        EconService.GetLocalizedName(paintkit.LocalizedNames, player.PlayerLanguage.Value),
+                        paintkit.Rarity.Color.HexColor,
+                        p => Api.UpdateGloveSkin(p.SteamID, p.Controller.Team, glove =>
                         {
-                            skin.DefinitionIndex = (ushort)item.Index;
-                            skin.Paintkit = paintkit.Index;
-                        }, true);
-
-                        return ValueTask.CompletedTask;
-                    };
-
+                            glove.DefinitionIndex = (ushort)item.Index;
+                            glove.Paintkit = paintkit.Index;
+                        }, true),
+                        PaintkitImageKey(glove, paintkit),
+                        itemName);
                     option.Tag = paintkit.Index;
-
-
-                    skinMenu.AddOption(option);
+                    skinMenu.Add(option);
                 }
-                return Task.FromResult(skinMenu.Build());
-            });
+
+                var built = skinMenu.Build();
+                TrackFocus(built, p => TryGetGloveDataInHand(p, out var inHand) && Utilities.IsGloveDefinitionIndex(inHand.DefinitionIndex) ? inHand.Paintkit : null);
+                return built;
+            }, preview is null ? null : PaintkitImageKey(glove, preview));
 
             submenuOption.Tag = (ushort)item.Index;
-            submenuOption.Click += OnGloveSkinOptionClick;
-            main.AddOption(submenuOption);
+            main.Add(submenuOption);
         }
 
         var menu = main.Build();
+        TrackFocus(menu, p => TryGetGloveDataInHand(p, out var inHand) ? inHand.DefinitionIndex : null);
         return menu;
     }
 
-    private ValueTask OnGloveMenuSkinOptionClick(object? sender, MenuOptionClickEventArgs args)
-    {
-        Core.Scheduler.NextTick(() =>
-        {
-            if (TryGetGloveDataInHand(args.Player, out var gloveInHand))
-            {
-                Core.Scheduler.NextTick(() =>
-                {
-                    var menu = Core.MenusAPI.GetCurrentMenu(args.Player);
-                    if (menu != null)
-                    {
-                        var option = menu.Options.FirstOrDefault(o =>
-                                o.Tag is ushort tag &&
-                                tag == gloveInHand.DefinitionIndex);
-
-                        if (option != null)
-                            menu.MoveToOption(args.Player, option);
-                    }
-                });
-            }
-
-        });
-        return ValueTask.CompletedTask;
-    }
-
-    public IMenuOption GetGloveSkinMenuSubmenuOption(IPlayer player)
+    public IMenuComponent GetGloveSkinMenuSubmenuOption(IPlayer player)
     {
         if (!ItemPermissionService.CanUseGloveSkins(player.SteamID))
         {
             return CreateDisabledOption(LocalizationService[player].MenuTitleGloves);
         }
 
-        var skinOption = new SubmenuMenuOption(LocalizationService[player].MenuTitleGloves,
-            () => Task.FromResult(BuildGloveSkinMenu(player)));
-
-        if (TryGetGloveDataInHand(player, out var gloveInHand))
-        {
-            skinOption.Click += OnGloveMenuSkinOptionClick;
-        }
-
-        return skinOption;
+        return new SubmenuComponent(LocalizationService[player].MenuTitleGloves, _ => BuildGloveSkinMenu(player));
     }
 }

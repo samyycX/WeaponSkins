@@ -1,5 +1,5 @@
-using SwiftlyS2.Core.Menus.OptionsBase;
-using SwiftlyS2.Shared.Menus;
+using SwiftlyS2.Shared.Menu;
+using SwiftlyS2.Shared.Menu.Components;
 using SwiftlyS2.Shared.Players;
 
 using WeaponSkins.Shared;
@@ -8,109 +8,51 @@ namespace WeaponSkins;
 
 public partial class MenuService
 {
-    public IMenuAPI BuildStickerPropertiesMenu(IPlayer player,
+    public IMenu BuildStickerPropertiesMenu(IPlayer player,
         WeaponSkinData data,
         int slot)
     {
-        var main = Core.MenusAPI.CreateBuilder();
-        main.Design.SetMenuTitle(LocalizationService[player].MenuTitleStickerProperties);
-
+        var title = LocalizationService[player].MenuTitleStickerProperties;
         var sticker = data.GetSticker(slot);
-        if (sticker == null) return main.Build();
+        if (sticker == null) return BuildEmptyMenu(Core, $"weaponskins.stickerproperties.slot{slot}", title);
 
-        var wearOption = new InputMenuOption(
-            LocalizationService[player].MenuSkinPropertiesWear,
-            validator: (value) =>
-            {
-                if (float.TryParse(value, out var result))
-                {
-                    return result is >= 0.0f and <= 1.0f;
-                }
+        var main = CreateMenu($"weaponskins.stickerproperties.slot{slot}")
+            .WithTitle(title);
 
-                return false;
-            }
-        );
+        void Update(Action<WeaponSkinData> apply) =>
+            Api.UpdateWeaponSkin(data.SteamID, data.Team, data.DefinitionIndex, apply, true);
 
-        wearOption.SetValue(player, sticker.Wear.ToString());
-        wearOption.ValueChanged += (_,
-            args) =>
-        {
-            var value = float.Parse(args.NewValue);
-            Api.UpdateWeaponSkin(data.SteamID, data.Team, data.DefinitionIndex, skin =>
-            {
-                skin.GetSticker(slot)?.Wear = value;
-            }, true);
-        };
-        main.AddOption(wearOption);
+        main.Add(CreateFloatInput(LocalizationService[player].MenuSkinPropertiesWear, sticker.Wear,
+            value => value is >= 0.0f and <= 1.0f,
+            (_, value) => Update(skin => skin.GetSticker(slot)?.Wear = value)));
 
-        var offsetXOption = new InputMenuOption(
-            LocalizationService[player].MenuStickerPropertiesOffsetX,
-            validator: (value) =>
-            {
-                if (float.TryParse(value, out var result))
-                {
-                    return float.IsFinite(result);
-                }
-
-                return false;
-            }
-        );
-        offsetXOption.SetValue(player, sticker.OffsetX.ToString());
-        offsetXOption.ValueChanged += (_,
-            args) =>
-        {
-            var value = float.Parse(args.NewValue);
-            Api.UpdateWeaponSkin(data.SteamID, data.Team, data.DefinitionIndex, skin =>
+        main.Add(CreateFloatInput(LocalizationService[player].MenuStickerPropertiesOffsetX, sticker.OffsetX,
+            float.IsFinite,
+            (_, value) => Update(skin =>
             {
                 skin.GetSticker(slot)?.OffsetX = value;
                 skin.GetSticker(slot)?.Schema = 0;
-            }, true);
-        };
-        main.AddOption(offsetXOption);
+            })));
 
-        var offsetYOption = new InputMenuOption(
-            LocalizationService[player].MenuStickerPropertiesOffsetY,
-            validator: (value) =>
-            {
-                if (float.TryParse(value, out var result))
-                {
-                    return float.IsFinite(result);
-                }
-
-                return false;
-            }
-        );
-        offsetYOption.SetValue(player, sticker.OffsetY.ToString());
-        offsetYOption.ValueChanged += (_,
-            args) =>
-        {
-            var value = float.Parse(args.NewValue);
-            Api.UpdateWeaponSkin(data.SteamID, data.Team, data.DefinitionIndex, skin =>
+        main.Add(CreateFloatInput(LocalizationService[player].MenuStickerPropertiesOffsetY, sticker.OffsetY,
+            float.IsFinite,
+            (_, value) => Update(skin =>
             {
                 skin.GetSticker(slot)?.OffsetY = value;
                 skin.GetSticker(slot)?.Schema = 0;
-            }, true);
-        };
-        main.AddOption(offsetYOption);
+            })));
 
-        var resetOffsetOption = new ButtonMenuOption(LocalizationService[player].MenuStickerPropertiesResetOffset);
-        resetOffsetOption.Click += (_,
-            args) =>
+        main.Add(CreateButton(LocalizationService[player].MenuStickerPropertiesResetOffset, _ => Update(skin =>
         {
-            Api.UpdateWeaponSkin(data.SteamID, data.Team, data.DefinitionIndex, skin =>
-            {
-                skin.GetSticker(slot)?.OffsetX = 0f;
-                skin.GetSticker(slot)?.OffsetY = 0f;
-                skin.GetSticker(slot)?.Schema = 1337;
-            }, true);
-            return ValueTask.CompletedTask;
-        };
-        main.AddOption(resetOffsetOption);
+            skin.GetSticker(slot)?.OffsetX = 0f;
+            skin.GetSticker(slot)?.OffsetY = 0f;
+            skin.GetSticker(slot)?.Schema = 1337;
+        })));
 
         return main.Build();
     }
 
-    public IMenuOption? GetStickerPropertiesMenuSubmenuOption(IPlayer player,
+    public IMenuComponent? GetStickerPropertiesMenuSubmenuOption(IPlayer player,
         WeaponSkinData data,
         int slot)
     {
@@ -119,7 +61,7 @@ public partial class MenuService
         var sticker = data.GetSticker(slot);
         var stickerName = GetStickerName(sticker, player.PlayerLanguage.Value);
         if (stickerName == null) return null;
-        return new SubmenuMenuOption(LocalizationService[player].MenuSkinPropertiesSetSticker(slot, stickerName),
-            () => Task.FromResult(BuildStickerPropertiesMenu(player, data, slot)));
+        return new SubmenuComponent(LocalizationService[player].MenuSkinPropertiesSetSticker(slot, stickerName),
+            _ => BuildStickerPropertiesMenu(player, data, slot));
     }
 }

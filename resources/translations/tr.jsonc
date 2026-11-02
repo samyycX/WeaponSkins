@@ -33,5 +33,10 @@
   "menu.keychainproperties.offsety": "Offset Y",
   "menu.keychainproperties.offsetz": "Offset Z",
   "menu.keychainproperties.resetoffset": "Offset'i Sıfırla",
-  "menu.reset": "Sıfırla"
+  "menu.reset": "Sıfırla",
+  "menu.type.ctagent": "CT Ajanı",
+  "menu.type.tagent": "T Ajanı",
+  "menu.type.charm": "Anahtarlık",
+  "menu.type.musickit": "Müzik Kiti",
+  "menu.type.sticker": "Çıkartma"
 }

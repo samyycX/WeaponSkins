@@ -1,5 +1,5 @@
-using SwiftlyS2.Core.Menus.OptionsBase;
-using SwiftlyS2.Shared.Menus;
+using SwiftlyS2.Shared.Menu;
+using SwiftlyS2.Shared.Menu.Components;
 using SwiftlyS2.Shared.Players;
 
 using WeaponSkins.Shared;
@@ -8,69 +8,32 @@ namespace WeaponSkins;
 
 public partial class MenuService
 {
-    public IMenuAPI BuildGlovePropertiesMenu(IPlayer player,
+    public IMenu BuildGlovePropertiesMenu(IPlayer player,
         GloveData gloveInHand)
     {
-        var main = Core.MenusAPI.CreateBuilder();
-        main.Design.SetMenuTitle(LocalizationService[player].MenuTitleGloveProperties);
+        var main = CreateMenu("weaponskins.gloveproperties")
+            .WithTitle(LocalizationService[player].MenuTitleGloveProperties);
 
-        var wearOption = new InputMenuOption(
-            LocalizationService[player].MenuSkinPropertiesWear,
-            validator: (value) =>
+        main.Add(CreateFloatInput(LocalizationService[player].MenuSkinPropertiesWear, gloveInHand.PaintkitWear,
+            value => value is >= 0.0f and <= 1.0f,
+            (_, value) =>
             {
-                if (float.TryParse(value, out var result))
-                {
-                    return result is >= 0.0f and <= 1.0f;
-                }
+                gloveInHand.PaintkitWear = value;
+                Api.UpdateGloveSkin(gloveInHand.SteamID, gloveInHand.Team, skin => skin.PaintkitWear = value, true);
+            }));
 
-                return false;
-            }
-        );
-        wearOption.SetValue(player, gloveInHand.PaintkitWear.ToString());
-        wearOption.ValueChanged += (_,
-            args) =>
-        {
-            gloveInHand.PaintkitWear = float.Parse(args.NewValue);
-            Api.UpdateGloveSkin(gloveInHand.SteamID, gloveInHand.Team, skin =>
+        main.Add(CreateIntInput(LocalizationService[player].MenuSkinPropertiesSeed, gloveInHand.PaintkitSeed,
+            value => value >= 0,
+            (_, value) =>
             {
-                skin.PaintkitWear = gloveInHand.PaintkitWear;
-            }, true);
-        };
-
-        main.AddOption(wearOption);
-
-        var seedOption = new InputMenuOption(
-            LocalizationService[player].MenuSkinPropertiesSeed,
-            validator: (value) =>
-            {
-                if (int.TryParse(value, out var result))
-                {
-                    return result >= 0;
-                }
-
-                return false;
-            }
-        );
-
-        seedOption.SetValue(player, gloveInHand.PaintkitSeed.ToString());
-
-        seedOption.ValueChanged += (_,
-            args) =>
-        {
-            gloveInHand.PaintkitSeed = int.Parse(args.NewValue);
-
-            Api.UpdateGloveSkin(gloveInHand.SteamID, gloveInHand.Team, skin =>
-            {
-                skin.PaintkitSeed = gloveInHand.PaintkitSeed;
-            }, true);
-        };
-
-        main.AddOption(seedOption);
+                gloveInHand.PaintkitSeed = value;
+                Api.UpdateGloveSkin(gloveInHand.SteamID, gloveInHand.Team, skin => skin.PaintkitSeed = value, true);
+            }));
 
         return main.Build();
     }
 
-    public IMenuOption GetGlovePropertiesMenuSubmenuOption(IPlayer player)
+    public IMenuComponent GetGlovePropertiesMenuSubmenuOption(IPlayer player)
     {
         if (!ItemPermissionService.CanUseGloveSkins(player.SteamID))
         {
@@ -82,7 +45,7 @@ public partial class MenuService
             return CreateDisabledOption(LocalizationService[player].MenuTitleGloveProperties);
         }
 
-        return new SubmenuMenuOption(LocalizationService[player].MenuTitleGloveProperties,
-            () => Task.FromResult(BuildGlovePropertiesMenu(player, dataInHand)));
+        return new SubmenuComponent(LocalizationService[player].MenuTitleGloveProperties,
+            _ => BuildGlovePropertiesMenu(player, dataInHand));
     }
 }

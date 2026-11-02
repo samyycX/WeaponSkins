@@ -1,5 +1,5 @@
-using SwiftlyS2.Core.Menus.OptionsBase;
-using SwiftlyS2.Shared.Menus;
+using SwiftlyS2.Shared.Menu;
+using SwiftlyS2.Shared.Menu.Components;
 using SwiftlyS2.Shared.Players;
 
 using WeaponSkins.Shared;
@@ -8,130 +8,47 @@ namespace WeaponSkins;
 
 public partial class MenuService
 {
-    public IMenuAPI BuildKeychainPropertiesMenu(IPlayer player,
+    public IMenu BuildKeychainPropertiesMenu(IPlayer player,
         WeaponSkinData data,
         int slot)
     {
-        var main = Core.MenusAPI.CreateBuilder();
-        main.Design.SetMenuTitle(LocalizationService[player].MenuTitleKeychainProperties);
-
+        var title = LocalizationService[player].MenuTitleKeychainProperties;
         var keychain = data.GetKeychain(slot);
-        if (keychain == null) return main.Build();
+        if (keychain == null) return BuildEmptyMenu(Core, $"weaponskins.keychainproperties.slot{slot}", title);
 
-        var seedOption = new InputMenuOption(
-            LocalizationService[player].MenuSkinPropertiesSeed,
-            validator: (value) =>
-            {
-                if (int.TryParse(value, out var result))
-                {
-                    return result >= 0;
-                }
+        var main = CreateMenu($"weaponskins.keychainproperties.slot{slot}")
+            .WithTitle(title);
 
-                return false;
-            }
-        );
-        seedOption.SetValue(player, keychain.Seed.ToString());
-        seedOption.ValueChanged += (_,
-            args) =>
+        void Update(Action<WeaponSkinData> apply) =>
+            Api.UpdateWeaponSkin(data.SteamID, data.Team, data.DefinitionIndex, apply, true);
+
+        main.Add(CreateIntInput(LocalizationService[player].MenuSkinPropertiesSeed, keychain.Seed,
+            value => value >= 0,
+            (_, value) => Update(skin => skin.GetKeychain(slot)?.Seed = value)));
+
+        main.Add(CreateFloatInput(LocalizationService[player].MenuKeychainPropertiesOffsetX, keychain.OffsetX,
+            float.IsFinite,
+            (_, value) => Update(skin => skin.GetKeychain(slot)?.OffsetX = value)));
+
+        main.Add(CreateFloatInput(LocalizationService[player].MenuKeychainPropertiesOffsetY, keychain.OffsetY,
+            float.IsFinite,
+            (_, value) => Update(skin => skin.GetKeychain(slot)?.OffsetY = value)));
+
+        main.Add(CreateFloatInput(LocalizationService[player].MenuKeychainPropertiesOffsetZ, keychain.OffsetZ,
+            float.IsFinite,
+            (_, value) => Update(skin => skin.GetKeychain(slot)?.OffsetZ = value)));
+
+        main.Add(CreateButton(LocalizationService[player].MenuKeychainPropertiesResetOffset, _ => Update(skin =>
         {
-            var value = int.Parse(args.NewValue);
-            Api.UpdateWeaponSkin(data.SteamID, data.Team, data.DefinitionIndex, skin =>
-            {
-                skin.GetKeychain(slot)?.Seed = value;
-            }, true);
-        };
-        main.AddOption(seedOption);
-
-        var offsetXOption = new InputMenuOption(
-            LocalizationService[player].MenuKeychainPropertiesOffsetX,
-            validator: (value) =>
-            {
-                if (float.TryParse(value, out var result))
-                {
-                    return float.IsFinite(result);
-                }
-
-                return false;
-            }
-        );
-        offsetXOption.SetValue(player, keychain.OffsetX.ToString());
-        offsetXOption.ValueChanged += (_,
-            args) =>
-        {
-            var value = float.Parse(args.NewValue);
-            Api.UpdateWeaponSkin(data.SteamID, data.Team, data.DefinitionIndex, skin =>
-            {
-                skin.GetKeychain(slot)?.OffsetX = value;
-            }, true);
-        };
-        main.AddOption(offsetXOption);
-
-        var offsetYOption = new InputMenuOption(
-            LocalizationService[player].MenuKeychainPropertiesOffsetY,
-            validator: (value) =>
-            {
-                if (float.TryParse(value, out var result))
-                {
-                    return float.IsFinite(result);
-                }
-
-                return false;
-            }
-        );
-        offsetYOption.SetValue(player, keychain.OffsetY.ToString());
-        offsetYOption.ValueChanged += (_,
-            args) =>
-        {
-            var value = float.Parse(args.NewValue);
-            Api.UpdateWeaponSkin(data.SteamID, data.Team, data.DefinitionIndex, skin =>
-            {
-                skin.GetKeychain(slot)?.OffsetY = value;
-            }, true);
-        };
-        main.AddOption(offsetYOption);
-
-        var offsetZOption = new InputMenuOption(
-            LocalizationService[player].MenuKeychainPropertiesOffsetZ,
-            validator: (value) =>
-            {
-                if (float.TryParse(value, out var result))
-                {
-                    return float.IsFinite(result);
-                }
-
-                return false;
-            }
-        );
-        offsetZOption.SetValue(player, keychain.OffsetZ.ToString());
-        offsetZOption.ValueChanged += (_,
-            args) =>
-        {
-            var value = float.Parse(args.NewValue);
-            Api.UpdateWeaponSkin(data.SteamID, data.Team, data.DefinitionIndex, skin =>
-            {
-                skin.GetKeychain(slot)?.OffsetZ = value;
-            }, true);
-        };
-        main.AddOption(offsetZOption);
-
-        var resetOffsetOption = new ButtonMenuOption(LocalizationService[player].MenuKeychainPropertiesResetOffset);
-        resetOffsetOption.Click += (_,
-            args) =>
-        {
-            Api.UpdateWeaponSkin(data.SteamID, data.Team, data.DefinitionIndex, skin =>
-            {
-                skin.GetKeychain(slot)?.OffsetX = 0f;
-                skin.GetKeychain(slot)?.OffsetY = 0f;
-                skin.GetKeychain(slot)?.OffsetZ = 0f;
-            }, true);
-            return ValueTask.CompletedTask;
-        };
-        main.AddOption(resetOffsetOption);
+            skin.GetKeychain(slot)?.OffsetX = 0f;
+            skin.GetKeychain(slot)?.OffsetY = 0f;
+            skin.GetKeychain(slot)?.OffsetZ = 0f;
+        })));
 
         return main.Build();
     }
 
-    public IMenuOption? GetKeychainPropertiesMenuSubmenuOption(IPlayer player,
+    public IMenuComponent? GetKeychainPropertiesMenuSubmenuOption(IPlayer player,
         WeaponSkinData data,
         int slot)
     {
@@ -141,7 +58,7 @@ public partial class MenuService
         if (keychain == null) return null;
         var keychainName = GetKeychainName(keychain, player.PlayerLanguage.Value);
         if (keychainName == null) return null;
-        return new SubmenuMenuOption(LocalizationService[player].MenuSkinPropertiesSetKeychain(slot, keychainName),
-            () => Task.FromResult(BuildKeychainPropertiesMenu(player, data, slot)));
+        return new SubmenuComponent(LocalizationService[player].MenuSkinPropertiesSetKeychain(slot, keychainName),
+            _ => BuildKeychainPropertiesMenu(player, data, slot));
     }
 }

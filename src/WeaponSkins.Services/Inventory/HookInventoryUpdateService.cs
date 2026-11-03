@@ -44,6 +44,7 @@ public class HookInventoryUpdateService : IInventoryUpdateService, IDisposable
         EconService = econService;
 
         Core.Event.OnEntityCreated += OnEntityCreated;
+        Core.Event.OnMapLoad += _ => FinishCacheKeys.Clear();
         Core.GameEvent.HookPost<EventPlayerSpawn>(OnPlayerSpawn);
         Core.GameEvent.HookPre<EventRoundStart>(OnRoundStart);
         Core.GameEvent.HookPre<EventRoundMvp>(OnRoundMvp);
@@ -136,6 +137,7 @@ public class HookInventoryUpdateService : IInventoryUpdateService, IDisposable
         {
             ApplyPlayerGlove(player);
             ApplyPlayerAgent(player);
+            ApplyPlayerMusicKit(player);
         });
 
         Core.Scheduler.DelayBySeconds(0.1f, () =>
@@ -390,6 +392,15 @@ public class HookInventoryUpdateService : IInventoryUpdateService, IDisposable
         if (!player.IsAlive()) return;
         var pawn = player.PlayerPawn!;
         ApplyGlove(player, pawn);
+    }
+
+    // A kit is set on the controller, which a reconnect or map change replaces, so it is re-applied each spawn.
+    private void ApplyPlayerMusicKit(IPlayer player)
+    {
+        if (player.IsValid && DataService.MusicKitDataService.TryGetMusicKit(player.SteamID, out var musicKit))
+        {
+            UpdateMusicKit(player.SteamID, musicKit);
+        }
     }
 
     private void ApplyWeaponSkin(ulong steamId,

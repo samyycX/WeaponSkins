@@ -20,7 +20,8 @@ public partial class MenuService
             var index = musicKit.Index;
 
             menu.Add(CreateButton(truncatedName, p => Api.SetMusicKit(p.SteamID, index),
-                EconService.GetImageKey("music", musicKit.Name), typeLabel));
+                EconService.GetImageKey("music", musicKit.Name), typeLabel,
+                session => DataService.MusicKitDataService.TryGetMusicKit(session.Player.SteamID, out var current) && current == index));
         }
 
         return menu.Build();

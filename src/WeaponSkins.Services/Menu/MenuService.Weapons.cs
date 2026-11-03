@@ -33,7 +33,8 @@ public partial class MenuService
                         paintkit.Rarity.Color.HexColor,
                         p => Api.UpdateWeaponSkin(p.SteamID, p.Controller.Team, (ushort)item.Index, skin => skin.Paintkit = paintkit.Index, true),
                         PaintkitImageKey(weapon, paintkit),
-                        itemName);
+                        itemName,
+                        session => HasWeaponPaint(session, (ushort)item.Index, paintkit.Index));
                     option.Tag = paintkit.Index;
                     skinMenu.Add(option);
                 }

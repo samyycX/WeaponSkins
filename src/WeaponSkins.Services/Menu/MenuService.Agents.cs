@@ -62,7 +62,9 @@ public partial class MenuService
                 {
                     ApplyAgentModel(p, agent.ModelPath);
                 });
-            }, EconService.GetImageKey("agent", agent.Name), typeLabel));
+            }, EconService.GetImageKey("agent", agent.Name), typeLabel,
+                session => DataService.AgentDataService.TryGetAgent(session.Player.SteamID, session.Player.Controller.Team, out var current)
+                           && current == agent.Index));
         }
 
         return main.Build();

@@ -168,8 +168,6 @@ Follow these steps in order. Steps 1 and 2 use phpMyAdmin, or your host's databa
 
 In the `!ws` menu, players choose weapon skins, knives, gloves, agents and music kits. Wear, pattern, name tag, StatTrak™, stickers and charms are under **Weapon Properties**, **Knife Properties** and **Glove Properties**. Choices are saved straight away, separately for T and CT — music kits count for both. Options a player has no permission for are greyed out.
 
-With [CustomHUD](https://github.com/shmitzas/CustomHUD) in mouse mode, the properties pages show item pictures.
-
 ## ⚙️ Settings
 
 All settings are in `addons/swiftlys2/configs/plugins/WeaponSkins/config.toml`. Changes apply when you save the file, except `ItemLanguages`, which needs a restart. The defaults:

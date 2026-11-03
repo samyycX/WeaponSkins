@@ -10,6 +10,7 @@ internal static class WeaponAppearance
         WeaponSkinData skin)
     {
         var item = weapon.AttributeManager.Item;
+        var wear = FinishCacheKeys.Resolve(skin);
         var itemId = (ulong)Random.Shared.NextInt64(1, long.MaxValue);
         item.ItemID = itemId;
         item.ItemIDLow = (uint)itemId;
@@ -23,12 +24,12 @@ internal static class WeaponAppearance
         weapon.OriginalOwnerXuidHigh = (uint)(skin.SteamID >> 32);
         weapon.FallbackPaintKit = skin.Paintkit;
         weapon.FallbackSeed = skin.PaintkitSeed;
-        weapon.FallbackWear = skin.PaintkitWear;
+        weapon.FallbackWear = wear;
         weapon.FallbackStatTrak = skin.Quality == EconItemQuality.StatTrak ? skin.StattrakCount : -1;
 
         RemoveCosmeticAttributes(item.AttributeList);
         RemoveCosmeticAttributes(item.NetworkedDynamicAttributes);
-        WriteAttributes(skin, (name, value) =>
+        WriteAttributes(skin, wear, (name, value) =>
         {
             item.AttributeList.SetOrAddAttribute(name, value);
             item.NetworkedDynamicAttributes.SetOrAddAttribute(name, value);
@@ -65,17 +66,33 @@ internal static class WeaponAppearance
     }
 
     internal static void WriteAttributes(WeaponSkinData skin,
+        float wear,
         Action<string, float> setAttribute)
     {
         setAttribute("set item texture prefab", skin.Paintkit);
         setAttribute("set item texture seed", skin.PaintkitSeed);
-        setAttribute("set item texture wear", skin.PaintkitWear);
+        setAttribute("set item texture wear", wear);
         if (skin.Quality == EconItemQuality.StatTrak)
         {
             setAttribute("kill eater", BitConverter.Int32BitsToSingle(skin.StattrakCount));
             setAttribute("kill eater score type", 0);
         }
 
+        WriteStickers(skin, setAttribute);
+
+        if (skin.Keychain0 is { Id: > 0 } keychain)
+        {
+            setAttribute("keychain slot 0 id", BitConverter.Int32BitsToSingle(keychain.Id));
+            setAttribute("keychain slot 0 offset x", keychain.OffsetX);
+            setAttribute("keychain slot 0 offset y", keychain.OffsetY);
+            setAttribute("keychain slot 0 offset z", keychain.OffsetZ);
+            setAttribute("keychain slot 0 seed", BitConverter.Int32BitsToSingle(keychain.Seed));
+        }
+    }
+
+    internal static void WriteStickers(WeaponSkinData skin,
+        Action<string, float> setAttribute)
+    {
         for (var index = 0; index < 6; index++)
         {
             var sticker = skin.GetSticker(index);
@@ -92,15 +109,6 @@ internal static class WeaponAppearance
             setAttribute($"{prefix} wear", sticker.Wear);
             setAttribute($"{prefix} scale", sticker.Scale);
             setAttribute($"{prefix} rotation", sticker.Rotation);
-        }
-
-        if (skin.Keychain0 is { Id: > 0 } keychain)
-        {
-            setAttribute("keychain slot 0 id", BitConverter.Int32BitsToSingle(keychain.Id));
-            setAttribute("keychain slot 0 offset x", keychain.OffsetX);
-            setAttribute("keychain slot 0 offset y", keychain.OffsetY);
-            setAttribute("keychain slot 0 offset z", keychain.OffsetZ);
-            setAttribute("keychain slot 0 seed", BitConverter.Int32BitsToSingle(keychain.Seed));
         }
     }
 }

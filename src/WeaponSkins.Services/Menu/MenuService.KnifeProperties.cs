@@ -1,5 +1,4 @@
 using SwiftlyS2.Shared.Menu;
-using SwiftlyS2.Shared.Menu.Components;
 using SwiftlyS2.Shared.Players;
 
 using WeaponSkins.Shared;
@@ -8,71 +7,32 @@ namespace WeaponSkins;
 
 public partial class MenuService
 {
-    public IMenu BuildKnifePropertiesMenu(IPlayer player,
-        KnifeSkinData weaponInHand)
+    public IMenu BuildKnifePropertiesMenu(IPlayer player)
     {
+        var loc = LocalizationService[player];
+        var steamId = player.SteamID;
+        var team = player.Controller.Team;
         var main = CreateMenu("weaponskins.knifeproperties")
-            .WithTitle(LocalizationService[player].MenuTitleKnifeProperties);
+            .WithTitle(loc.MenuTitleKnifeProperties);
+
+        if (!Api.TryGetKnifeSkin(steamId, team, out var knife))
+        {
+            AddEmptyNotice(main, loc);
+            return main.Build();
+        }
 
         void Update(Action<KnifeSkinData> apply) =>
-            Api.UpdateKnifeSkin(weaponInHand.SteamID, weaponInHand.Team, apply, true);
+            Api.UpdateKnifeSkin(steamId, team, apply, true);
 
-        main.Add(CreateFloatInput(LocalizationService[player].MenuSkinPropertiesWear, weaponInHand.PaintkitWear,
-            value => value is >= 0.0f and <= 1.0f,
-            (_, value) =>
-            {
-                weaponInHand.PaintkitWear = value;
-                Update(skin => skin.PaintkitWear = value);
-            }));
-
-        main.Add(CreateIntInput(LocalizationService[player].MenuSkinPropertiesSeed, weaponInHand.PaintkitSeed,
-            value => value >= 0,
-            (_, value) =>
-            {
-                weaponInHand.PaintkitSeed = value;
-                Update(skin => skin.PaintkitSeed = value);
-            }));
-
-        main.Add(new InputComponent(LocalizationService[player].MenuSkinPropertiesNametag,
-            weaponInHand.Nametag ?? LocalizationService[player].MenuSkinPropertiesNametagNone,
-            null,
-            ctx => Update(skin => skin.Nametag = ctx.NewValue))
-        {
-            MaxLength = 32
-        });
-
-        main.Add(CreateButton(LocalizationService[player].MenuSkinPropertiesNametagUnset,
-            _ => Update(skin => skin.Nametag = null)));
-        main.Add(CreateButton(LocalizationService[player].MenuSkinPropertiesSetStattrak,
-            _ => Update(skin => skin.Quality = EconItemQuality.StatTrak)));
-        main.Add(CreateButton(LocalizationService[player].MenuSkinPropertiesUnsetStattrak,
-            _ => Update(skin => skin.Quality = EconItemQuality.Normal)));
-
-        main.Add(CreateIntInput(LocalizationService[player].MenuSkinPropertiesStattrakCount(weaponInHand.StattrakCount),
-            weaponInHand.StattrakCount,
-            value => value >= 0,
-            (_, value) =>
-            {
-                weaponInHand.StattrakCount = value;
-                Update(skin => skin.StattrakCount = value);
-            }));
+        main.Add(CreateHero(loc, player.PlayerLanguage.Value, knife.DefinitionIndex, knife.Paintkit));
+        AddNametag(main, loc, knife.Nametag, nametag => Update(k => k.Nametag = nametag));
+        AddWear(main, loc, knife.PaintkitWear, wear => Update(k => k.PaintkitWear = wear));
+        main.Add(CreateSeedInput(loc, knife.PaintkitSeed, seed => Update(k => k.PaintkitSeed = seed)));
+        AddStattrak(main, loc, knife.StattrakCount, knife.Quality,
+            count => Update(k => k.StattrakCount = count),
+            quality => Update(k => k.Quality = quality),
+            withSouvenir: false);
 
         return main.Build();
-    }
-
-    public IMenuComponent GetKnifePropertiesMenuSubmenuOption(IPlayer player)
-    {
-        if (!ItemPermissionService.CanUseKnifeSkins(player.SteamID))
-        {
-            return CreateDisabledOption(LocalizationService[player].MenuTitleKnifeProperties);
-        }
-
-        if (!TryGetKnifeDataInHand(player, out var dataInHand))
-        {
-            return CreateDisabledOption(LocalizationService[player].MenuTitleKnifeProperties);
-        }
-
-        return new SubmenuComponent(LocalizationService[player].MenuTitleKnifeProperties,
-            _ => BuildKnifePropertiesMenu(player, dataInHand));
     }
 }

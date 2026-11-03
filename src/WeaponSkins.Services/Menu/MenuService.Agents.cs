@@ -8,16 +8,6 @@ namespace WeaponSkins;
 
 public partial class MenuService
 {
-    public IMenuComponent GetAgentMenuSubmenuOption(IPlayer player)
-    {
-        if (!ItemPermissionService.CanUseAgents(player.SteamID))
-        {
-            return CreateDisabledOption(LocalizationService[player].MenuTitleAgents);
-        }
-
-        return new SubmenuComponent(LocalizationService[player].MenuTitleAgents, _ => BuildAgentMenu(player));
-    }
-
     private IMenu BuildAgentMenu(IPlayer player)
     {
         var main = CreateMenu("weaponskins.agents")
@@ -72,7 +62,9 @@ public partial class MenuService
                 {
                     ApplyAgentModel(p, agent.ModelPath);
                 });
-            }, EconService.GetImageKey("agent", agent.Name), typeLabel));
+            }, EconService.GetImageKey("agent", agent.Name), typeLabel,
+                session => DataService.AgentDataService.TryGetAgent(session.Player.SteamID, session.Player.Controller.Team, out var current)
+                           && current == agent.Index));
         }
 
         return main.Build();

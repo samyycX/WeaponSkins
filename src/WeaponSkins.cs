@@ -1,6 +1,3 @@
-using System.IO.MemoryMappedFiles;
-using System.Runtime.InteropServices;
-
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 
@@ -52,7 +49,6 @@ public partial class WeaponSkins : BasePlugin
         var collection = new ServiceCollection()
             .AddSwiftly(Core)
             .AddDataService()
-            .AddNativeService()
             .AddInventoryService()
             .AddPlayerService()
             .AddApi()
@@ -73,7 +69,6 @@ public partial class WeaponSkins : BasePlugin
 
         _provider
             .UseDataService()
-            .UseNativeService()
             .UseInventoryService()
             .UsePlayerService()
             .UseApi()

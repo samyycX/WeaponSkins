@@ -57,10 +57,11 @@ public partial class MenuService
                 (Applied() is { } sticker ? EconService.GetLocalizedName(sticker.LocalizedNames, language) : null)
                 ?? loc.MenuSkinPropertiesNametagNone);
 
-            main.Add(new ThumbSubmenuComponent(Title(), _ => BuildStickerSlotMenu(player, team, definition, slot, Title(), slots))
+            // A row's Tag is the item it stands for, so any renderer can identify it.
+            main.Add(new SubmenuComponent(Title(), _ => BuildStickerSlotMenu(player, team, definition, slot, Title(), slots))
             {
                 TextProvider = _ => Title(),
-                ImageKeyProvider = _ => Applied() is { } sticker ? EconService.GetImageKey("sticker", sticker.Name) : null
+                Tag = slot
             });
         }
 
@@ -96,11 +97,10 @@ public partial class MenuService
             VisibleWhen = _ => Api.TryGetWeaponSkin(player.SteamID, team, definition, out var skin) && skin.HasSticker(slot)
         });
 
-        var typeLabel = loc.MenuTypeSticker;
         foreach (var (_, stickerCollection) in EconService.StickerCollections)
         {
             var collectionName = EconService.GetLocalizedName(stickerCollection.LocalizedNames, language);
-            main.Add(CreateSubmenu(collectionName, _ =>
+            var capsule = CreateSubmenu(collectionName, _ =>
             {
                 var stickerMenu = CreateMenu($"weaponskins.stickers.slot{slot}.collection")
                     .WithTitle(collectionName);
@@ -109,16 +109,18 @@ public partial class MenuService
                 {
                     if (sticker.Index == 0) continue;
                     var stickerIndex = sticker.Index;
-                    stickerMenu.Add(CreateRarityButton(
+                    var button = CreateRarityButton(
                         EconService.GetLocalizedName(sticker.LocalizedNames, language),
                         sticker.Rarity.Color.HexColor,
-                        _ => Apply(new StickerData { Id = stickerIndex }),
-                        EconService.GetImageKey("sticker", sticker.Name),
-                        typeLabel));
+                        _ => Apply(new StickerData { Id = stickerIndex }));
+                    button.Tag = sticker;
+                    stickerMenu.Add(button);
                 }
 
                 return stickerMenu.Build();
-            }, EconService.GetImageKey("capsule", stickerCollection.Name)));
+            });
+            capsule.Tag = stickerCollection;
+            main.Add(capsule);
         }
 
         return main.Build();

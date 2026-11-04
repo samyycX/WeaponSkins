@@ -34,18 +34,5 @@
   "menu.keychainproperties.resetoffset": "Atstatyti poslinkį",
   "menu.reset": "Atstatyti",
   "menu.on": "Įjungta",
-  "menu.off": "Išjungta",
-  "menu.rarity.common": "Consumer Grade",
-  "menu.rarity.uncommon": "Industrial Grade",
-  "menu.rarity.rare": "Mil-Spec Grade",
-  "menu.rarity.mythical": "Restricted",
-  "menu.rarity.legendary": "Classified",
-  "menu.rarity.ancient": "Covert",
-  "menu.rarity.immortal": "Contraband",
-  "menu.rarity.extraordinary": "Extraordinary",
-  "menu.type.ctagent": "CT agentas",
-  "menu.type.tagent": "T agentas",
-  "menu.type.charm": "Pakabukas",
-  "menu.type.musickit": "Muzikos rinkinys",
-  "menu.type.sticker": "Lipdukas"
+  "menu.off": "Išjungta"
 }

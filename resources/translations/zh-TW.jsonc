@@ -32,18 +32,5 @@
   "menu.reset": "重置",
   "menu.on": "開",
   "menu.off": "關",
-  "menu.rarity.common": "消費級",
-  "menu.rarity.uncommon": "工業級",
-  "menu.rarity.rare": "軍規級",
-  "menu.rarity.mythical": "受管制",
-  "menu.rarity.legendary": "機密",
-  "menu.rarity.ancient": "隱蔽",
-  "menu.rarity.immortal": "違禁品",
-  "menu.rarity.extraordinary": "超絕",
-  "menu.type.ctagent": "CT 探員",
-  "menu.type.tagent": "T 探員",
-  "menu.type.charm": "吊飾",
-  "menu.type.musickit": "音樂盒",
-  "menu.type.sticker": "印花",
   "menu.weaponproperties.title": "武器屬性"
 }

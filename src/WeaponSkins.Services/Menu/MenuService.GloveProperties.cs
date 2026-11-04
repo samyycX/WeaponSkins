@@ -25,7 +25,7 @@ public partial class MenuService
             Api.UpdateGloveSkin(steamId, team, apply, true);
 
         // Gloves take wear only: no name tag, seed, StatTrak, stickers or charms.
-        main.Add(CreateHero(loc, player.PlayerLanguage.Value, glove.DefinitionIndex, glove.Paintkit, glove: true));
+        main.Add(CreateHero(player.PlayerLanguage.Value, glove.DefinitionIndex, glove.Paintkit));
         AddWear(main, loc, glove.PaintkitWear, wear => Update(g => g.PaintkitWear = wear));
 
         return main.Build();

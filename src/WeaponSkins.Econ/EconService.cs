@@ -54,7 +54,7 @@ public class EconService
 
     public Dictionary<string /* Name */, MusicKitDefinition> MusicKits { get; set; } = new(StringComparer.OrdinalIgnoreCase);
 
-    // Kept off the WeaponSkins.Shared records so the public contract does not change for a menu-only detail.
+    // Kept off the WeaponSkins.Shared records; IWeaponSkinAPI.GetImageKey serves them.
     private Dictionary<string /* kind + ":" + Name, kind = agent/music/keychain/keychaincollection/sticker/capsule */, string /* panorama/images/econ-relative key */> ImageKeys { get; set; } = new();
 
     // Loot lists name charms by their item name, not the definition index Keychains is keyed by.
@@ -1314,8 +1314,8 @@ public class EconService
         var path = imageInventory.Replace('\\', '/');
         path = path.StartsWith("econ/", StringComparison.OrdinalIgnoreCase) ? path["econ/".Length..] : path;
 
-        // Some items name art the game does not ship (Budapest 2025's charm); without a key the card
-        // is drawn plain rather than around an empty frame.
+        // Some items name art the game does not ship (Budapest 2025's charm); those get no key
+        // rather than a path to a missing file.
         if (!Core.GameFileSystem.FileExists($"panorama/images/econ/{path}_png.vtex_c", "GAME"))
         {
             return;

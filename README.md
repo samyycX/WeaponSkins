@@ -242,10 +242,13 @@ _weaponSkins?.UpdateWeaponSkin(steamId, Team.T, 7, skin => skin.Paintkit = 44, p
 
 | Members | Purpose |
 |---------|---------|
-| `TryGet*Skin(s)` | Read a player's weapon, knife, glove or agent selections |
+| `TryGet*Skin(s)`, `TryGetMusicKit` | Read a player's weapon, knife, glove, agent or music kit selections |
 | `Set*Skins`, `Update*Skin`, `Reset*Skin` | Change or remove them; `permanent: true` also saves to storage. Item permissions still apply |
-| `Items`, `WeaponToPaintkits`, `StickerCollections`, `Keychains` | The parsed item catalog |
+| `Items`, `WeaponToPaintkits`, `StickerCollections`, `Keychains`, `Agents`, `MusicKits` | The parsed item catalog |
+| `GetImageKey(kind, name)` | The game's inventory image for an item — `kind` is `agent`, `music`, `sticker`, `capsule`, `keychain` or `keychaincollection` — as a path under `panorama/images/econ/` without extension, or `null` when the game ships none |
 | `SetExternalStorageProvider` | Provide the storage for `StorageBackend = "external"` |
+
+Menu rows carry the item they stand for as their component `Tag` — an `AgentDefinition`, `MusicKitDefinition`, `StickerDefinition`, `StickerCollectionDefinition` or `KeychainDefinition`, a charm collection's name (`string`), a sticker slot (`int`, from 0), or an econ index (`ushort` for weapons, knives and gloves, `int` for paint kits) — so a custom menu renderer can draw images and selection state from the API.
 
 ## 🛠️ Building
 

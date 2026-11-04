@@ -33,18 +33,5 @@
   "menu.reset": "Sıfırla",
   "menu.on": "Açık",
   "menu.off": "Kapalı",
-  "menu.rarity.common": "Tüketici Sınıfı",
-  "menu.rarity.uncommon": "Endüstri Sınıfı",
-  "menu.rarity.rare": "Askeri Sınıf",
-  "menu.rarity.mythical": "Sınırlı",
-  "menu.rarity.legendary": "Gizli",
-  "menu.rarity.ancient": "Çok Gizli",
-  "menu.rarity.immortal": "Kaçak",
-  "menu.rarity.extraordinary": "Olağandışı",
-  "menu.type.ctagent": "CT Ajanı",
-  "menu.type.tagent": "T Ajanı",
-  "menu.type.charm": "Anahtarlık",
-  "menu.type.musickit": "Müzik Kiti",
-  "menu.type.sticker": "Çıkartma",
   "menu.weaponproperties.title": "Silah Özellikleri"
 }

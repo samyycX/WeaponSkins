@@ -7,40 +7,24 @@ using WeaponSkins.Shared;
 
 namespace WeaponSkins;
 
-// Properties pages as CustomHUD's card; other renderers ignore the markers and list the same rows.
+// Rows shared by the weapon, knife and glove properties pages.
 public partial class MenuService
 {
-    private const string CustomHudRendererId = "customhud.panorama";
     private const int MaxSeed = 999;
 
-    // Appended into the component's own line: CustomHUD splits a value off its first text node.
-    private static MenuNode MarkForCustomHud(MenuNode node, string payload)
-    {
-        var raw = new MenuRawNode(CustomHudRendererId, payload);
-        return node is MenuLineNode line
-            ? line with { Children = [.. line.Children, raw] }
-            : MenuLineNode.Of(node, raw);
-    }
-
-    private TextComponent CreateHero(PlayerLocalizationService loc, string language, ushort definitionIndex, int paintkitIndex, bool glove = false)
+    private TextComponent CreateHero(string language, ushort definitionIndex, int paintkitIndex)
     {
         var (weapon, item) = EconService.Items.FirstOrDefault(entry => entry.Value.Index == definitionIndex);
-        if (item is null) return new HeroComponent(string.Empty);
+        if (item is null) return new TextComponent(string.Empty);
 
         var name = EconService.GetLocalizedName(item.LocalizedNames, language);
         var paintkit = EconService.WeaponToPaintkits.TryGetValue(weapon, out var paintkits)
             ? paintkits.FirstOrDefault(p => p.Index == paintkitIndex)
             : null;
-        if (paintkit is null)
-        {
-            // CS2 ships no render of a bare glove type.
-            return new HeroComponent(name) { ImageKey = glove ? null : BaseWeaponImageKey(weapon) };
-        }
+        if (paintkit is null) return new TextComponent(name);
 
-        return new HeroComponent($"{name} | {EconService.GetLocalizedName(paintkit.LocalizedNames, language)}")
+        return new TextComponent($"{name} | {EconService.GetLocalizedName(paintkit.LocalizedNames, language)}")
         {
-            ImageKey = PaintkitImageKey(weapon, paintkit),
-            Rarity = glove ? loc.MenuRarityExtraordinary : loc.MenuRarity(paintkit.Rarity.Name),
             Style = RarityStyle(paintkit.Rarity.Color.HexColor),
         };
     }
@@ -54,7 +38,7 @@ public partial class MenuService
             EmptyText = loc.MenuSkinPropertiesNametagNone
         };
         menu.Add(input);
-        menu.Add(new InlineButtonComponent(loc.MenuSkinPropertiesNametagUnset, ctx =>
+        menu.Add(new ButtonComponent(loc.MenuSkinPropertiesNametagUnset, ctx =>
         {
             apply(null);
             Poke(ctx.Session, input, string.Empty);
@@ -70,11 +54,16 @@ public partial class MenuService
     private static void AddWear(IMenuBuilder menu, PlayerLocalizationService loc, float wear, Action<float> apply)
     {
         InputComponent exact = null!;
-        var track = new WearTrackComponent(loc.MenuSkinPropertiesWear, wear, ctx =>
+        // Coarse on purpose: the exact field above it takes any value.
+        var track = new SliderComponent(loc.MenuSkinPropertiesWear, 0f, 1f, wear, 0.01f, ctx =>
         {
             apply(ctx.NewValue);
             Poke(ctx.Session, exact, FormatWear(ctx.NewValue));
-        });
+        })
+        {
+            ValueFormat = "F2",
+            WrapAround = false
+        };
         exact = new InputComponent(loc.MenuSkinPropertiesWear, FormatWear(wear),
             input => TryParseFloat(input, out var value) && value is >= 0f and <= 1f,
             ctx =>
@@ -109,7 +98,7 @@ public partial class MenuService
         menu.Add(CreateIntInput(loc.MenuSkinPropertiesStattrakCount(count), count, value => value >= 0, (_, value) => setCount(value)));
 
         ToggleComponent? souvenir = null;
-        var stattrak = new InlineToggleComponent(loc.MenuSkinPropertiesStattrak, quality == EconItemQuality.StatTrak, ctx =>
+        var stattrak = CreateToggle(loc.MenuSkinPropertiesStattrak, quality == EconItemQuality.StatTrak, loc, ctx =>
         {
             if (ctx.NewValue && souvenir != null)
             {
@@ -117,11 +106,7 @@ public partial class MenuService
             }
 
             setQuality(ctx.NewValue ? EconItemQuality.StatTrak : EconItemQuality.Normal);
-        })
-        {
-            OnSymbol = loc.MenuOn,
-            OffSymbol = loc.MenuOff
-        };
+        });
         menu.Add(stattrak);
 
         if (!withSouvenir)
@@ -146,48 +131,5 @@ public partial class MenuService
         var state = session.GetState<MenuValueState<T>>(component);
         state.Value = value;
         state.Initialised = true;
-    }
-
-    private sealed class HeroComponent(string text) : TextComponent(text)
-    {
-        public string? ImageKey { get; init; }
-        public string? Rarity { get; init; }
-
-        public override MenuNode Render(IMenuComponentRenderContext context)
-        {
-            var payload = "hero";
-            if (ImageKey is not null) payload += ";image=" + ImageKey;
-            // `;` separates directives in the payload, so a localized label must not carry one.
-            if (!string.IsNullOrWhiteSpace(Rarity)) payload += ";type=" + Rarity.Replace(';', ',');
-            return MarkForCustomHud(base.Render(context), payload);
-        }
-    }
-
-    private sealed class InlineToggleComponent(string text, bool value, Action<MenuValueChangedContext<bool>> onChanged)
-        : ToggleComponent(text, value, onChanged)
-    {
-        public override MenuNode Render(IMenuComponentRenderContext context)
-            => MarkForCustomHud(base.Render(context), "inline");
-    }
-
-    private sealed class InlineButtonComponent(string text, Func<MenuActionContext, ValueTask> onSelect)
-        : ButtonComponent(text, onSelect)
-    {
-        public override MenuNode Render(IMenuComponentRenderContext context)
-            => MarkForCustomHud(base.Render(context), "inline");
-    }
-
-    // Coarse on purpose: the exact field above it takes any value.
-    private sealed class WearTrackComponent : SliderComponent
-    {
-        public WearTrackComponent(string text, float wear, Action<MenuValueChangedContext<float>> onChanged)
-            : base(text, 0f, 1f, wear, 0.01f, onChanged)
-        {
-            ValueFormat = "F2";
-            WrapAround = false;
-        }
-
-        public override MenuNode Render(IMenuComponentRenderContext context)
-            => MarkForCustomHud(base.Render(context), "inline;track=wear");
     }
 }

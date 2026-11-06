@@ -256,7 +256,9 @@ Menu rows carry the item they stand for as their component `Tag` — an `AgentDe
 dotnet build WeaponSkins.sln -c Release
 ```
 
-The plugin builds to `build/net10.0/` and `WeaponSkins.Shared.dll` to `build/exports/net10.0/`. The [build workflow](.github/workflows/build-and-release.yml) packages both into a release on every push to `main` or `beta`.
+The plugin builds to `build/net10.0/` and `WeaponSkins.Shared.dll` to `build/exports/net10.0/`; the build output and `dotnet publish` (`build/publish/WeaponSkins/`, zipped to `build/WeaponSkins.zip`) both carry the contract in `resources/exports/` as well. The [build workflow](.github/workflows/build-and-release.yml) packages a release on every push to `main` or `beta`.
+
+After replacing an install whose `resources/exports/WeaponSkins.Shared.dll` predates the new one, restart the server: SwiftlyS2 reads every plugin's exports once at startup, so a plugin reload keeps the old contract.
 
 ## 🤝 Support
 

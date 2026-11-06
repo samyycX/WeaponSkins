@@ -54,7 +54,22 @@
     <DefineConstants>$(DefineConstants);WORKFLOW;WORKFLOW_VERSION="$(WorkflowVersion)"</DefineConstants>
     </PropertyGroup>
 
-  <Target Name="CreateZip" AfterTargets="Publish">
+  <!-- The contract ships in resources/exports as well as next to WeaponSkins.dll. SwiftlyS2 binds
+       every plugin to the exports copy, snapshotted once at server start, and prefers it over the
+       local one: a stale export left by an earlier install is exactly what fails Load with
+       "Could not load type 'WeaponSkins.Shared.MusicKitDefinition'". The local copy only covers a
+       hot install, before any export of it exists. -->
+  <Target Name="CopyContract" AfterTargets="Build">
+    <Copy SourceFiles="$(OutDir)WeaponSkins.Shared.dll" DestinationFolder="$(OutDir)resources/exports" SkipUnchangedFiles="true" />
+  </Target>
+
+  <Target Name="CopyContractToPublish" AfterTargets="Publish">
+    <Error Condition="!Exists('$(PublishDir)WeaponSkins.Shared.dll')"
+           Text="CopyContractToPublish: $(PublishDir)WeaponSkins.Shared.dll is missing from the publish output." />
+    <Copy SourceFiles="$(PublishDir)WeaponSkins.Shared.dll" DestinationFolder="$(PublishDir)resources/exports" SkipUnchangedFiles="true" />
+  </Target>
+
+  <Target Name="CreateZip" AfterTargets="Publish" DependsOnTargets="CopyContractToPublish">
     <ItemGroup>
       <PublishFiles Include="$(PublishDir)**\*.*" />
     </ItemGroup>

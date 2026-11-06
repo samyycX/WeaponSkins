@@ -20,8 +20,6 @@ public partial class MenuService
             }
 
             var itemName = EconService.GetLocalizedName(item.LocalizedNames, player.PlayerLanguage.Value);
-            // CS2 ships no per-type glove render, so the type borrows its first finish's.
-            var preview = paintkits.OrderByDescending(p => p.Rarity.Id).FirstOrDefault();
             var submenuOption = CreateSubmenu(itemName, _ =>
             {
                 var skinMenu = CreateMenu("weaponskins.gloves.paintkits").WithTitle(itemName);
@@ -37,9 +35,7 @@ public partial class MenuService
                         {
                             glove.DefinitionIndex = (ushort)item.Index;
                             glove.Paintkit = paintkit.Index;
-                        }, true),
-                        PaintkitImageKey(glove, paintkit),
-                        itemName);
+                        }, true));
                     option.Tag = paintkit.Index;
                     skinMenu.Add(option);
                 }
@@ -47,7 +43,7 @@ public partial class MenuService
                 var built = skinMenu.Build();
                 TrackFocus(built, p => TryGetGloveDataInHand(p, out var inHand) && Utilities.IsGloveDefinitionIndex(inHand.DefinitionIndex) ? inHand.Paintkit : null);
                 return built;
-            }, preview is null ? null : PaintkitImageKey(glove, preview));
+            });
 
             submenuOption.Tag = (ushort)item.Index;
             main.Add(submenuOption);
@@ -56,15 +52,5 @@ public partial class MenuService
         var menu = main.Build();
         TrackFocus(menu, p => TryGetGloveDataInHand(p, out var inHand) ? inHand.DefinitionIndex : null);
         return menu;
-    }
-
-    public IMenuComponent GetGloveSkinMenuSubmenuOption(IPlayer player)
-    {
-        if (!ItemPermissionService.CanUseGloveSkins(player.SteamID))
-        {
-            return CreateDisabledOption(LocalizationService[player].MenuTitleGloves);
-        }
-
-        return new SubmenuComponent(LocalizationService[player].MenuTitleGloves, _ => BuildGloveSkinMenu(player));
     }
 }

@@ -35,9 +35,7 @@ public partial class MenuService
                         {
                             knife.DefinitionIndex = (ushort)item.Index;
                             knife.Paintkit = paintkit.Index;
-                        }, true),
-                        PaintkitImageKey(knife, paintkit),
-                        itemName);
+                        }, true));
                     option.Tag = paintkit.Index;
                     skinMenu.Add(option);
                 }
@@ -45,7 +43,7 @@ public partial class MenuService
                 var built = skinMenu.Build();
                 TrackFocus(built, p => TryGetKnifeDataInHand(p, out var inHand) ? inHand.Paintkit : null);
                 return built;
-            }, BaseWeaponImageKey(knife));
+            });
 
             submenuOption.Tag = (ushort)item.Index;
             main.Add(submenuOption);
@@ -54,15 +52,5 @@ public partial class MenuService
         var menu = main.Build();
         TrackFocus(menu, p => TryGetKnifeDataInHand(p, out var inHand) ? inHand.DefinitionIndex : null);
         return menu;
-    }
-
-    public IMenuComponent GetKnifeSkinMenuSubmenuOption(IPlayer player)
-    {
-        if (!ItemPermissionService.CanUseKnifeSkins(player.SteamID))
-        {
-            return CreateDisabledOption(LocalizationService[player].MenuTitleKnifes);
-        }
-
-        return new SubmenuComponent(LocalizationService[player].MenuTitleKnifes, _ => BuildKnifeSkinMenu(player));
     }
 }

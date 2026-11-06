@@ -31,9 +31,7 @@ public partial class MenuService
                     var option = CreateRarityButton(
                         EconService.GetLocalizedName(paintkit.LocalizedNames, player.PlayerLanguage.Value),
                         paintkit.Rarity.Color.HexColor,
-                        p => Api.UpdateWeaponSkin(p.SteamID, p.Controller.Team, (ushort)item.Index, skin => skin.Paintkit = paintkit.Index, true),
-                        PaintkitImageKey(weapon, paintkit),
-                        itemName);
+                        p => Api.UpdateWeaponSkin(p.SteamID, p.Controller.Team, (ushort)item.Index, skin => skin.Paintkit = paintkit.Index, true));
                     option.Tag = paintkit.Index;
                     skinMenu.Add(option);
                 }
@@ -41,7 +39,7 @@ public partial class MenuService
                 var built = skinMenu.Build();
                 TrackFocus(built, p => TryGetWeaponDataInHand(p, out var inHand) ? inHand.Paintkit : null);
                 return built;
-            }, BaseWeaponImageKey(weapon));
+            });
 
             submenuOption.Tag = (ushort)item.Index;
             main.Add(submenuOption);
@@ -50,15 +48,5 @@ public partial class MenuService
         var menu = main.Build();
         TrackFocus(menu, p => TryGetWeaponInHand(p, out var weapon) && Utilities.IsWeaponDefinitionIndex(weapon.AttributeManager.Item.ItemDefinitionIndex) ? (ushort)weapon.AttributeManager.Item.ItemDefinitionIndex : null);
         return menu;
-    }
-
-    public IMenuComponent GetWeaponSkinMenuSubmenuOption(IPlayer player)
-    {
-        if (!ItemPermissionService.CanUseWeaponSkins(player.SteamID))
-        {
-            return CreateDisabledOption(LocalizationService[player].MenuTitleSkins);
-        }
-
-        return new SubmenuComponent(LocalizationService[player].MenuTitleSkins, _ => BuildWeaponSkinMenu(player));
     }
 }

@@ -11,115 +11,118 @@ namespace WeaponSkins;
 
 public partial class MenuService
 {
-    private ConcurrentDictionary<int, StickerDefinition> StickerDefinitions { get; set; } = new();
-    private readonly ConcurrentDictionary<ulong /* steamid */, WeaponSkinData> _stickerOperatingWeaponSkins = new();
+    private const int StickerSlots = 6;
 
-    private string? GetStickerName(StickerData? data,
-        string language)
+    private ConcurrentDictionary<int, StickerDefinition> StickerDefinitions { get; set; } = new();
+
+    private StickerDefinition? FindSticker(StickerData? data)
     {
         if (data == null) return null;
         if (data.Id == 0) return null;
-        if (!StickerDefinitions.TryGetValue(data.Id, out var definition))
+        if (StickerDefinitions.TryGetValue(data.Id, out var definition)) return definition;
+
+        foreach (var (_, stickers) in EconService.StickerCollections)
         {
-            foreach (var (_, stickers) in EconService.StickerCollections)
+            foreach (var sticker in stickers.Stickers)
             {
-                foreach (var sticker in stickers.Stickers)
+                if (sticker.Index == data.Id)
                 {
-                    if (sticker.Index == data.Id)
-                    {
-                        definition = sticker;
-                        StickerDefinitions[data.Id] = definition;
-                        break;
-                    }
+                    StickerDefinitions[data.Id] = sticker;
+                    return sticker;
                 }
             }
         }
 
-        if (definition == null) return null;
-
-        return EconService.GetLocalizedName(definition.LocalizedNames, language);
+        return null;
     }
 
-    private void UpdateOperatingSticker(IPlayer player, int slot, StickerData? sticker)
+    public IMenu BuildStickerMenu(IPlayer player,
+        Team team,
+        ushort definition)
     {
-        if (!_stickerOperatingWeaponSkins.TryGetValue(player.SteamID, out var dataInHand))
+        var loc = LocalizationService[player];
+        var language = player.PlayerLanguage.Value;
+        var main = CreateMenu("weaponskins.stickers")
+            .WithTitle(loc.MenuTitleStickers);
+        IMenu slots = null!;
+
+        for (var i = 0; i < StickerSlots; i++)
         {
-            return;
+            var slot = i;
+            StickerDefinition? Applied() => Api.TryGetWeaponSkin(player.SteamID, team, definition, out var skin)
+                ? FindSticker(skin.GetSticker(slot))
+                : null;
+            // Read on every draw: the page this opens changes the sticker it names.
+            string Title() => loc.MenuSkinPropertiesSetSticker(slot + 1,
+                (Applied() is { } sticker ? EconService.GetLocalizedName(sticker.LocalizedNames, language) : null)
+                ?? loc.MenuSkinPropertiesNametagNone);
+
+            // A row's Tag is the item it stands for, so any renderer can identify it.
+            main.Add(new SubmenuComponent(Title(), _ => BuildStickerSlotMenu(player, team, definition, slot, Title(), slots))
+            {
+                TextProvider = _ => Title(),
+                Tag = slot
+            });
         }
 
-        Api.UpdateWeaponSkin(player.SteamID, player.Controller.Team, dataInHand.DefinitionIndex,
-            skin => skin.SetSticker(slot, sticker), true);
+        slots = main.Build();
+        TrackFocus(slots);
+        return slots;
     }
 
-    private IMenu BuildStickerMenuBySlot(IPlayer player,
+    private IMenu BuildStickerSlotMenu(IPlayer player,
+        Team team,
+        ushort definition,
         int slot,
-        string language,
-        string title)
+        string title,
+        IMenu slots)
     {
+        var loc = LocalizationService[player];
+        var language = player.PlayerLanguage.Value;
         var main = CreateMenu($"weaponskins.stickers.slot{slot}")
             .WithTitle(title);
 
-        main.Add(CreateButton(LocalizationService[player].MenuReset, p => UpdateOperatingSticker(p, slot, null)));
+        // Picking or clearing the sticker finishes the slot, so the player lands back on the slot list.
+        // Open rather than Close: Close would reopen the capsule list in between.
+        void Apply(StickerData? sticker)
+        {
+            Api.UpdateWeaponSkin(player.SteamID, team, definition, skin => skin.SetSticker(slot, sticker), true);
+            _ = slots.Open(player);
+        }
+
+        main.Add(CreateButton(loc.MenuReset, _ => Apply(null)));
+        main.Add(new SubmenuComponent(loc.MenuTitleStickerProperties,
+            _ => BuildStickerPropertiesMenu(player, team, definition, slot))
+        {
+            VisibleWhen = _ => Api.TryGetWeaponSkin(player.SteamID, team, definition, out var skin) && skin.HasSticker(slot)
+        });
 
         foreach (var (_, stickerCollection) in EconService.StickerCollections)
         {
             var collectionName = EconService.GetLocalizedName(stickerCollection.LocalizedNames, language);
-            main.Add(new SubmenuComponent(collectionName, _ =>
+            var capsule = CreateSubmenu(collectionName, _ =>
             {
                 var stickerMenu = CreateMenu($"weaponskins.stickers.slot{slot}.collection")
                     .WithTitle(collectionName);
 
-                var typeLabel = LocalizationService[player].MenuTypeSticker;
                 foreach (var sticker in stickerCollection.Stickers)
                 {
                     if (sticker.Index == 0) continue;
                     var stickerIndex = sticker.Index;
-                    stickerMenu.Add(CreateRarityButton(
+                    var button = CreateRarityButton(
                         EconService.GetLocalizedName(sticker.LocalizedNames, language),
                         sticker.Rarity.Color.HexColor,
-                        p => UpdateOperatingSticker(p, slot, new StickerData { Id = stickerIndex }),
-                        typeLabel: typeLabel));
+                        _ => Apply(new StickerData { Id = stickerIndex }));
+                    button.Tag = sticker;
+                    stickerMenu.Add(button);
                 }
 
                 return stickerMenu.Build();
-            }));
+            });
+            capsule.Tag = stickerCollection;
+            main.Add(capsule);
         }
 
         return main.Build();
-    }
-
-    public IMenu BuildStickerMenu(IPlayer player)
-    {
-        var main = CreateMenu("weaponskins.stickers")
-            .WithTitle(LocalizationService[player].MenuTitleStickers);
-
-        for (int i = 0; i < 6; i++)
-        {
-            var title = $"[{i + 1}] Slot";
-            var slot = i;
-            main.Add(new SubmenuComponent(title,
-                _ => BuildStickerMenuBySlot(player, slot, player.PlayerLanguage.Value, title)));
-        }
-
-        var menu = main.Build();
-        TrackFocus(menu);
-        return menu;
-    }
-
-    public IMenuComponent GetStickerMenuSubmenuOption(IPlayer player)
-    {
-        if (!ItemPermissionService.CanUseStickers(player.SteamID))
-        {
-            return CreateDisabledOption(LocalizationService[player].MenuTitleStickers);
-        }
-
-        if (!TryGetWeaponDataInHand(player, out var dataInHand))
-        {
-            return CreateDisabledOption(LocalizationService[player].MenuTitleStickers);
-        }
-
-        _stickerOperatingWeaponSkins[player.SteamID] = dataInHand;
-        return new SubmenuComponent(LocalizationService[player].MenuTitleStickers,
-            _ => BuildStickerMenu(player));
     }
 }

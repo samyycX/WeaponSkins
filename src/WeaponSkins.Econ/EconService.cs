@@ -48,19 +48,26 @@ public class EconService
 
     public Dictionary<string /* Name */, KeychainDefinition> Keychains { get; } = new(StringComparer.OrdinalIgnoreCase);
 
+    public Dictionary<string /* Loot list name, or base charm name for highlights */, KeychainCollectionDefinition> KeychainCollections { get; set; } = new(StringComparer.OrdinalIgnoreCase);
+
     public Dictionary<string /* Name */, AgentDefinition> Agents { get; set; } = new(StringComparer.OrdinalIgnoreCase);
 
     public Dictionary<string /* Name */, MusicKitDefinition> MusicKits { get; set; } = new(StringComparer.OrdinalIgnoreCase);
 
-    // Kept off the WeaponSkins.Shared records so the public contract does not change for a menu-only detail.
-    private Dictionary<string /* "agent:"/"music:"/"keychain:" + Name */, string /* panorama/images/econ-relative key */> ImageKeys { get; set; } = new();
+    // Kept off the WeaponSkins.Shared records; IWeaponSkinAPI.GetImageKey serves them.
+    private Dictionary<string /* kind + ":" + Name, kind = agent/music/keychain/keychaincollection/sticker/capsule */, string /* panorama/images/econ-relative key */> ImageKeys { get; set; } = new();
+
+    // Loot lists name charms by their item name, not the definition index Keychains is keyed by.
+    private Dictionary<string, KeychainDefinition> KeychainsByItemName { get; } = new(StringComparer.OrdinalIgnoreCase);
+
+    private Dictionary<string /* Definition name */, string /* Base charm item name */> KeychainBases { get; } = new(StringComparer.OrdinalIgnoreCase);
 
     private Dictionary<string /* Language */, Dictionary<string /* Key */, string /* Value */>> Languages { get; } =
         new(StringComparer.OrdinalIgnoreCase);
 
     private Dictionary<string, string> RevolvingLootLists { get; } = new(StringComparer.OrdinalIgnoreCase);
 
-    private const int SchemaVersion = 26;
+    private const int SchemaVersion = 28;
 
     public EconService(ISwiftlyCore core,
         ILogger<EconService> logger,
@@ -97,7 +104,7 @@ public class EconService
                     File.ReadAllText(Path.Combine(Core.PluginDataDirectory, "version.lock")));
             if (new HashSet<string>(itemLanguages).SetEquals(lockVersion?.ItemLanguages ?? []) && lockVersion?.EconDataVersion == version && lockVersion.SchemaVersion == SchemaVersion)
             {
-                var files = new[] { "items.json", "agents.json", "weapon_to_paintkits.json", "sticker_collections.json", "keychains.json", "musickits.json", "image_keys.json" };
+                var files = new[] { "items.json", "agents.json", "weapon_to_paintkits.json", "sticker_collections.json", "keychains.json", "keychain_collections.json", "musickits.json", "image_keys.json" };
                 var allFilesExist = files.All(f => File.Exists(Path.Combine(Core.PluginDataDirectory, f)));
 
                 if (allFilesExist)
@@ -115,6 +122,8 @@ public class EconService
                             File.ReadAllText(Path.Combine(Core.PluginDataDirectory, "sticker_collections.json")))!;
                     Keychains = JsonSerializer.Deserialize<Dictionary<string, KeychainDefinition>>(
                         File.ReadAllText(Path.Combine(Core.PluginDataDirectory, "keychains.json")))!;
+                    KeychainCollections = JsonSerializer.Deserialize<Dictionary<string, KeychainCollectionDefinition>>(
+                        File.ReadAllText(Path.Combine(Core.PluginDataDirectory, "keychain_collections.json")))!;
                     MusicKits = JsonSerializer.Deserialize<Dictionary<string, MusicKitDefinition>>(
                         File.ReadAllText(Path.Combine(Core.PluginDataDirectory, "musickits.json")))!;
                     ImageKeys = JsonSerializer.Deserialize<Dictionary<string, string>>(
@@ -205,6 +214,10 @@ public class EconService
         Logger.LogInformation($"Parsed {Keychains.Count} keychains in {watch.ElapsedMilliseconds}ms.");
         watch.Restart();
 
+        ParseKeychainCollections();
+        Logger.LogInformation($"Parsed {KeychainCollections.Count} keychain collections in {watch.ElapsedMilliseconds}ms.");
+        watch.Restart();
+
         ParseMusicKits();
         Logger.LogInformation($"Parsed {MusicKits.Count} music kits in {watch.ElapsedMilliseconds}ms.");
         watch.Restart();
@@ -241,6 +254,9 @@ public class EconService
         File.WriteAllText(Path.Combine(dataDirectory, "keychains.json"),
             JsonSerializer.Serialize(Keychains, options));
 
+        File.WriteAllText(Path.Combine(dataDirectory, "keychain_collections.json"),
+            JsonSerializer.Serialize(KeychainCollections, options));
+
         File.WriteAllText(Path.Combine(dataDirectory, "musickits.json"),
             JsonSerializer.Serialize(MusicKits, options));
 
@@ -248,6 +264,8 @@ public class EconService
             JsonSerializer.Serialize(ImageKeys, options));
 
         Stickers.Clear();
+        KeychainsByItemName.Clear();
+        KeychainBases.Clear();
         ClientLootLists.Clear();
         Rarities.Clear();
         Colors.Clear();
@@ -311,28 +329,42 @@ public class EconService
         if (!LanguageCodeToTranslationKey.TryGetValue(key, out string? translationKey))
         {
             Logger.LogWarning($"Language code {key} not found in LanguageCodeToTranslationKey, using primary language {_PrimaryLanguage}...");
-            return localizedNames[_PrimaryLanguage];
         }
-        if (localizedNames.TryGetValue(translationKey, out string? value))
+        else if (localizedNames.TryGetValue(translationKey, out string? value))
         {
             return value;
         }
-        // hard-coded english fallback
-        if (localizedNames.TryGetValue(_PrimaryLanguage, out string? value2))
+
+        if (localizedNames.TryGetValue(_PrimaryLanguage, out string? primary))
         {
-            return value2;
+            return primary;
         }
-        return localizedNames["english"];
+        // hard-coded english fallback, then whichever language does name it
+        if (localizedNames.TryGetValue("english", out string? english))
+        {
+            return english;
+        }
+        return localizedNames.Values.FirstOrDefault() ?? string.Empty;
     }
 
-    private Dictionary<string, string> GetLocalizedNames(string key)
+    // Never empty: Valve drops tokens whose items stay in items_game (music kit 2 ships art and tracks but no name).
+    private Dictionary<string, string> GetLocalizedNames(string key, string? fallback = null)
+    {
+        if (!TryGetLocalizedNames(key, out var localizedNames))
+        {
+            localizedNames[string.Intern(_PrimaryLanguage)] = fallback ?? key.TrimStart('#');
+        }
+        return localizedNames;
+    }
+
+    private bool TryGetLocalizedNames(string key, out Dictionary<string, string> localizedNames)
     {
         if (key.StartsWith("#"))
         {
             key = key[1..];
         }
 
-        var localizedNames = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        localizedNames = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         var notFoundLanguages = new List<string>();
 
         string? fallbackSource1 = null;
@@ -381,7 +413,7 @@ public class EconService
                 localizedNames[string.Intern(notfoundLanguage)] = fallbackSource2;
             }
         }
-        return localizedNames;
+        return localizedNames.Count > 0;
     }
 
     private string GetVersion(string content)
@@ -672,6 +704,8 @@ public class EconService
             foreach (var musicKit in section.Children)
             {
                 var internalName = musicKit.Name;
+                // The entry key is the kit's id; its readable code name ("valve_02") is the name field.
+                var codeName = musicKit.HasSubKey("name") ? musicKit.Value["name"].EToString() : internalName;
 
                 string? itemName = null;
                 if (musicKit.HasSubKey("loc_name"))
@@ -693,7 +727,7 @@ public class EconService
                 {
                     Name = internalName,
                     Index = index,
-                    LocalizedNames = !string.IsNullOrWhiteSpace(itemName) ? GetLocalizedNames(itemName) : new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase),
+                    LocalizedNames = GetLocalizedNames(itemName ?? string.Empty, codeName),
                     Rarity = Rarities.ContainsKey("default") ? Rarities["default"] : new RarityDefinition { Name = "default", Id = 0, Color = new ColorDefinition { Name = "default", HexColor = "FFFFFF" } }
                 };
 
@@ -1028,6 +1062,7 @@ public class EconService
                         Rarity = rarity
                     };
                     Stickers[definition.Name] = definition;
+                    AddImageKey("sticker:" + definition.Name, "stickers/" + materialName);
                 }
                 else
                 {
@@ -1102,6 +1137,7 @@ public class EconService
                             Stickers = stickers,
                         };
                         StickerCollections[definition.Name] = definition;
+                        AddImageKey("capsule:" + definition.Name, ImageInventory(stickerCollections));
                     }
                     else if (stickerCollections.HasSubKey("prefab"))
                     {
@@ -1151,6 +1187,7 @@ public class EconService
                                     Stickers = stickers,
                                 };
                                 StickerCollections[definition.Name] = definition;
+                                AddImageKey("capsule:" + definition.Name, ImageInventory(stickerCollections));
 
                             }
                         }
@@ -1181,11 +1218,91 @@ public class EconService
                         Rarity = rarity
                     };
                     Keychains[definition.Name] = definition;
-                    AddImageKey("keychain:" + definition.Name, keychain.HasSubKey("image_inventory") ? keychain.Value["image_inventory"].EToString() : null);
+                    if (keychain.HasSubKey("name"))
+                    {
+                        KeychainsByItemName[keychain.Value["name"].EToString()] = definition;
+                    }
+                    if (keychain.HasSubKey("base"))
+                    {
+                        KeychainBases[definition.Name] = keychain.Value["base"].EToString();
+                    }
+                    AddImageKey("keychain:" + definition.Name, ImageInventory(keychain));
                 }
             }
         }
     }
+
+    // Each collection is a "keychain_pack_<set>_lootlist"; the game names it and draws its icon from <set>.
+    public void ParseKeychainCollections()
+    {
+        const string prefix = "keychain_pack_";
+        const string suffix = "_lootlist";
+        foreach (var (name, lootList) in ClientLootLists)
+        {
+            if (!name.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)
+                || !name.EndsWith(suffix, StringComparison.OrdinalIgnoreCase)
+                || lootList.Items.Any(item => item.BelongingItemName != "keychain"))
+            {
+                continue;
+            }
+
+            var set = name[prefix.Length..^suffix.Length];
+            if (!TryGetLocalizedNames($"CSGO_crate_keychain_pack_{set}_capsule", out var localizedNames))
+            {
+                Logger.LogDebug($"Keychain collection {name} has no localized name");
+                continue;
+            }
+
+            var keychains = new List<KeychainDefinition>();
+            foreach (var item in lootList.Items)
+            {
+                if (KeychainsByItemName.TryGetValue(item.Name, out var keychain) && !keychains.Contains(keychain))
+                {
+                    keychains.Add(keychain);
+                }
+            }
+
+            if (keychains.Count == 0)
+            {
+                continue;
+            }
+
+            var definition = new KeychainCollectionDefinition
+            {
+                Name = name,
+                LocalizedNames = localizedNames,
+                Keychains = keychains,
+            };
+            KeychainCollections[definition.Name] = definition;
+            AddImageKey("keychaincollection:" + definition.Name, $"set_icons/set_{set}");
+        }
+
+        // Highlight charms carry no art of their own: the game draws each as the souvenir charm it is based on.
+        foreach (var highlights in KeychainBases.GroupBy(entry => entry.Value, StringComparer.OrdinalIgnoreCase))
+        {
+            if (!KeychainsByItemName.TryGetValue(highlights.Key, out var baseKeychain))
+            {
+                continue;
+            }
+
+            var definition = new KeychainCollectionDefinition
+            {
+                Name = highlights.Key,
+                LocalizedNames = baseKeychain.LocalizedNames,
+                Keychains = [baseKeychain, .. highlights.Select(entry => Keychains[entry.Key])],
+            };
+            KeychainCollections[definition.Name] = definition;
+            var image = GetImageKey("keychain", baseKeychain.Name);
+            AddImageKey("keychaincollection:" + definition.Name, image);
+            foreach (var entry in highlights)
+            {
+                AddImageKey("keychain:" + entry.Key, image);
+            }
+        }
+    }
+
+    private static string? ImageInventory(KVObject item) =>
+        item.HasSubKey("image_inventory") ? item.Value["image_inventory"].EToString() : null;
 
     private void AddImageKey(string key, string? imageInventory)
     {
@@ -1195,7 +1312,16 @@ public class EconService
         }
 
         var path = imageInventory.Replace('\\', '/');
-        ImageKeys[key] = path.StartsWith("econ/", StringComparison.OrdinalIgnoreCase) ? path["econ/".Length..] : path;
+        path = path.StartsWith("econ/", StringComparison.OrdinalIgnoreCase) ? path["econ/".Length..] : path;
+
+        // Some items name art the game does not ship (Budapest 2025's charm); those get no key
+        // rather than a path to a missing file.
+        if (!Core.GameFileSystem.FileExists($"panorama/images/econ/{path}_png.vtex_c", "GAME"))
+        {
+            return;
+        }
+
+        ImageKeys[key] = path;
     }
 
     public string? GetImageKey(string kind, string name) =>

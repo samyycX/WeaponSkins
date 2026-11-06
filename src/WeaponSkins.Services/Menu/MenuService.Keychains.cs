@@ -1,100 +1,78 @@
-using System.Collections.Concurrent;
-
 using SwiftlyS2.Shared.Menu;
 using SwiftlyS2.Shared.Menu.Components;
 using SwiftlyS2.Shared.Players;
 
-using WeaponSkins.Econ;
 using WeaponSkins.Shared;
 
 namespace WeaponSkins;
 
 public partial class MenuService
 {
-    private ConcurrentDictionary<int, KeychainDefinition> KeychainDefinitions { get; set; } = new();
-    private readonly ConcurrentDictionary<ulong /* steamid */, WeaponSkinData> _keychainOperatingWeaponSkins = new();
+    // Weapons carry one charm.
+    private const int KeychainSlot = 0;
 
-    private string? GetKeychainName(KeychainData data,
-        string language)
+    public IMenu BuildKeychainMenu(IPlayer player,
+        Team team,
+        ushort definition)
     {
-        if (data == null) return null;
-        if (data.Id == 0) return null;
-        if (!KeychainDefinitions.TryGetValue(data.Id, out var definition))
+        var loc = LocalizationService[player];
+        var language = player.PlayerLanguage.Value;
+        var main = CreateMenu("weaponskins.keychains")
+            .WithTitle(loc.MenuTitleKeychains);
+
+        void Apply(KeychainData? keychain) =>
+            Api.UpdateWeaponSkin(player.SteamID, team, definition, skin => skin.SetKeychain(KeychainSlot, keychain), true);
+
+        main.Add(CreateButton(loc.MenuReset, _ => Apply(null)));
+        main.Add(new SubmenuComponent(loc.MenuTitleKeychainProperties,
+            _ => BuildKeychainPropertiesMenu(player, team, definition, KeychainSlot))
         {
-            definition = EconService.Keychains.Where(k => k.Value.Index == data.Id).FirstOrDefault().Value;
-            if (definition == null) return null;
-            KeychainDefinitions[data.Id] = definition;
-        }
+            VisibleWhen = _ => Api.TryGetWeaponSkin(player.SteamID, team, definition, out var skin) && skin.HasKeychain(KeychainSlot)
+        });
 
-        return EconService.GetLocalizedName(definition.LocalizedNames, language);
-    }
-
-    private void UpdateOperatingKeychain(IPlayer player, int slot, KeychainData? keychain)
-    {
-        if (!_keychainOperatingWeaponSkins.TryGetValue(player.SteamID, out var dataInHand))
-        {
-            return;
-        }
-
-        Api.UpdateWeaponSkin(player.SteamID, player.Controller.Team, dataInHand.DefinitionIndex,
-            skin => skin.SetKeychain(slot, keychain), true);
-    }
-
-    private IMenu BuildKeychainMenuBySlot(IPlayer player,
-        int slot,
-        string language,
-        string title)
-    {
-        var main = CreateMenu($"weaponskins.keychains.slot{slot}")
-            .WithTitle(title);
-
-        main.Add(CreateButton(LocalizationService[player].MenuReset, p => UpdateOperatingKeychain(p, slot, null)));
-
-        var typeLabel = LocalizationService[player].MenuTypeCharm;
-        foreach (var (_, keychain) in EconService.Keychains.OrderByDescending(k => k.Value.Rarity.Id))
+        // A row's Tag is the item it stands for, so any renderer can identify it.
+        ButtonComponent CreateCharmButton(KeychainDefinition keychain)
         {
             var keychainIndex = keychain.Index;
-            main.Add(CreateRarityButton(
+            var button = CreateRarityButton(
                 EconService.GetLocalizedName(keychain.LocalizedNames, language),
                 keychain.Rarity.Color.HexColor,
-                p => UpdateOperatingKeychain(p, slot, new KeychainData { Id = keychainIndex }),
-                EconService.GetImageKey("keychain", keychain.Name),
-                typeLabel));
+                _ => Apply(new KeychainData { Id = keychainIndex }));
+            button.Tag = keychain;
+            return button;
+        }
+
+        var grouped = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var (_, collection) in EconService.KeychainCollections)
+        {
+            var collectionName = EconService.GetLocalizedName(collection.LocalizedNames, language);
+            grouped.UnionWith(collection.Keychains.Select(keychain => keychain.Name));
+            var submenu = CreateSubmenu(collectionName, _ =>
+            {
+                var collectionMenu = CreateMenu("weaponskins.keychains.collection")
+                    .WithTitle(collectionName);
+
+                foreach (var keychain in collection.Keychains.OrderByDescending(k => k.Rarity.Id))
+                {
+                    collectionMenu.Add(CreateCharmButton(keychain));
+                }
+
+                return collectionMenu.Build();
+            });
+            // The name, not the definition: KeychainCollectionDefinition is not part of WeaponSkins.Shared.
+            submenu.Tag = collection.Name;
+            main.Add(submenu);
+        }
+
+        // A charm no collection lists stays reachable here.
+        foreach (var (_, keychain) in EconService.Keychains.OrderByDescending(k => k.Value.Rarity.Id))
+        {
+            if (!grouped.Contains(keychain.Name))
+            {
+                main.Add(CreateCharmButton(keychain));
+            }
         }
 
         return main.Build();
-    }
-
-    public IMenu BuildKeychainMenu(IPlayer player)
-    {
-        var main = CreateMenu("weaponskins.keychains")
-            .WithTitle(LocalizationService[player].MenuTitleKeychains);
-
-        for (int i = 0; i < 1; i++)
-        {
-            var title = $"[{i + 1}] Slot";
-            var slot = i;
-            main.Add(new SubmenuComponent(title,
-                _ => BuildKeychainMenuBySlot(player, slot, player.PlayerLanguage.Value, title)));
-        }
-
-        return main.Build();
-    }
-
-    public IMenuComponent GetKeychainMenuSubmenuOption(IPlayer player)
-    {
-        if (!ItemPermissionService.CanUseKeychains(player.SteamID))
-        {
-            return CreateDisabledOption(LocalizationService[player].MenuTitleKeychains);
-        }
-
-        if (!TryGetWeaponDataInHand(player, out var dataInHand))
-        {
-            return CreateDisabledOption(LocalizationService[player].MenuTitleKeychains);
-        }
-
-        _keychainOperatingWeaponSkins[player.SteamID] = dataInHand;
-        return new SubmenuComponent(LocalizationService[player].MenuTitleKeychains,
-            _ => BuildKeychainMenu(player));
     }
 }

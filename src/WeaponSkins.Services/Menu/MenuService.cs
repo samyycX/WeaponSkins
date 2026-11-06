@@ -3,7 +3,6 @@ using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 
 using SwiftlyS2.Shared;
 using SwiftlyS2.Shared.Menu;
@@ -12,7 +11,6 @@ using SwiftlyS2.Shared.Players;
 using SwiftlyS2.Shared.SchemaDefinitions;
 using SwiftlyS2.Shared.Translation;
 
-using WeaponSkins.Configuration;
 using WeaponSkins.Econ;
 using WeaponSkins.Services;
 using WeaponSkins.Shared;
@@ -28,7 +26,6 @@ public partial class MenuService
     private LocalizationService LocalizationService { get; init; }
     private ItemPermissionService ItemPermissionService { get; init; }
     private DataService DataService { get; init; }
-    private IOptionsMonitor<MainConfigModel> Options { get; init; }
 
     public MenuService(ISwiftlyCore core,
         ILogger<MenuService> logger,
@@ -36,8 +33,7 @@ public partial class MenuService
         EconService econService,
         LocalizationService localizationService,
         ItemPermissionService itemPermissionService,
-        DataService dataService,
-        IOptionsMonitor<MainConfigModel> options)
+        DataService dataService)
     {
         Core = core;
         Logger = logger;
@@ -46,45 +42,46 @@ public partial class MenuService
         LocalizationService = localizationService;
         ItemPermissionService = itemPermissionService;
         DataService = dataService;
-        Options = options;
     }
 
-    private IMenuBuilder CreateMenu(string id)
-    {
-        return Core.Menu.CreateMenu(id).WithItemsPerPage(Options.CurrentValue.MenuItemsPerPage);
-    }
+    private IMenuBuilder CreateMenu(string id) => Core.Menu.CreateMenu(id);
 
     public void OpenMainMenu(IPlayer player)
     {
+        var loc = LocalizationService[player];
+        var steamId = player.SteamID;
         var main = CreateMenu("weaponskins.main")
-            .WithTitle(LocalizationService[player].MenuTitle);
+            .WithTitle(loc.MenuTitle);
 
-        AddMenuOption(main, ItemPermissionService.CanUseWeaponSkins(player.SteamID),
-            () => GetWeaponSkinMenuSubmenuOption(player), LocalizationService[player].MenuTitleSkins);
-        AddMenuOption(main, ItemPermissionService.CanUseKnifeSkins(player.SteamID),
-            () => GetKnifeSkinMenuSubmenuOption(player), LocalizationService[player].MenuTitleKnifes);
-        AddMenuOption(main, ItemPermissionService.CanUseGloveSkins(player.SteamID),
-            () => GetGloveSkinMenuSubmenuOption(player), LocalizationService[player].MenuTitleGloves);
-        AddMenuOption(main, ItemPermissionService.CanUseStickers(player.SteamID),
-            () => GetStickerMenuSubmenuOption(player), LocalizationService[player].MenuTitleStickers);
-        AddMenuOption(main, ItemPermissionService.CanUseKeychains(player.SteamID),
-            () => GetKeychainMenuSubmenuOption(player), LocalizationService[player].MenuTitleKeychains);
-        AddMenuOption(main, ItemPermissionService.CanUseWeaponSkins(player.SteamID),
-            () => GetSkinPropertiesMenuSubmenuOption(player), LocalizationService[player].MenuTitleSkinProperties);
-        AddMenuOption(main, ItemPermissionService.CanUseKnifeSkins(player.SteamID),
-            () => GetKnifePropertiesMenuSubmenuOption(player), LocalizationService[player].MenuTitleKnifeProperties);
-        AddMenuOption(main, ItemPermissionService.CanUseGloveSkins(player.SteamID),
-            () => GetGlovePropertiesMenuSubmenuOption(player), LocalizationService[player].MenuTitleGloveProperties);
-
-        AddMenuOption(main, ItemPermissionService.CanUseAgents(player.SteamID),
-            () => GetAgentMenuSubmenuOption(player), LocalizationService[player].MenuTitleAgents);
-        AddMenuOption(main, ItemPermissionService.CanUseMusicKits(player.SteamID),
-            () => GetMusicKitMenuSubmenuOption(player), LocalizationService[player].MenuTitleMusicKits);
+        main.Add(CreateCategory(ItemPermissionService.CanUseWeaponSkins(steamId), loc.MenuTitleSkins,
+            "weaponskins.weapons", () => BuildWeaponSkinMenu(player)));
+        main.Add(CreateCategory(ItemPermissionService.CanUseKnifeSkins(steamId), loc.MenuTitleKnifes,
+            "weaponskins.knifes", () => BuildKnifeSkinMenu(player)));
+        main.Add(CreateCategory(ItemPermissionService.CanUseGloveSkins(steamId), loc.MenuTitleGloves,
+            "weaponskins.gloves", () => BuildGloveSkinMenu(player)));
+        main.Add(CreateCategory(ItemPermissionService.CanUseAgents(steamId), loc.MenuTitleAgents,
+            "weaponskins.agents", () => BuildAgentMenu(player)));
+        main.Add(CreateCategory(ItemPermissionService.CanUseMusicKits(steamId), loc.MenuTitleMusicKits,
+            "weaponskins.musickits", () => BuildMusicKitMenu(player)));
+        main.Add(CreateCategory(ItemPermissionService.CanUseWeaponSkins(steamId), loc.MenuTitleWeaponProperties,
+            "weaponskins.weaponproperties", () => BuildWeaponPropertiesMenu(player)));
+        main.Add(CreateCategory(ItemPermissionService.CanUseKnifeSkins(steamId), loc.MenuTitleKnifeProperties,
+            "weaponskins.knifeproperties", () => BuildKnifePropertiesMenu(player)));
+        main.Add(CreateCategory(ItemPermissionService.CanUseGloveSkins(steamId), loc.MenuTitleGloveProperties,
+            "weaponskins.gloveproperties", () => BuildGlovePropertiesMenu(player)));
 
         var menu = main.Build();
         TrackFocus(menu);
         menu.Open(player);
     }
+
+    // The component id is the id of the menu it opens, so a renderer with a
+    // category sidebar can mark the page the player is on.
+    private static SubmenuComponent CreateCategory(bool enabled, string title, string menuId, Func<IMenu> build)
+    {
+        return new SubmenuComponent(title, _ => enabled ? build() : null, menuId) { Enabled = enabled };
+    }
+
     public bool TryGetWeaponInHand(IPlayer player,
         [MaybeNullWhen(false)] out CBasePlayerWeapon weaponInHand)
     {
@@ -146,106 +143,47 @@ public partial class MenuService
             : agent.LocalizedNames.GetValueOrDefault("english") ?? agent.Name;
     }
 
-    private static void AddMenuOption(IMenuBuilder builder,
-        bool enabled,
-        Func<IMenuComponent> optionFactory,
-        string title)
+    private static void AddEmptyNotice(IMenuBuilder builder, PlayerLocalizationService loc)
     {
-        builder.Add(enabled ? optionFactory() : CreateDisabledOption(title));
+        builder.Add(new TextComponent(loc.MenuPropertiesEmpty) { Enabled = false });
     }
 
-    private static TextComponent CreateDisabledOption(string title)
+    private static ButtonComponent CreateButton(string text, Action<IPlayer> onSelect)
     {
-        return new TextComponent(title) { Enabled = false };
-    }
-
-    private static IMenu BuildEmptyMenu(ISwiftlyCore core, string id, string title)
-    {
-        return core.Menu.CreateMenu(id).WithTitle(title).Build();
-    }
-
-    private static ButtonComponent CreateButton(string text, Action<IPlayer> onSelect, string? imageKey = null, string? typeLabel = null)
-    {
-        return new ThumbButtonComponent(text, ctx =>
+        return new ButtonComponent(text, ctx =>
         {
             onSelect(ctx.Player);
             return ValueTask.CompletedTask;
-        })
-        {
-            ImageKey = imageKey,
-            TypeLabel = typeLabel
-        };
+        });
     }
 
-    private static ButtonComponent CreateRarityButton(string text, string hexColor, Action<IPlayer> onSelect, string? imageKey = null, string? typeLabel = null)
+    private static ButtonComponent CreateRarityButton(string text, string hexColor, Action<IPlayer> onSelect)
     {
-        var button = CreateButton(text, onSelect, imageKey, typeLabel);
-        button.Style = MenuTextStyle.Default.WithSize(MenuTextSize.SmallMedium).WithColor(NormalizeHex(hexColor));
+        var button = CreateButton(text, onSelect);
+        button.Style = RarityStyle(hexColor);
         return button;
     }
 
-    private static SubmenuComponent CreateSubmenu(string text, Func<IMenuSession, IMenu?> factory, string? imageKey)
+    private static SubmenuComponent CreateSubmenu(string text, Func<IMenuSession, IMenu?> factory, string? hexColor = null)
     {
-        return new ThumbSubmenuComponent(text, factory) { ImageKey = imageKey };
+        var submenu = new SubmenuComponent(text, factory);
+        if (hexColor is not null) submenu.Style = RarityStyle(hexColor);
+        return submenu;
     }
 
-    // ImageKey is a CS2 econ texture path under panorama/images/econ/ (no extension); TypeLabel is
-    // the caption drawn above the name. Only the CustomHUD renderer reads either; every other
-    // renderer ignores raw nodes addressed elsewhere.
-    private static MenuNode WithCustomHudMetadata(MenuNode node, string? imageKey, string? typeLabel)
+    private static MenuTextStyle RarityStyle(string hexColor)
     {
-        const string customHudRendererId = "customhud.panorama";
-
-        var hasType = !string.IsNullOrWhiteSpace(typeLabel);
-        if (imageKey is null && !hasType) return node;
-
-        // `;` separates directives in the payload, so a localized label must not carry one.
-        var payload = string.Join(';', new[]
-        {
-            imageKey is null ? null : "image=" + imageKey,
-            hasType ? "type=" + typeLabel!.Replace(';', ',') : null
-        }.Where(p => p is not null));
-
-        var raw = new MenuRawNode(customHudRendererId, payload);
-        return node is MenuLineNode line
-            ? line with { Children = [.. line.Children, raw] }
-            : MenuLineNode.Of(node, raw);
+        return MenuTextStyle.Default.WithSize(MenuTextSize.SmallMedium).WithColor(NormalizeHex(hexColor));
     }
 
-    private sealed class ThumbButtonComponent(string text, Func<MenuActionContext, ValueTask> onSelect)
-        : ButtonComponent(text, onSelect)
+    private static ToggleComponent CreateToggle(string text, bool value, PlayerLocalizationService loc, Action<MenuValueChangedContext<bool>> onChanged)
     {
-        public string? ImageKey { get; init; }
-        public string? TypeLabel { get; init; }
-
-        public override MenuNode Render(IMenuComponentRenderContext context)
-            => WithCustomHudMetadata(base.Render(context), ImageKey, TypeLabel);
-    }
-
-    private sealed class ThumbSubmenuComponent(string text, Func<IMenuSession, IMenu?> factory)
-        : SubmenuComponent(text, factory)
-    {
-        public string? ImageKey { get; init; }
-
-        public override MenuNode Render(IMenuComponentRenderContext context)
-            => WithCustomHudMetadata(base.Render(context), ImageKey, null);
+        return new ToggleComponent(text, value, onChanged) { OnSymbol = loc.MenuOn, OffSymbol = loc.MenuOff };
     }
 
     private static string NormalizeHex(string hex)
     {
         return hex.StartsWith('#') ? hex : "#" + hex;
-    }
-
-    // The pair EconService.ParseWeaponToPaintkits discovered, rendered at its
-    // cleanest (_light) wear.
-    private static string PaintkitImageKey(string weapon, PaintkitDefinition paintkit)
-    {
-        return $"default_generated/{weapon}_{paintkit.Name}_light";
-    }
-
-    private static string BaseWeaponImageKey(string weapon)
-    {
-        return $"weapons/base_weapons/{weapon}";
     }
 
     private static InputComponent CreateFloatInput(string text, float value, Func<float, bool> isValid, Action<IPlayer, float> apply)

@@ -21,11 +21,7 @@ namespace WeaponSkins;
 
 [PluginMetadata(
     Id = "WeaponSkins",
-#if WORKFLOW
-    Version = WORKFLOW_VERSION,
-#else
-    Version = "Local",
-#endif
+    Version = "0.7.0",
     Name = "WeaponSkins",
     Author = "samyyc & ELDment",
     Description = "A swiftlys2 plugin to change player's skins."

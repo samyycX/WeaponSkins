@@ -1,0 +1,163 @@
+name: Build and Release
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build-and-release:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[release]')
+
+    # Job-level, so a push that is not a release never joins the group, and never cancelling,
+    # so a second release waits instead of cutting the first one short.
+    concurrency:
+      group: release
+      cancel-in-progress: false
+
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          # Full history so `git describe` can find the previous tag for the compare link.
+          fetch-depth: 0
+
+      # The CHANGELOG is the source of truth; PluginMetadata only has to agree with it.
+      - name: Read version from CHANGELOG
+        id: version
+        run: |
+          set -euo pipefail
+
+          # The topmost real "## [x.y.z]" heading. The template in the header comment is
+          # indented, so an anchored match skips it without needing to strip comments.
+          VERSION=$(grep -m1 -oP '^##[ \t]*\[v?\K[^]]+' CHANGELOG.md || true)
+
+          if [ -z "$VERSION" ]; then
+            echo "::error file=CHANGELOG.md::No '## [x.y.z]' section found, so there is nothing to release."
+            exit 1
+          fi
+
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "tag=v$VERSION"    >> "$GITHUB_OUTPUT"
+          echo "CHANGELOG says $VERSION"
+
+      - name: Verify PluginMetadata matches the CHANGELOG
+        run: |
+          set -euo pipefail
+          VERSION="${{ steps.version.outputs.version }}"
+
+          DECLARED=$(sed -n 's/.*Version[[:space:]]*=[[:space:]]*"\([^"]*\)".*/\1/p' src/WeaponSkins.cs | head -1)
+
+          if [ -z "$DECLARED" ]; then
+            echo "::error file=src/WeaponSkins.cs::Could not read PluginMetadata.Version."
+            exit 1
+          fi
+
+          if [ "$DECLARED" != "$VERSION" ]; then
+            echo "::error file=src/WeaponSkins.cs::PluginMetadata.Version is $DECLARED but the newest CHANGELOG section is $VERSION. Bump whichever is behind."
+            exit 1
+          fi
+
+          echo "PluginMetadata.Version $DECLARED matches."
+
+      - name: Refuse to overwrite an existing release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          TAG="${{ steps.version.outputs.tag }}"
+
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            echo "::error::Release $TAG already exists. Add a new CHANGELOG section and bump PluginMetadata.Version."
+            exit 1
+          fi
+
+      - name: Extract release notes from CHANGELOG
+        run: |
+          set -euo pipefail
+          VERSION="${{ steps.version.outputs.version }}"
+
+          # Print the body of the matching "## [x.y.z]" section, stopping at the next one.
+          awk -v ver="$VERSION" '
+            /^## \[/ {
+              if (found) exit
+              if ($0 ~ "\\[v?" ver "\\]") { found = 1; next }
+            }
+            found { print }
+          ' CHANGELOG.md > release-notes.md
+
+          if [ ! -s release-notes.md ]; then
+            echo "::error file=CHANGELOG.md::No '## [$VERSION]' section found."
+            exit 1
+          fi
+
+          PREV_TAG=$(git describe --tags --abbrev=0 --match 'v*' 2>/dev/null || true)
+          if [ -n "$PREV_TAG" ]; then
+            printf '\n**Full Changelog**: https://github.com/%s/compare/%s...%s\n' \
+              "${{ github.repository }}" "$PREV_TAG" "${{ steps.version.outputs.tag }}" >> release-notes.md
+          fi
+
+          cat release-notes.md
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+          cache: true
+          cache-dependency-path: "**/*.csproj"
+
+      - name: Publish
+        run: |
+          set -euo pipefail
+
+          # Builds WeaponSkins.Shared through the ProjectReference, so the contract ships from this commit.
+          dotnet restore WeaponSkins.csproj
+          dotnet publish WeaponSkins.csproj -c Release
+
+      - name: Collect zip
+        run: |
+          set -euo pipefail
+          VERSION="${{ steps.version.outputs.version }}"
+
+          mkdir -p release-artifacts
+
+          # Produced by the csproj's CreateZip target, which reads the same PluginMetadata the
+          # version check above already matched against the CHANGELOG.
+          ZIP="build/WeaponSkins-v${VERSION}.zip"
+
+          if [ ! -f "$ZIP" ]; then
+            echo "::error::Expected $ZIP from the CreateZip target. Zips found:"
+            find . -name '*.zip' -type f || true
+            exit 1
+          fi
+
+          cp "$ZIP" release-artifacts/
+          ls -l release-artifacts
+
+      - name: Create release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          VERSION="${{ steps.version.outputs.version }}"
+          TAG="${{ steps.version.outputs.tag }}"
+
+          PRERELEASE=()
+          case "$VERSION" in
+            *-*) PRERELEASE=(--prerelease) ;;
+          esac
+
+          # GitHub attaches "Source code (zip)" and "(tar.gz)" to the tag automatically, so only
+          # the published plugin zip is uploaded here.
+          gh release create "$TAG" \
+            --title "$TAG" \
+            --notes-file release-notes.md \
+            --target "${{ github.sha }}" \
+            "${PRERELEASE[@]}" \
+            release-artifacts/*.zip
+
+          echo "Released $TAG"

@@ -50,9 +50,23 @@
     <Compile Remove="WeaponSkins.Shared\**\*.cs" />
   </ItemGroup>
 
-  <PropertyGroup Condition="'$(WorkflowVersion)' != ''">
-    <DefineConstants>$(DefineConstants);WORKFLOW;WORKFLOW_VERSION="$(WorkflowVersion)"</DefineConstants>
-    </PropertyGroup>
+  <UsingTask TaskName="ExtractPluginVersion"
+             TaskFactory="RoslynCodeTaskFactory"
+             AssemblyFile="$(MSBuildToolsPath)/Microsoft.Build.Tasks.Core.dll">
+    <ParameterGroup>
+      <FilePath ParameterType="System.String" Required="true" />
+      <PluginVersion ParameterType="System.String" Output="true" />
+    </ParameterGroup>
+    <Task>
+      <Code Type="Fragment" Language="cs">
+        <![CDATA[
+          var content = System.IO.File.ReadAllText(FilePath);
+          var m = System.Text.RegularExpressions.Regex.Match(content, "Version\\s*=\\s*\"([^\"]+)\"");
+          PluginVersion = m.Success ? m.Groups[1].Value : "";
+        ]]>
+      </Code>
+    </Task>
+  </UsingTask>
 
   <!-- The contract ships in resources/exports as well as next to WeaponSkins.dll. SwiftlyS2 binds
        every plugin to the exports copy, snapshotted once at server start, and prefers it over the
@@ -69,12 +83,15 @@
     <Copy SourceFiles="$(PublishDir)WeaponSkins.Shared.dll" DestinationFolder="$(PublishDir)resources/exports" SkipUnchangedFiles="true" />
   </Target>
 
+  <!-- PluginMetadata.Version is the only place the version lives; release.yml checks it against CHANGELOG.md. -->
   <Target Name="CreateZip" AfterTargets="Publish" DependsOnTargets="CopyContractToPublish">
-    <ItemGroup>
-      <PublishFiles Include="$(PublishDir)**\*.*" />
-    </ItemGroup>
-    
-    <ZipDirectory SourceDirectory="$(PublishDir)../" DestinationFile="$(OutputPath)../$(AssemblyName).zip" Overwrite="true" />
+    <ExtractPluginVersion FilePath="$(MSBuildThisFileDirectory)src/WeaponSkins.cs">
+      <Output TaskParameter="PluginVersion" PropertyName="_PluginVersion" />
+    </ExtractPluginVersion>
+    <Error Condition="'$(_PluginVersion)' == ''"
+           Text="CreateZip: failed to extract PluginMetadata.Version from src/WeaponSkins.cs." />
+
+    <ZipDirectory SourceDirectory="$(PublishDir)../" DestinationFile="$(OutputPath)../$(AssemblyName)-v$(_PluginVersion).zip" Overwrite="true" />
   </Target>
 
 </Project> 

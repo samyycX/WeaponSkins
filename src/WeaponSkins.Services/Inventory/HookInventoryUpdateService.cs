@@ -235,46 +235,6 @@ public class HookInventoryUpdateService : IInventoryUpdateService, IDisposable
         // Remade rather than painted in place: a weapon the client has drawn keeps that finish (upstream #43).
         foreach (var (steamId, targets) in changed)
         {
-            if (!PlayerService.TryGetPlayer(steamID, out var player) || !player.IsAlive())
-            {
-                continue;
-            }
-
-            // Remake held weapons so OnGiveNamedItemPost applies paint. In-place
-            // attribute writes alone do not refresh the client finish.
-            foreach (var skin in updatedSkins)
-            {
-                if (player.Controller.Team != skin.Team)
-                {
-                    continue;
-                }
-
-                var definitionIndex = skin.DefinitionIndex;
-                var team = skin.Team;
-                Core.Scheduler.NextTick(() =>
-                {
-                    if (!player.IsAlive() || player.Controller.Team != team)
-                    {
-                        return;
-                    }
-
-                    var weapons = player.PlayerPawn?.WeaponServices?.MyWeapons;
-                    if (weapons == null)
-                    {
-                        return;
-                    }
-
-                    foreach (var handle in weapons)
-                    {
-                        if (handle.Value is { IsValid: true } weapon &&
-                            weapon.AttributeManager.Item.ItemDefinitionIndex == definitionIndex)
-                        {
-                            player.RegiveWeapon(weapon, definitionIndex);
-                            break;
-                        }
-                    }
-                });
-            }
             Core.Scheduler.NextTick(() => RemakeWeapons(steamId, targets));
         }
     }
@@ -294,29 +254,6 @@ public class HookInventoryUpdateService : IInventoryUpdateService, IDisposable
         // Likewise: an in-place ChangeSubclass swapped the model but not the finish.
         foreach (var (steamId, team) in changed)
         {
-            if (!PlayerService.TryGetPlayer(steamID, out var player) || !player.IsAlive())
-            {
-                continue;
-            }
-
-            // Always remake the knife. Applying ChangeSubclass in-place can swap the
-            // knife type without the paint kit; !wp works because it only RegiveKnife's.
-            foreach (var knife in updatedKnives)
-            {
-                if (player.Controller.Team != knife.Team)
-                {
-                    continue;
-                }
-
-                var team = knife.Team;
-                Core.Scheduler.NextTick(() =>
-                {
-                    if (player.IsAlive() && player.Controller.Team == team)
-                    {
-                        player.RegiveKnife();
-                    }
-                });
-                break;
             Core.Scheduler.NextTick(() => RemakeKnife(steamId, team));
         }
     }

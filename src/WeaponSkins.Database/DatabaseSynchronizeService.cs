@@ -62,11 +62,13 @@ public class DatabaseSynchronizeService
             var agents = (await storage.GetAgentsAsync(steamId).WaitAsync(stopping)).Where(agent => agent.SteamID == steamId).ToArray();
             var musicKits = (await storage.GetMusicKitsAsync(steamId).WaitAsync(stopping)).Where(musicKit => musicKit.SteamID == steamId).ToArray();
 
-            return await Core.Scheduler.NextTickAsync(() =>
+            // Not NextTickAsync<T>(Func<T>): SwiftlyS2's obsolete-API scanner misreads it as the async overload.
+            var reloaded = false;
+            await Core.Scheduler.NextTickAsync(() =>
             {
-                if (stopping.IsCancellationRequested) return false;
+                if (stopping.IsCancellationRequested) return;
                 var player = Core.PlayerManager.GetPlayerFromSessionId(sessionId);
-                if (player is not { IsValid: true } || player.SteamID != steamId) return false;
+                if (player is not { IsValid: true } || player.SteamID != steamId) return;
 
                 var hadGlove = DataService.GloveDataService.TryGetGlove(steamId, player.Controller.Team, out _);
                 DataService.WeaponDataService.RemovePlayer(steamId);
@@ -83,8 +85,9 @@ public class DatabaseSynchronizeService
                 if (musicKits.Length > 0) DataService.MusicKitDataService.SetMusicKit(steamId, musicKits[^1].MusicKitIndex);
 
                 InventoryUpdateService.RefreshPlayer(steamId, hadGlove);
-                return true;
+                reloaded = true;
             }).WaitAsync(stopping);
+            return reloaded;
         }
         finally
         {

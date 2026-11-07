@@ -39,7 +39,8 @@ public partial class MenuService
                             glove.Paintkit = paintkit.Index;
                         }, true),
                         PaintkitImageKey(glove, paintkit),
-                        itemName);
+                        itemName,
+                        session => HasGlove(session, item.Index, paintkit.Index));
                     option.Tag = paintkit.Index;
                     skinMenu.Add(option);
                 }
@@ -47,7 +48,7 @@ public partial class MenuService
                 var built = skinMenu.Build();
                 TrackFocus(built, p => TryGetGloveDataInHand(p, out var inHand) && Utilities.IsGloveDefinitionIndex(inHand.DefinitionIndex) ? inHand.Paintkit : null);
                 return built;
-            }, preview is null ? null : PaintkitImageKey(glove, preview));
+            }, preview is null ? null : PaintkitImageKey(glove, preview), applied: session => HasGlove(session, item.Index));
 
             submenuOption.Tag = (ushort)item.Index;
             main.Add(submenuOption);
@@ -56,15 +57,5 @@ public partial class MenuService
         var menu = main.Build();
         TrackFocus(menu, p => TryGetGloveDataInHand(p, out var inHand) ? inHand.DefinitionIndex : null);
         return menu;
-    }
-
-    public IMenuComponent GetGloveSkinMenuSubmenuOption(IPlayer player)
-    {
-        if (!ItemPermissionService.CanUseGloveSkins(player.SteamID))
-        {
-            return CreateDisabledOption(LocalizationService[player].MenuTitleGloves);
-        }
-
-        return new SubmenuComponent(LocalizationService[player].MenuTitleGloves, _ => BuildGloveSkinMenu(player));
     }
 }

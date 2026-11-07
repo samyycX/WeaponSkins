@@ -37,7 +37,8 @@ One-line summary, only when the release has a theme or a reason to hurry.
   release is for them: *"Worth updating if players use stickers."*
 - Plain `-` bullets. No `Added` / `Changed` / `Fixed` sections, no bold lead-in labels.
 - Wrap around 90 columns.
-- Leave the `---` + older-releases note at the bottom of the file.
+- Nothing goes below the oldest section: the workflow takes a section's notes up to the
+  next `## [` heading, so for the bottom one that is the end of the file.
 
 ## Content
 

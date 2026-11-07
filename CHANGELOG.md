@@ -1,6 +1,7 @@
 # Changelog
 
-Notable changes to WeaponSkins, newest first.
+Notable changes to WeaponSkins, newest first. Releases up to `v0.6.0-ci.6` predate this
+file; their notes are on the [releases page](https://github.com/samyycX/WeaponSkins/releases).
 
 <!-- The release workflow takes the version from the TOP "## [x.y.z]" heading below and
      refuses to publish unless it matches PluginMetadata.Version in src/WeaponSkins.cs.
@@ -52,8 +53,3 @@ the `-ci.N` suffix from here on.
   `TryGetMusicKit`, and every menu row carries the item it stands for as its `Tag`, so a
   custom menu renderer can draw the locker. Restart the server after updating, rather than
   reloading the plugin, so other plugins see the new `WeaponSkins.Shared.dll`.
-
----
-
-Releases up to `v0.6.0-ci.6` predate this file; their notes are on the
-[releases page](https://github.com/samyycX/WeaponSkins/releases).

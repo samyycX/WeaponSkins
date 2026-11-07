@@ -5,7 +5,7 @@
 </div>
 
 <p align="center">
-  <a href="https://github.com/samyycX/WeaponSkins/actions/workflows/build-and-release.yml"><img src="https://img.shields.io/github/actions/workflow/status/samyycX/WeaponSkins/build-and-release.yml?branch=main&style=flat&logo=github&cacheSeconds=3600" alt="Build Status"></a>
+  <a href="https://github.com/samyycX/WeaponSkins/actions/workflows/build.yml"><img src="https://img.shields.io/github/actions/workflow/status/samyycX/WeaponSkins/build.yml?branch=main&style=flat&logo=github&cacheSeconds=3600" alt="Build Status"></a>
   <a href="https://github.com/samyycX/WeaponSkins/releases/latest"><img src="https://img.shields.io/github/v/release/samyycX/WeaponSkins?style=flat&logo=github&cacheSeconds=3600" alt="Latest Release"></a>
   <img src="https://img.shields.io/github/downloads/samyycX/WeaponSkins/total?style=flat&logo=github&cacheSeconds=3600" alt="Downloads">
   <img src="https://img.shields.io/github/stars/samyycX/WeaponSkins?style=flat&logo=github&cacheSeconds=3600" alt="Stars">
@@ -39,7 +39,7 @@
 4. Start the server once to create WeaponSkins' settings file. The first start takes a little longer. If no database is set up yet, WeaponSkins shows a database error and doesn't load — the next step fixes that.
 5. Set up [storage](#-storage-setup).
 
-**Updating:** delete the old `plugins/WeaponSkins/` folder, then unzip the new version. Your settings and saved skins are stored elsewhere, so they stay.
+**Updating:** check the [changelog](CHANGELOG.md) for anything to do first, delete the old `plugins/WeaponSkins/` folder, then unzip the new version. Your settings and saved skins are stored elsewhere, so they stay.
 
 ## 💾 Storage setup
 
@@ -254,9 +254,10 @@ Menu rows carry the item they stand for as their component `Tag` — an `AgentDe
 
 ```powershell
 dotnet build WeaponSkins.sln -c Release
+dotnet publish WeaponSkins.csproj -c Release
 ```
 
-The plugin builds to `build/net10.0/` and `WeaponSkins.Shared.dll` to `build/exports/net10.0/`; the build output and `dotnet publish` (`build/publish/WeaponSkins/`, zipped to `build/WeaponSkins.zip`) both carry the contract in `resources/exports/` as well. The [build workflow](.github/workflows/build-and-release.yml) packages a release on every push to `main` or `beta`.
+The plugin builds to `build/net10.0/` and `WeaponSkins.Shared.dll` to `build/exports/net10.0/`; the build output and `dotnet publish` (`build/publish/WeaponSkins/`, zipped to `build/WeaponSkins-v<version>.zip`) both carry the contract in `resources/exports/` as well. The [build workflow](.github/workflows/build.yml) checks every push and pull request. The [release workflow](.github/workflows/release.yml) publishes a release from the newest [changelog](CHANGELOG.md) section when a commit to `main` has `[release]` in its message, or when run by hand; the version in `src/WeaponSkins.cs` must match it.
 
 After replacing an install whose `resources/exports/WeaponSkins.Shared.dll` predates the new one, restart the server: SwiftlyS2 reads every plugin's exports once at startup, so a plugin reload keeps the old contract.
 

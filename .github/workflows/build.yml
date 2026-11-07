@@ -1,0 +1,51 @@
+name: Build
+
+# release.yml only runs for a release, so this is what catches a broken merge before then.
+on:
+  push:
+    branches: [main, beta]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+          cache: true
+          cache-dependency-path: "**/*.csproj"
+
+      # The same command release.yml runs, so a green check means a release can package.
+      - name: Publish
+        run: dotnet publish WeaponSkins.csproj -c Release
+
+      - name: Check the package and the version
+        run: |
+          set -euo pipefail
+
+          DECLARED=$(sed -n 's/.*Version[[:space:]]*=[[:space:]]*"\([^"]*\)".*/\1/p' src/WeaponSkins.cs | head -1)
+          LOGGED=$(grep -m1 -oP '^##[ \t]*\[v?\K[^]]+' CHANGELOG.md || true)
+
+          if [ ! -f "build/WeaponSkins-v${DECLARED}.zip" ]; then
+            echo "::error::Expected build/WeaponSkins-v${DECLARED}.zip from the CreateZip target."
+            exit 1
+          fi
+
+          # Only a warning: the two may differ while a release is still being prepared.
+          if [ "$DECLARED" != "$LOGGED" ]; then
+            echo "::warning file=src/WeaponSkins.cs::PluginMetadata.Version is $DECLARED but the newest CHANGELOG section is ${LOGGED:-missing}. release.yml refuses to publish until they match."
+          fi

@@ -24,7 +24,7 @@ public partial class MenuService
         void Update(Action<KnifeSkinData> apply) =>
             Api.UpdateKnifeSkin(steamId, team, apply, true);
 
-        main.Add(CreateHero(loc, player.PlayerLanguage.Value, knife.DefinitionIndex, knife.Paintkit));
+        main.Add(CreateHero(player.PlayerLanguage.Value, knife.DefinitionIndex, knife.Paintkit));
         AddNametag(main, loc, knife.Nametag, nametag => Update(k => k.Nametag = nametag));
         AddWear(main, loc, knife.PaintkitWear, wear => Update(k => k.PaintkitWear = wear));
         main.Add(CreateSeedInput(loc, knife.PaintkitSeed, seed => Update(k => k.PaintkitSeed = seed)));

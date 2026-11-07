@@ -41,9 +41,11 @@ public partial class MenuService
                 : $"{weaponName} | {EconService.GetLocalizedName(paintkit.LocalizedNames, language)}";
             var definition = skin.DefinitionIndex;
 
-            main.Add(CreateSubmenu(title, _ => BuildSkinPropertiesMenu(player, team, definition, title),
-                paintkit is null ? BaseWeaponImageKey(weapon) : PaintkitImageKey(weapon, paintkit),
-                paintkit?.Rarity.Color.HexColor));
+            var row = CreateSubmenu(title, _ => BuildSkinPropertiesMenu(player, team, definition, title),
+                paintkit?.Rarity.Color.HexColor);
+            // A row's Tag is the item it stands for, so any renderer can identify it.
+            row.Tag = definition;
+            main.Add(row);
             added++;
         }
 
@@ -74,7 +76,7 @@ public partial class MenuService
         void Update(Action<WeaponSkinData> apply) =>
             Api.UpdateWeaponSkin(steamId, team, definition, apply, true);
 
-        main.Add(CreateHero(loc, player.PlayerLanguage.Value, definition, skin.Paintkit));
+        main.Add(CreateHero(player.PlayerLanguage.Value, definition, skin.Paintkit));
         AddNametag(main, loc, skin.Nametag, nametag => Update(s => s.Nametag = nametag));
         AddWear(main, loc, skin.PaintkitWear, wear => Update(s => s.PaintkitWear = wear));
         main.Add(CreateSeedInput(loc, skin.PaintkitSeed, seed => Update(s => s.PaintkitSeed = seed)));

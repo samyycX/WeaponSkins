@@ -44,16 +44,7 @@ public partial class MenuService
         DataService = dataService;
     }
 
-    // CustomHUD pages by MaxVisibleLines in menus.jsonc, and a scrolling layout shows the whole list; any other
-    // renderer keeps core's default page, the size CenterHTML's panel holds. Core picks the renderer only in Build().
-    private IMenuBuilder CreateMenu(string id)
-    {
-        using var probe = Core.Menu.CreateMenu(id).Build();
-        var builder = Core.Menu.CreateMenu(id);
-        return string.Equals(probe.Renderer.Id, CustomHudRendererId, StringComparison.OrdinalIgnoreCase)
-            ? builder.WithItemsPerPage(int.MaxValue)
-            : builder;
-    }
+    private IMenuBuilder CreateMenu(string id) => Core.Menu.CreateMenu(id);
 
     public void OpenMainMenu(IPlayer player)
     {
@@ -84,19 +75,11 @@ public partial class MenuService
         menu.Open(player);
     }
 
-    // The component id is the id of the menu it opens: a renderer with a
-    // category sidebar (CustomHUD) matches the two to mark the page a player is on.
+    // The component id is the id of the menu it opens, so a renderer with a
+    // category sidebar can mark the page the player is on.
     private static SubmenuComponent CreateCategory(bool enabled, string title, string menuId, Func<IMenu> build)
     {
         return new SubmenuComponent(title, _ => enabled ? build() : null, menuId) { Enabled = enabled };
-    }
-
-    // CenterHTML and chat would draw it as a row of dashes; CustomHUD draws it only as its locker sidebar's rule.
-    private sealed class SidebarDividerComponent : DividerComponent
-    {
-        public override bool IsVisible(IMenuSession session)
-            => base.IsVisible(session)
-               && string.Equals(session.Menu.Renderer.Id, CustomHudRendererId, StringComparison.OrdinalIgnoreCase);
     }
 
     public bool TryGetWeaponInHand(IPlayer player,
@@ -165,49 +148,28 @@ public partial class MenuService
         builder.Add(new TextComponent(loc.MenuPropertiesEmpty) { Enabled = false });
     }
 
-    private static ButtonComponent CreateButton(string text, Action<IPlayer> onSelect, string? imageKey = null, string? typeLabel = null,
-        Func<IMenuSession, bool>? applied = null)
+    private static ButtonComponent CreateButton(string text, Action<IPlayer> onSelect)
     {
-        return new ThumbButtonComponent(text, ctx =>
+        return new ButtonComponent(text, ctx =>
         {
             onSelect(ctx.Player);
             return ValueTask.CompletedTask;
-        })
-        {
-            ImageKey = imageKey,
-            TypeLabel = typeLabel,
-            Applied = applied
-        };
+        });
     }
 
-    private static ButtonComponent CreateRarityButton(string text, string hexColor, Action<IPlayer> onSelect, string? imageKey = null, string? typeLabel = null,
-        Func<IMenuSession, bool>? applied = null)
+    private static ButtonComponent CreateRarityButton(string text, string hexColor, Action<IPlayer> onSelect)
     {
-        var button = CreateButton(text, onSelect, imageKey, typeLabel, applied);
+        var button = CreateButton(text, onSelect);
         button.Style = RarityStyle(hexColor);
         return button;
     }
 
-    private static SubmenuComponent CreateSubmenu(string text, Func<IMenuSession, IMenu?> factory, string? imageKey, string? hexColor = null,
-        Func<IMenuSession, bool>? applied = null)
+    private static SubmenuComponent CreateSubmenu(string text, Func<IMenuSession, IMenu?> factory, string? hexColor = null)
     {
-        var submenu = new ThumbSubmenuComponent(text, factory) { ImageKey = imageKey, Applied = applied };
+        var submenu = new SubmenuComponent(text, factory);
         if (hexColor is not null) submenu.Style = RarityStyle(hexColor);
         return submenu;
     }
-
-    // The data services, not the API's cloning views: a grid asks once per card on every draw.
-    private bool HasWeaponPaint(IMenuSession session, ushort definitionIndex, int paintkit)
-        => DataService.WeaponDataService.TryGetSkin(session.Player.SteamID, session.Player.Controller.Team, definitionIndex, out var skin)
-           && skin.Paintkit == paintkit;
-
-    private bool HasKnife(IMenuSession session, int definitionIndex, int? paintkit = null)
-        => DataService.KnifeDataService.TryGetKnife(session.Player.SteamID, session.Player.Controller.Team, out var knife)
-           && knife.DefinitionIndex == definitionIndex && (paintkit is null || knife.Paintkit == paintkit);
-
-    private bool HasGlove(IMenuSession session, int definitionIndex, int? paintkit = null)
-        => DataService.GloveDataService.TryGetGlove(session.Player.SteamID, session.Player.Controller.Team, out var glove)
-           && glove.DefinitionIndex == definitionIndex && (paintkit is null || glove.Paintkit == paintkit);
 
     private static MenuTextStyle RarityStyle(string hexColor)
     {
@@ -219,68 +181,9 @@ public partial class MenuService
         return new ToggleComponent(text, value, onChanged) { OnSymbol = loc.MenuOn, OffSymbol = loc.MenuOff };
     }
 
-    // ImageKey is a CS2 econ texture path under panorama/images/econ/ (no extension); TypeLabel is
-    // the caption drawn above the name; chosen outlines the item the player has on now. Only the
-    // CustomHUD renderer reads any of them; every other renderer ignores raw nodes addressed elsewhere.
-    private static MenuNode WithCustomHudMetadata(MenuNode node, string? imageKey, string? typeLabel, bool chosen = false)
-    {
-        var hasType = !string.IsNullOrWhiteSpace(typeLabel);
-        if (imageKey is null && !hasType && !chosen) return node;
-
-        // `;` separates directives in the payload, so a localized label must not carry one.
-        var payload = string.Join(';', new[]
-        {
-            imageKey is null ? null : "image=" + imageKey,
-            hasType ? "type=" + typeLabel!.Replace(';', ',') : null,
-            chosen ? "chosen" : null
-        }.Where(p => p is not null));
-
-        return MarkForCustomHud(node, payload);
-    }
-
-    private sealed class ThumbButtonComponent(string text, Func<MenuActionContext, ValueTask> onSelect)
-        : ButtonComponent(text, onSelect)
-    {
-        public string? ImageKey { get; init; }
-        public string? TypeLabel { get; init; }
-
-        // Read on every draw, so the outline follows the player's pick without a rebuild.
-        public Func<IMenuSession, bool>? Applied { get; init; }
-
-        public override MenuNode Render(IMenuComponentRenderContext context)
-            => WithCustomHudMetadata(base.Render(context), ImageKey, TypeLabel, Applied?.Invoke(context.Session) == true);
-    }
-
-    private sealed class ThumbSubmenuComponent(string text, Func<IMenuSession, IMenu?> factory)
-        : SubmenuComponent(text, factory)
-    {
-        public string? ImageKey { get; init; }
-
-        // Read on every draw, like TextProvider; a null result falls back to ImageKey.
-        public Func<IMenuSession, string?>? ImageKeyProvider { get; init; }
-
-        public Func<IMenuSession, bool>? Applied { get; init; }
-
-        public override MenuNode Render(IMenuComponentRenderContext context)
-            => WithCustomHudMetadata(base.Render(context), ImageKeyProvider?.Invoke(context.Session) ?? ImageKey, null,
-                Applied?.Invoke(context.Session) == true);
-    }
-
     private static string NormalizeHex(string hex)
     {
         return hex.StartsWith('#') ? hex : "#" + hex;
-    }
-
-    // The pair EconService.ParseWeaponToPaintkits discovered, rendered at its
-    // cleanest (_light) wear.
-    private static string PaintkitImageKey(string weapon, PaintkitDefinition paintkit)
-    {
-        return $"default_generated/{weapon}_{paintkit.Name}_light";
-    }
-
-    private static string BaseWeaponImageKey(string weapon)
-    {
-        return $"weapons/base_weapons/{weapon}";
     }
 
     private static InputComponent CreateFloatInput(string text, float value, Func<float, bool> isValid, Action<IPlayer, float> apply)

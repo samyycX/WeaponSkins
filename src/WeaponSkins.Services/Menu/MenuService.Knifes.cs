@@ -35,10 +35,7 @@ public partial class MenuService
                         {
                             knife.DefinitionIndex = (ushort)item.Index;
                             knife.Paintkit = paintkit.Index;
-                        }, true),
-                        PaintkitImageKey(knife, paintkit),
-                        itemName,
-                        session => HasKnife(session, item.Index, paintkit.Index));
+                        }, true));
                     option.Tag = paintkit.Index;
                     skinMenu.Add(option);
                 }
@@ -46,7 +43,7 @@ public partial class MenuService
                 var built = skinMenu.Build();
                 TrackFocus(built, p => TryGetKnifeDataInHand(p, out var inHand) ? inHand.Paintkit : null);
                 return built;
-            }, BaseWeaponImageKey(knife), applied: session => HasKnife(session, item.Index));
+            });
 
             submenuOption.Tag = (ushort)item.Index;
             main.Add(submenuOption);

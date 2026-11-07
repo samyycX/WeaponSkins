@@ -29,7 +29,6 @@ public partial class MenuService
 
         // Team 3 = CT ("ctm_" models), team 2 = T ("tm_" models).
         var teamPrefix = (int)team == 3 ? "ctm_" : "tm_";
-        var typeLabel = (int)team == 3 ? LocalizationService[player].MenuTypeCtAgent : LocalizationService[player].MenuTypeTAgent;
         var agents = EconService.Agents.Values
             .Where(a => a.ModelPath.Contains($"/{teamPrefix}", StringComparison.OrdinalIgnoreCase) ||
                        a.ModelPath.StartsWith(teamPrefix, StringComparison.OrdinalIgnoreCase))
@@ -40,7 +39,7 @@ public partial class MenuService
         foreach (var agent in agents)
         {
             var title = EconService.GetLocalizedName(agent.LocalizedNames, player.PlayerLanguage.Value);
-            main.Add(CreateRarityButton(title, agent.Rarity.Color.HexColor, p =>
+            var button = CreateRarityButton(title, agent.Rarity.Color.HexColor, p =>
             {
                 var team = p.Controller.Team;
 
@@ -62,9 +61,10 @@ public partial class MenuService
                 {
                     ApplyAgentModel(p, agent.ModelPath);
                 });
-            }, EconService.GetImageKey("agent", agent.Name), typeLabel,
-                session => DataService.AgentDataService.TryGetAgent(session.Player.SteamID, session.Player.Controller.Team, out var current)
-                           && current == agent.Index));
+            });
+            // A row's Tag is the item it stands for, so any renderer can identify it.
+            button.Tag = agent;
+            main.Add(button);
         }
 
         return main.Build();

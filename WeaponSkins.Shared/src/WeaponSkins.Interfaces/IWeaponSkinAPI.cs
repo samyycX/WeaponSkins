@@ -26,6 +26,30 @@ public interface IWeaponSkinAPI
     /// </summary>
     IReadOnlyDictionary<string, KeychainDefinition> Keychains { get; }
 
+    /// <summary>
+    /// All agent definitions indexed by name.
+    /// </summary>
+    IReadOnlyDictionary<string, AgentDefinition> Agents { get; }
+
+    /// <summary>
+    /// All music kit definitions indexed by name.
+    /// </summary>
+    IReadOnlyDictionary<string, MusicKitDefinition> MusicKits { get; }
+
+    /// <summary>
+    /// The game's inventory image for an item: a path under panorama/images/econ/, without extension, or null when the game ships none.
+    /// </summary>
+    /// <param name="kind">One of agent, music, sticker, capsule, keychain, keychaincollection.</param>
+    /// <param name="name">The definition's Name; for keychaincollection, the collection's name.</param>
+    string? GetImageKey(string kind,
+        string name);
+
+    /// <summary>
+    /// The music kit the player has set, if any.
+    /// </summary>
+    bool TryGetMusicKit(ulong steamid,
+        out int musicKitIndex);
+
     void SetWeaponSkins(IEnumerable<WeaponSkinData> skins,
         bool permanent = false);
 

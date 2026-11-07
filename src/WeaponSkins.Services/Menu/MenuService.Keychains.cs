@@ -30,16 +30,16 @@ public partial class MenuService
             VisibleWhen = _ => Api.TryGetWeaponSkin(player.SteamID, team, definition, out var skin) && skin.HasKeychain(KeychainSlot)
         });
 
-        var typeLabel = loc.MenuTypeCharm;
+        // A row's Tag is the item it stands for, so any renderer can identify it.
         ButtonComponent CreateCharmButton(KeychainDefinition keychain)
         {
             var keychainIndex = keychain.Index;
-            return CreateRarityButton(
+            var button = CreateRarityButton(
                 EconService.GetLocalizedName(keychain.LocalizedNames, language),
                 keychain.Rarity.Color.HexColor,
-                _ => Apply(new KeychainData { Id = keychainIndex }),
-                EconService.GetImageKey("keychain", keychain.Name),
-                typeLabel);
+                _ => Apply(new KeychainData { Id = keychainIndex }));
+            button.Tag = keychain;
+            return button;
         }
 
         var grouped = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -47,7 +47,7 @@ public partial class MenuService
         {
             var collectionName = EconService.GetLocalizedName(collection.LocalizedNames, language);
             grouped.UnionWith(collection.Keychains.Select(keychain => keychain.Name));
-            main.Add(CreateSubmenu(collectionName, _ =>
+            var submenu = CreateSubmenu(collectionName, _ =>
             {
                 var collectionMenu = CreateMenu("weaponskins.keychains.collection")
                     .WithTitle(collectionName);
@@ -58,7 +58,10 @@ public partial class MenuService
                 }
 
                 return collectionMenu.Build();
-            }, EconService.GetImageKey("keychaincollection", collection.Name)));
+            });
+            // The name, not the definition: KeychainCollectionDefinition is not part of WeaponSkins.Shared.
+            submenu.Tag = collection.Name;
+            main.Add(submenu);
         }
 
         // A charm no collection lists stays reachable here.

@@ -28,6 +28,13 @@ public class WeaponSkinAPI : IWeaponSkinAPI
 
     public IReadOnlyDictionary<string, KeychainDefinition> Keychains => EconService.Keychains.AsReadOnly();
 
+    public IReadOnlyDictionary<string, AgentDefinition> Agents => EconService.Agents.AsReadOnly();
+
+    public IReadOnlyDictionary<string, MusicKitDefinition> MusicKits => EconService.MusicKits.AsReadOnly();
+
+    public string? GetImageKey(string kind,
+        string name) => EconService.GetImageKey(kind, name);
+
     public WeaponSkinAPI(IInventoryUpdateService inventoryUpdateService,
         WeaponSkinGetterAPI weaponSkinGetterAPI,
         DataService dataService,
@@ -257,6 +264,10 @@ public class WeaponSkinAPI : IWeaponSkinAPI
             var _ = Task.Run(async () => await StorageService.Get().RemoveAgentAsync(steamid, team));
         }
     }
+
+    public bool TryGetMusicKit(ulong steamid,
+        out int musicKitIndex) =>
+        DataService.MusicKitDataService.TryGetMusicKit(steamid, out musicKitIndex);
 
     public void SetMusicKit(ulong steamid,
         int musicKitIndex,

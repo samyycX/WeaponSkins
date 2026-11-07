@@ -31,10 +31,7 @@ public partial class MenuService
                     var option = CreateRarityButton(
                         EconService.GetLocalizedName(paintkit.LocalizedNames, player.PlayerLanguage.Value),
                         paintkit.Rarity.Color.HexColor,
-                        p => Api.UpdateWeaponSkin(p.SteamID, p.Controller.Team, (ushort)item.Index, skin => skin.Paintkit = paintkit.Index, true),
-                        PaintkitImageKey(weapon, paintkit),
-                        itemName,
-                        session => HasWeaponPaint(session, (ushort)item.Index, paintkit.Index));
+                        p => Api.UpdateWeaponSkin(p.SteamID, p.Controller.Team, (ushort)item.Index, skin => skin.Paintkit = paintkit.Index, true));
                     option.Tag = paintkit.Index;
                     skinMenu.Add(option);
                 }
@@ -42,7 +39,7 @@ public partial class MenuService
                 var built = skinMenu.Build();
                 TrackFocus(built, p => TryGetWeaponDataInHand(p, out var inHand) ? inHand.Paintkit : null);
                 return built;
-            }, BaseWeaponImageKey(weapon));
+            });
 
             submenuOption.Tag = (ushort)item.Index;
             main.Add(submenuOption);

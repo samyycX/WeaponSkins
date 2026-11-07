@@ -2,8 +2,8 @@ using WeaponSkins.Shared;
 
 namespace WeaponSkins.Econ;
 
-// The game's charm collections (its keychain_pack loot lists). Kept off WeaponSkins.Shared,
-// like the image keys: only the menu groups charms this way.
+// The game's charm collections (its keychain_pack loot lists). Kept off WeaponSkins.Shared:
+// only the menu groups charms this way.
 public record KeychainCollectionDefinition
 {
     public required string Name { get; init; }

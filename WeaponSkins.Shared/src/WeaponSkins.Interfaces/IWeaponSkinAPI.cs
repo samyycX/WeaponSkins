@@ -42,15 +42,15 @@ public interface IWeaponSkinAPI
     IReadOnlyDictionary<string, GraffitiDefinition> Graffiti { get; }
 
     /// <summary>
-    /// The colours a graffiti whose Tintable is true can be sprayed in, indexed by name.
+    /// The colours a graffiti whose Tintable is true can be sprayed in, indexed by name. Graffiti art is untinted: the game washes the image in the tint's HexColor (Panorama wash-color).
     /// </summary>
     IReadOnlyDictionary<string, GraffitiTintDefinition> GraffitiTints { get; }
 
     /// <summary>
     /// The game's inventory image for an item: a path under panorama/images/econ/, without extension, or null when the game ships none.
     /// </summary>
-    /// <param name="kind">One of agent, music, sticker, capsule, keychain, keychaincollection, graffiti.</param>
-    /// <param name="name">The definition's Name; for keychaincollection, the collection's name.</param>
+    /// <param name="kind">One of agent, music, sticker, capsule, keychain, keychaincollection, graffiti, graffititournament.</param>
+    /// <param name="name">The definition's Name; for keychaincollection, the collection's name; for graffititournament, the tournament's event id.</param>
     string? GetImageKey(string kind,
         string name);
 

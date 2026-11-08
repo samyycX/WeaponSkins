@@ -20,7 +20,7 @@ public partial class MenuService
         foreach (var tournament in EconService.GraffitiTournaments.Values.OrderByDescending(t => t.EventId))
         {
             var tournamentName = EconService.GetLocalizedName(tournament.LocalizedNames, language);
-            main.Add(CreateSubmenu(tournamentName, _ =>
+            var submenu = CreateSubmenu(tournamentName, _ =>
             {
                 var tournamentMenu = CreateMenu("weaponskins.graffiti.tournament")
                     .WithTitle(tournamentName);
@@ -29,7 +29,10 @@ public partial class MenuService
                 var built = tournamentMenu.Build();
                 TrackFocus(built, SelectedGraffiti);
                 return built;
-            }));
+            });
+            // The event id, not the definition: GraffitiTournamentDefinition is not part of WeaponSkins.Shared.
+            submenu.Tag = tournament.EventId;
+            main.Add(submenu);
         }
 
         var inTournaments = EconService.GraffitiTournaments.Values

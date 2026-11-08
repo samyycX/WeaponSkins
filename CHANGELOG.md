@@ -41,11 +41,12 @@ file; their notes are on the [releases page](https://github.com/samyycX/WeaponSk
 - If you edited the translation files, add the new `menu.graffiti.title` and `graffiti.*`
   keys to them.
 - For plugin developers: `IWeaponSkinAPI` adds `Graffiti`, `GraffitiTints` and
-  `TryGetGraffiti`, `GetImageKey` takes `graffiti`, and graffiti rows carry a
-  `GraffitiDefinition` or `GraffitiTintDefinition` as their `Tag`. `IStorageProvider` gains
-  graffiti members with default bodies, so storage plugins keep loading but don't save
-  graffiti until they implement them. Restart the server after updating, rather than
-  reloading the plugin, so other plugins see the new `WeaponSkins.Shared.dll`.
+  `TryGetGraffiti`, and `GetImageKey` takes `graffiti` and `graffititournament`. Graffiti
+  rows carry a `GraffitiDefinition` or `GraffitiTintDefinition` as their `Tag`, tournament
+  rows their event id. `IStorageProvider` gains graffiti members with default bodies, so
+  storage plugins keep loading but don't save graffiti until they implement them. Restart
+  the server after updating, rather than reloading the plugin, so other plugins see the
+  new `WeaponSkins.Shared.dll`.
 
 ## [0.7.0] - 2026-11-07
 

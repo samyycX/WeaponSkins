@@ -61,7 +61,7 @@ public class EconService
     public Dictionary<int /* tournament_event_id */, GraffitiTournamentDefinition> GraffitiTournaments { get; set; } = new();
 
     // Kept off the WeaponSkins.Shared records; IWeaponSkinAPI.GetImageKey serves them.
-    private Dictionary<string /* kind + ":" + Name, kind = agent/music/keychain/keychaincollection/sticker/capsule/graffiti */, string /* panorama/images/econ-relative key */> ImageKeys { get; set; } = new();
+    private Dictionary<string /* kind + ":" + Name (event id for graffititournament), kind = agent/music/keychain/keychaincollection/sticker/capsule/graffiti/graffititournament */, string /* panorama/images/econ-relative key */> ImageKeys { get; set; } = new();
 
     // Loot lists name charms by their item name, not the definition index Keychains is keyed by.
     private Dictionary<string, KeychainDefinition> KeychainsByItemName { get; } = new(StringComparer.OrdinalIgnoreCase);
@@ -73,7 +73,7 @@ public class EconService
 
     private Dictionary<string, string> RevolvingLootLists { get; } = new(StringComparer.OrdinalIgnoreCase);
 
-    private const int SchemaVersion = 29;
+    private const int SchemaVersion = 30;
 
     public EconService(ISwiftlyCore core,
         ILogger<EconService> logger,
@@ -828,6 +828,12 @@ public class EconService
                     }
 
                     tournament.Graffiti.Add(definition.Name);
+
+                    // Team 0 is the organiser, so its logo graffiti pictures the tournament.
+                    if (kit.Value["tournament_team_id"]?.EToInt32() == 0)
+                    {
+                        AddImageKey("graffititournament:" + eventId, "stickers/" + material);
+                    }
                 }
             }
         }

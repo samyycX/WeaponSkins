@@ -256,10 +256,10 @@ _weaponSkins?.UpdateWeaponSkin(steamId, Team.T, 7, skin => skin.Paintkit = 44, p
 | `TryGet*Skin(s)`, `TryGetMusicKit`, `TryGetGraffiti` | Read a player's weapon, knife, glove, agent, music kit or graffiti selections |
 | `Set*Skins`, `Update*Skin`, `Reset*Skin` | Change or remove them; `permanent: true` also saves to storage. Item permissions still apply |
 | `Items`, `WeaponToPaintkits`, `StickerCollections`, `Keychains`, `Agents`, `MusicKits`, `Graffiti`, `GraffitiTints` | The parsed item catalog |
-| `GetImageKey(kind, name)` | The game's inventory image for an item — `kind` is `agent`, `music`, `sticker`, `capsule`, `keychain`, `keychaincollection` or `graffiti` — as a path under `panorama/images/econ/` without extension, or `null` when the game ships none |
+| `GetImageKey(kind, name)` | The game's inventory image for an item — `kind` is `agent`, `music`, `sticker`, `capsule`, `keychain`, `keychaincollection`, `graffiti` or `graffititournament` (whose `name` is the event id) — as a path under `panorama/images/econ/` without extension, or `null` when the game ships none. Graffiti art is untinted: the game washes it in the tint's `HexColor` (Panorama `wash-color`) |
 | `SetExternalStorageProvider` | Provide the storage for `StorageBackend = "external"`. Its graffiti members are optional: without them, graffiti isn't saved |
 
-Menu rows carry the item they stand for as their component `Tag` — an `AgentDefinition`, `MusicKitDefinition`, `GraffitiDefinition`, `GraffitiTintDefinition`, `StickerDefinition`, `StickerCollectionDefinition` or `KeychainDefinition`, a charm collection's name (`string`), a sticker slot (`int`, from 0), or an econ index (`ushort` for weapons, knives and gloves, `int` for paint kits) — so a custom menu renderer can draw images and selection state from the API.
+Menu rows carry the item they stand for as their component `Tag` — an `AgentDefinition`, `MusicKitDefinition`, `GraffitiDefinition`, `GraffitiTintDefinition`, `StickerDefinition`, `StickerCollectionDefinition` or `KeychainDefinition`, a charm collection's name (`string`), a graffiti tournament's event id (`int`), a sticker slot (`int`, from 0), or an econ index (`ushort` for weapons, knives and gloves, `int` for paint kits) — so a custom menu renderer can draw images and selection state from the API.
 
 ## 🛠️ Building
 

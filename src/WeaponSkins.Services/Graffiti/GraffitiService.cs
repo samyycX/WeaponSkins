@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Options;
 
 using SwiftlyS2.Shared;
+using SwiftlyS2.Shared.Events;
 using SwiftlyS2.Shared.Natives;
 using SwiftlyS2.Shared.Players;
 using SwiftlyS2.Shared.SchemaDefinitions;
@@ -11,7 +12,6 @@ using WeaponSkins.Configuration;
 
 namespace WeaponSkins.Services;
 
-// Sprays made with the game's own graffiti key are left alone.
 public class GraffitiService
 {
     // Source's classic spray reach.
@@ -42,6 +42,7 @@ public class GraffitiService
             _sprays.Clear();
             _nextSprayAt.Clear();
         };
+        Core.Event.OnEntityCreated += OnEntityCreated;
     }
 
     public void Spray(IPlayer player)
@@ -50,36 +51,41 @@ public class GraffitiService
         var steamId = player.SteamID;
         if (!ItemPermissionService.CanUseGraffiti(steamId))
         {
-            player.SendCenter(loc.GraffitiNoPermission);
+            player.SendChat(loc.GraffitiNoPermission);
             return;
         }
 
         if (!DataService.GraffitiDataService.TryGetGraffiti(steamId, out var graffitiIndex, out var tintIndex))
         {
-            player.SendCenter(loc.GraffitiNotChosen);
+            player.SendChat(loc.GraffitiNotChosen);
             return;
         }
 
         if (!player.IsAlive || player.PlayerPawn is not { IsValid: true } pawn || pawn.EyePosition is not { } eye)
         {
-            player.SendCenter(loc.GraffitiNotAlive);
+            player.SendChat(loc.GraffitiNotAlive);
             return;
         }
 
         var now = Environment.TickCount64;
         if (_nextSprayAt.TryGetValue(steamId, out var nextSprayAt) && now < nextSprayAt)
         {
-            player.SendCenter(loc.GraffitiCooldown((int)Math.Ceiling((nextSprayAt - now) / 1000.0)));
+            player.SendChat(loc.GraffitiCooldown((int)Math.Ceiling((nextSprayAt - now) / 1000.0)));
             return;
         }
 
         var angles = pawn.EyeAngles;
+        // World and static props only, passing through everything else: the decal stays where it was
+        // put, so it would float off a moving entity. The world hits as an entity too ("worldent").
         var trace = Core.Trace.TraceShapeAngle(eye, angles, SprayDistance,
-            TraceParams.Builder().IgnoreEntity(pawn).Build());
-        // Static surfaces only: the decal stays where it was put, so it would float off a moving entity.
-        if (!trace.DidHit || trace.StartInSolid || trace.Entity is { IsValid: true, Index: not 0 })
+            TraceParams.Builder()
+                .IgnoreEntity(pawn)
+                .IgnoreOwner(pawn)
+                .WithShouldHitEntity(entity => entity.DesignerName is "worldent" or "prop_static")
+                .Build());
+        if (!trace.DidHit || trace.StartInSolid)
         {
-            player.SendCenter(loc.GraffitiNoSurface);
+            player.SendChat(loc.GraffitiNoSurface);
             return;
         }
 
@@ -90,7 +96,7 @@ public class GraffitiService
         left -= normal * left.Dot(normal);
         if (left.Length() < 0.1f)
         {
-            player.SendCenter(loc.GraffitiNoSurface);
+            player.SendChat(loc.GraffitiNoSurface);
             return;
         }
 
@@ -120,5 +126,43 @@ public class GraffitiService
         using var sound = new SoundEvent("SprayCan.Paint");
         sound.Recipients.AddRecipient(player.PlayerID);
         sound.Emit();
+    }
+
+    // The game's own graffiti key sprays a graffiti from the player's Steam inventory, so it only
+    // exists for players who own and equip one. Their spray then shows what they chose here.
+    private void OnEntityCreated(IOnEntityCreatedEvent @event)
+    {
+        if (!Options.CurrentValue.ReplaceNativeGraffiti || @event.Entity.DesignerName != "player_spray_decal")
+        {
+            return;
+        }
+
+        var handle = Core.EntitySystem.GetRefEHandle(@event.Entity.As<CPlayerSprayDecal>());
+        // The game fills the decal in after creating it.
+        Core.Scheduler.NextWorldUpdate(() => ReplaceNativeSpray(handle));
+    }
+
+    private void ReplaceNativeSpray(CHandle<CPlayerSprayDecal> handle)
+    {
+        if (handle.Value is not { IsValid: true } decal || decal.AccountID == 0)
+        {
+            return;
+        }
+
+        var accountId = decal.AccountID;
+        var player = Core.PlayerManager.GetAllPlayers()
+            .FirstOrDefault(p => p.IsValid && !p.IsFakeClient && (uint)p.SteamID == accountId);
+        if (player is null
+            || !ItemPermissionService.CanUseGraffiti(player.SteamID)
+            || !DataService.GraffitiDataService.TryGetGraffiti(player.SteamID, out var graffitiIndex, out var tintIndex)
+            || (decal.Player == graffitiIndex && decal.TintID == tintIndex))
+        {
+            return;
+        }
+
+        decal.Player = graffitiIndex;
+        decal.PlayerUpdated();
+        decal.TintID = tintIndex;
+        decal.TintIDUpdated();
     }
 }

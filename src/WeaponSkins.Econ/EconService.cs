@@ -60,8 +60,12 @@ public class EconService
 
     public Dictionary<int /* tournament_event_id */, GraffitiTournamentDefinition> GraffitiTournaments { get; set; } = new();
 
+    public Dictionary<string /* Name */, PatchDefinition> Patches { get; set; } = new(StringComparer.OrdinalIgnoreCase);
+
+    public Dictionary<string /* Name */, PatchCollectionDefinition> PatchCollections { get; set; } = new(StringComparer.OrdinalIgnoreCase);
+
     // Kept off the WeaponSkins.Shared records; IWeaponSkinAPI.GetImageKey serves them.
-    private Dictionary<string /* kind + ":" + Name (event id for graffititournament), kind = agent/music/keychain/keychaincollection/sticker/capsule/graffiti/graffititournament */, string /* panorama/images/econ-relative key */> ImageKeys { get; set; } = new();
+    private Dictionary<string /* kind + ":" + Name (event id for graffititournament), kind = agent/music/keychain/keychaincollection/sticker/capsule/graffiti/graffititournament/patch/patchcapsule */, string /* panorama/images/econ-relative key */> ImageKeys { get; set; } = new();
 
     // Loot lists name charms by their item name, not the definition index Keychains is keyed by.
     private Dictionary<string, KeychainDefinition> KeychainsByItemName { get; } = new(StringComparer.OrdinalIgnoreCase);
@@ -73,7 +77,7 @@ public class EconService
 
     private Dictionary<string, string> RevolvingLootLists { get; } = new(StringComparer.OrdinalIgnoreCase);
 
-    private const int SchemaVersion = 30;
+    private const int SchemaVersion = 31;
 
     public EconService(ISwiftlyCore core,
         ILogger<EconService> logger,
@@ -110,7 +114,7 @@ public class EconService
                     File.ReadAllText(Path.Combine(Core.PluginDataDirectory, "version.lock")));
             if (new HashSet<string>(itemLanguages).SetEquals(lockVersion?.ItemLanguages ?? []) && lockVersion?.EconDataVersion == version && lockVersion.SchemaVersion == SchemaVersion)
             {
-                var files = new[] { "items.json", "agents.json", "weapon_to_paintkits.json", "sticker_collections.json", "keychains.json", "keychain_collections.json", "musickits.json", "graffiti.json", "graffiti_tints.json", "graffiti_tournaments.json", "image_keys.json" };
+                var files = new[] { "items.json", "agents.json", "weapon_to_paintkits.json", "sticker_collections.json", "keychains.json", "keychain_collections.json", "musickits.json", "graffiti.json", "graffiti_tints.json", "graffiti_tournaments.json", "patches.json", "patch_collections.json", "image_keys.json" };
                 var allFilesExist = files.All(f => File.Exists(Path.Combine(Core.PluginDataDirectory, f)));
 
                 if (allFilesExist)
@@ -138,6 +142,10 @@ public class EconService
                         File.ReadAllText(Path.Combine(Core.PluginDataDirectory, "graffiti_tints.json")))!;
                     GraffitiTournaments = JsonSerializer.Deserialize<Dictionary<int, GraffitiTournamentDefinition>>(
                         File.ReadAllText(Path.Combine(Core.PluginDataDirectory, "graffiti_tournaments.json")))!;
+                    Patches = JsonSerializer.Deserialize<Dictionary<string, PatchDefinition>>(
+                        File.ReadAllText(Path.Combine(Core.PluginDataDirectory, "patches.json")))!;
+                    PatchCollections = JsonSerializer.Deserialize<Dictionary<string, PatchCollectionDefinition>>(
+                        File.ReadAllText(Path.Combine(Core.PluginDataDirectory, "patch_collections.json")))!;
                     ImageKeys = JsonSerializer.Deserialize<Dictionary<string, string>>(
                         File.ReadAllText(Path.Combine(Core.PluginDataDirectory, "image_keys.json")))!;
 
@@ -238,6 +246,11 @@ public class EconService
         Logger.LogInformation($"Parsed {Graffiti.Count} graffiti and {GraffitiTints.Count} tints in {watch.ElapsedMilliseconds}ms.");
         watch.Restart();
 
+        ParsePatches();
+        ParsePatchCollections();
+        Logger.LogInformation($"Parsed {Patches.Count} patches and {PatchCollections.Count} patch packs in {watch.ElapsedMilliseconds}ms.");
+        watch.Restart();
+
         var version = new EconVersion { ItemLanguages = Config.ItemLanguages, EconDataVersion = GetVersion(items), SchemaVersion = SchemaVersion };
 
         File.WriteAllText(Path.Combine(Core.PluginDataDirectory, "version.lock"), JsonSerializer.Serialize(version));
@@ -284,6 +297,12 @@ public class EconService
 
         File.WriteAllText(Path.Combine(dataDirectory, "graffiti_tournaments.json"),
             JsonSerializer.Serialize(GraffitiTournaments, options));
+
+        File.WriteAllText(Path.Combine(dataDirectory, "patches.json"),
+            JsonSerializer.Serialize(Patches, options));
+
+        File.WriteAllText(Path.Combine(dataDirectory, "patch_collections.json"),
+            JsonSerializer.Serialize(PatchCollections, options));
 
         File.WriteAllText(Path.Combine(dataDirectory, "image_keys.json"),
             JsonSerializer.Serialize(ImageKeys, options));
@@ -839,6 +858,94 @@ public class EconService
         }
     }
 
+    // Patches are the sticker kits with a patch_material instead of a sticker_material.
+    public void ParsePatches()
+    {
+        foreach (var section in Root.Children)
+        {
+            if (section.Name != "sticker_kits")
+            {
+                continue;
+            }
+
+            foreach (var kit in section.Children)
+            {
+                var material = kit.Value["patch_material"]?.EToString();
+                if (string.IsNullOrEmpty(material))
+                {
+                    continue;
+                }
+
+                var name = kit.Value["name"].EToString();
+                var rarityName = kit.Value["item_rarity"];
+                var definition = new PatchDefinition
+                {
+                    Name = name,
+                    Index = int.Parse(kit.Name),
+                    LocalizedNames = GetLocalizedNames(kit.Value["item_name"]?.EToString() ?? string.Empty, name),
+                    Rarity = rarityName == null ? Rarities["default"] : Rarities[rarityName.EToString()]
+                };
+                Patches[definition.Name] = definition;
+                AddImageKey("patch:" + definition.Name, "patches/" + material);
+            }
+        }
+    }
+
+    // Patch packs are the items tagged PatchCapsule; their loot lists name patches as "[name]patch".
+    public void ParsePatchCollections()
+    {
+        foreach (var section in Root.Children)
+        {
+            if (section.Name != "items")
+            {
+                continue;
+            }
+
+            foreach (var item in section.Children)
+            {
+                if (item.GetSubKey("tags")?.GetSubKey("PatchCapsule") is not { } tag)
+                {
+                    continue;
+                }
+
+                var name = item.Value["name"].EToString();
+                var series = item.GetSubKey("attributes")?.GetSubKey("set supply crate series");
+                var seriesIndex = series?.HasSubKey("value") == true
+                    ? series.Value["value"].EToString()
+                    : series?.Value.EToString();
+                if (!ClientLootLists.TryGetValue(name, out var lootList)
+                    && !ClientLootLists.TryGetValue(tag.Value["tag_value"]?.EToString() ?? string.Empty, out lootList)
+                    && !(seriesIndex is not null
+                         && RevolvingLootLists.TryGetValue(seriesIndex, out var revolving)
+                         && ClientLootLists.TryGetValue(revolving, out lootList)))
+                {
+                    Logger.LogDebug($"Patch pack {name} not found in ClientLootLists");
+                    continue;
+                }
+
+                var patches = lootList.Items
+                    .Where(entry => entry.BelongingItemName == "patch")
+                    .Select(entry => Patches.GetValueOrDefault(entry.Name))
+                    .OfType<PatchDefinition>()
+                    .Distinct()
+                    .ToList();
+                if (patches.Count == 0)
+                {
+                    continue;
+                }
+
+                PatchCollections[name] = new PatchCollectionDefinition
+                {
+                    Name = name,
+                    Index = int.Parse(item.Name),
+                    LocalizedNames = GetLocalizedNames(item.Value["item_name"]?.EToString() ?? string.Empty, name),
+                    Patches = patches
+                };
+                AddImageKey("patchcapsule:" + name, ImageInventory(item));
+            }
+        }
+    }
+
     public void ParseColors()
     {
         foreach (var keys in Root.Children)
@@ -1241,7 +1348,9 @@ public class EconService
                     else if (stickerCollections.HasSubKey("prefab"))
                     {
                         var prefab = stickerCollections.Value["prefab"].EToString();
-                        if (!prefab.Contains("_capsule_prefab"))
+                        // Stockholm 2021's patch packs share the capsule prefab naming.
+                        if (!prefab.Contains("_capsule_prefab")
+                            || stickerCollections.GetSubKey("tags")?.HasSubKey("PatchCapsule") == true)
                         {
                             continue;
                         }
@@ -1276,6 +1385,11 @@ public class EconService
                                         continue;
                                     }
                                     stickers.Add(Stickers[item.Name]);
+                                }
+
+                                if (stickers.Count == 0)
+                                {
+                                    continue;
                                 }
 
                                 var definition = new StickerCollectionDefinition

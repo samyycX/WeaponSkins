@@ -58,7 +58,7 @@ public partial class MenuService
             var color = definition.Rarity.Color.HexColor;
             TextComponent row = definition.Tintable
                 ? CreateSubmenu(name, _ => BuildGraffitiTintMenu(player, definition, name), color)
-                : CreateRarityButton(name, color, p => Api.SetGraffiti(p.SteamID, definition.Index, 0));
+                : CreateRarityButton(name, color, p => SelectGraffiti(p, definition.Index, 0, name));
             row.Tag = definition;
             menu.Add(row);
         }
@@ -72,8 +72,9 @@ public partial class MenuService
 
         foreach (var tint in EconService.GraffitiTints.Values.OrderBy(t => t.Index))
         {
-            var button = CreateRarityButton(EconService.GetLocalizedName(tint.LocalizedNames, language), tint.HexColor,
-                p => Api.SetGraffiti(p.SteamID, graffiti.Index, tint.Index));
+            var tintName = EconService.GetLocalizedName(tint.LocalizedNames, language);
+            var button = CreateRarityButton(tintName, tint.HexColor,
+                p => SelectGraffiti(p, graffiti.Index, tint.Index, $"{title} ({tintName})"));
             button.Tag = tint;
             menu.Add(button);
         }
@@ -84,6 +85,13 @@ public partial class MenuService
                 ? EconService.GraffitiTints.Values.FirstOrDefault(t => t.Index == selectedTint)
                 : null);
         return built;
+    }
+
+    // Choosing changes nothing the player can see until they spray, so say what was chosen.
+    private void SelectGraffiti(IPlayer player, int graffitiIndex, int tintIndex, string name)
+    {
+        Api.SetGraffiti(player.SteamID, graffitiIndex, tintIndex);
+        player.SendChat(LocalizationService[player].GraffitiSelected(name));
     }
 
     private GraffitiDefinition? SelectedGraffiti(IPlayer player)

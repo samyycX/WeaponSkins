@@ -43,6 +43,7 @@ public class ItemPermissionService
             Agents = source.Agents,
             MusicKits = source.MusicKits,
             Graffiti = source.Graffiti,
+            Patches = source.Patches,
             Nametag = source.Nametag,
             Wear = source.Wear,
             Seed = source.Seed
@@ -222,6 +223,8 @@ public class ItemPermissionService
     public bool CanUseMusicKits(ulong steamId) => HasPermission(steamId, Config.MusicKits);
 
     public bool CanUseGraffiti(ulong steamId) => HasPermission(steamId, Config.Graffiti);
+
+    public bool CanUsePatches(ulong steamId) => HasPermission(steamId, Config.Patches);
 
     public bool CanUseNametag(ulong steamId) => HasPermission(steamId, Config.Nametag);
 

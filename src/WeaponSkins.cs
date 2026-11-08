@@ -55,6 +55,7 @@ public partial class WeaponSkins : BasePlugin
             .AddLocalizationService()
             .AddItemPermissionService()
             .AddGraffitiService()
+            .AddAgentPatchService()
             .AddCommandService();
 
 
@@ -76,6 +77,7 @@ public partial class WeaponSkins : BasePlugin
             .UseLocalizationService()
             .UseItemPermissionService()
             .UseGraffitiService()
+            .UseAgentPatchService()
             .UseCommandService();
     }
 

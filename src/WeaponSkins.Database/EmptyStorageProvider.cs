@@ -227,4 +227,34 @@ public class EmptyStorageProvider : IStorageProvider
         WarnEmpty();
         return Task.CompletedTask;
     }
+
+    public Task StoreAgentPatchesAsync(IEnumerable<(ulong SteamID, Team Team, int Slot, int PatchIndex)> patches)
+    {
+        WarnEmpty();
+        return Task.CompletedTask;
+    }
+
+    public Task<IEnumerable<(ulong SteamID, Team Team, int Slot, int PatchIndex)>> GetAgentPatchesAsync(ulong steamId)
+    {
+        WarnEmpty();
+        return Task.FromResult<IEnumerable<(ulong, Team, int, int)>>(new List<(ulong, Team, int, int)>());
+    }
+
+    public Task<IEnumerable<(ulong SteamID, Team Team, int Slot, int PatchIndex)>> GetAllAgentPatchesAsync()
+    {
+        WarnEmpty();
+        return Task.FromResult<IEnumerable<(ulong, Team, int, int)>>(new List<(ulong, Team, int, int)>());
+    }
+
+    public Task RemoveAgentPatchAsync(ulong steamId, Team team, int slot)
+    {
+        WarnEmpty();
+        return Task.CompletedTask;
+    }
+
+    public Task RemoveAgentPatchesAsync(ulong steamId, Team team)
+    {
+        WarnEmpty();
+        return Task.CompletedTask;
+    }
 }

@@ -26,6 +26,7 @@ public class HookInventoryUpdateService : IInventoryUpdateService, IDisposable
     private WeaponSkinGetterAPI Api { get; }
     private DataService DataService { get; }
     private EconService EconService { get; }
+    private AgentPatchService AgentPatchService { get; }
 
     public HookInventoryUpdateService(ISwiftlyCore core,
         WeaponSkinGetterAPI api,
@@ -33,7 +34,8 @@ public class HookInventoryUpdateService : IInventoryUpdateService, IDisposable
         ILogger<HookInventoryUpdateService> logger,
         ItemPermissionService itemPermissionService,
         DataService dataService,
-        EconService econService)
+        EconService econService,
+        AgentPatchService agentPatchService)
     {
         Core = core;
         Api = api;
@@ -42,6 +44,7 @@ public class HookInventoryUpdateService : IInventoryUpdateService, IDisposable
         ItemPermissionService = itemPermissionService;
         DataService = dataService;
         EconService = econService;
+        AgentPatchService = agentPatchService;
 
         Core.Event.OnEntityCreated += OnEntityCreated;
         Core.Event.OnMapLoad += _ => FinishCacheKeys.Clear();
@@ -197,7 +200,9 @@ public class HookInventoryUpdateService : IInventoryUpdateService, IDisposable
                     {
                         if (!player.IsAlive()) return;
                         pawn.SetModel(modelPath);
+                        AgentPatchService.Apply(player);
                     });
+                    return;
                 }
             }
             else if (DataService.AgentDataService.TryGetDefaultModel(player.SteamID, player.Controller.Team,
@@ -214,8 +219,12 @@ public class HookInventoryUpdateService : IInventoryUpdateService, IDisposable
                 {
                     if (!player.IsAlive()) return;
                     pawn.SetModel(defaultModel);
+                    AgentPatchService.Apply(player);
                 });
+                return;
             }
+
+            AgentPatchService.Apply(player);
         });
     }
 
@@ -602,6 +611,8 @@ public class HookInventoryUpdateService : IInventoryUpdateService, IDisposable
         {
             ResetMusicKit(steamId);
         }
+
+        AgentPatchService.Apply(player);
 
         if (!player.IsAlive()) return;
         var pawn = player.PlayerPawn;

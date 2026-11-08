@@ -1,7 +1,8 @@
 # WeaponSkins — Copilot Instructions
 
 > A SwiftlyS2 plugin (C#, .NET 10) for Counter-Strike 2: players pick weapon skins,
-> knives, gloves, stickers, charms, agents, music kits and graffiti from the `!ws` menu.
+> knives, gloves, stickers, charms, agents and their patches, music kits and graffiti from
+> the `!ws` menu.
 > Upstream is `samyycX/WeaponSkins`; contributions arrive as pull requests.
 
 ## Where things are documented
@@ -103,8 +104,17 @@ StatTrak™ counts on `EventPlayerDeath` against the attacker's active weapon an
 every kill (`StattrakService`).
 
 Graffiti is not an inventory item. `GraffitiService` spawns a `player_spray_decal` on the
-static surface `!spray` aims at, keeps one per player and forgets them on map load. Sprays
-made with the game's own graffiti key are left alone.
+static surface `!spray` aims at, keeps one per player and forgets them on map load. Its
+trace only hits `worldent` and `prop_static` (the world reaches the trace filter as an
+entity), so it passes through the sprayer, their held weapon and anything that moves. The
+game's own graffiti key works only for players who own a graffiti; with
+`ReplaceNativeGraffiti` its decal gets the player's `!ws` sticker kit and tint on the next
+world update after it is created, once the game has filled it in.
+
+Agent patches are not an econ item either: the game draws them from the pawn's
+`m_vecPlayerPatchEconIndices` (five slots), whatever model it wears. `AgentPatchService`
+writes them after the agent model is set (spawn, an agent picked in `!ws`, a reload) and
+when they change. A team with no chosen patches is left alone, so a player's own show.
 
 ## Permissions
 
@@ -117,7 +127,8 @@ player lacks those permissions. Writes go through `ApplyWeaponUpdateRules`,
 case. A trimmed view never equals its save, so only a changed save remakes a carried
 weapon or knife — StatTrak™ saves on every kill. Agents and music kits are gated in the
 menu only, so saved ones keep showing — the README promises that. Graffiti is gated in the
-menu, in `!spray` and in `TryGetGraffiti`.
+menu, in `!spray`, in the native-spray swap and in `TryGetGraffiti`; patches in the menu,
+when applied and in `TryGetAgentPatches`.
 
 ## Item catalog
 
@@ -162,7 +173,8 @@ misreads `NextTickAsync<T>(Func<T>)`.
 
 - The tables are WeaponPaints-compatible (`wp_player_skins`, `wp_player_knife`,
   `wp_player_gloves`, `wp_player_agents`, `wp_player_music`) so servers can switch from
-  WeaponPaints and websites can read them; `wp_player_graffiti` is WeaponSkins' own.
+  WeaponPaints and websites can read them; `wp_player_graffiti` and `wp_player_agent_patches`
+  are WeaponSkins' own.
   **Never rename or retype an existing column.**
 - Schema changes are FluentMigrator migrations in `src/WeaponSkins.Database/Migrations/`,
   numbered `MigrationNNN`, tracked in `__weaponskins_version_info`. Guard a create with
@@ -185,8 +197,8 @@ misreads `NextTickAsync<T>(Func<T>)`.
   plugin reload keeps the old one — the changelog tells admins to restart.
 - Change it additively. Removing or changing a member breaks every plugin compiled against
   it. `IStorageProvider` is implemented by external storage plugins, so a new member there
-  needs a default body, as the graffiti members have, or those plugins stop loading. It
-  also gets a real one on `DatabaseService` and `EmptyStorageProvider`.
+  needs a default body, as the graffiti and agent patch members have, or those plugins stop
+  loading. It also gets a real one on `DatabaseService` and `EmptyStorageProvider`.
 - The README's API section lists the members; keep it in step.
 
 ## Configuration

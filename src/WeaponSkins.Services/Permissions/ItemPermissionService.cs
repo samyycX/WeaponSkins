@@ -41,7 +41,12 @@ public class ItemPermissionService
             Stickers = source.Stickers,
             Keychains = source.Keychains,
             Agents = source.Agents,
-            MusicKits = source.MusicKits
+            MusicKits = source.MusicKits,
+            Graffiti = source.Graffiti,
+            Patches = source.Patches,
+            Nametag = source.Nametag,
+            Wear = source.Wear,
+            Seed = source.Seed
         };
     }
 
@@ -67,6 +72,11 @@ public class ItemPermissionService
         {
             result.Keychain0 = null;
         }
+
+        // A newly chosen skin's defaults.
+        if (!CanUseNametag(data.SteamID)) result.Nametag = null;
+        if (!CanUseWear(data.SteamID)) result.PaintkitWear = 0f;
+        if (!CanUseSeed(data.SteamID)) result.PaintkitSeed = 0;
 
         return true;
     }
@@ -97,6 +107,9 @@ public class ItemPermissionService
         }
 
         result = data.DeepClone();
+        if (!CanUseNametag(data.SteamID)) result.Nametag = null;
+        if (!CanUseWear(data.SteamID)) result.PaintkitWear = 0f;
+        if (!CanUseSeed(data.SteamID)) result.PaintkitSeed = 0;
         return true;
     }
 
@@ -126,6 +139,8 @@ public class ItemPermissionService
         }
 
         result = data.DeepClone();
+        if (!CanUseWear(data.SteamID)) result.PaintkitWear = 0f;
+        if (!CanUseSeed(data.SteamID)) result.PaintkitSeed = 0;
         return true;
     }
 
@@ -167,6 +182,29 @@ public class ItemPermissionService
             result.Keychain0 = current.Keychain0?.DeepClone();
         }
 
+        if (!CanUseNametag(current.SteamID)) result.Nametag = current.Nametag;
+        if (!CanUseWear(current.SteamID)) result.PaintkitWear = current.PaintkitWear;
+        if (!CanUseSeed(current.SteamID)) result.PaintkitSeed = current.PaintkitSeed;
+
+        return result;
+    }
+
+    public KnifeSkinData ApplyKnifeUpdateRules(KnifeSkinData current,
+        KnifeSkinData updated)
+    {
+        var result = updated.DeepClone();
+        if (!CanUseNametag(current.SteamID)) result.Nametag = current.Nametag;
+        if (!CanUseWear(current.SteamID)) result.PaintkitWear = current.PaintkitWear;
+        if (!CanUseSeed(current.SteamID)) result.PaintkitSeed = current.PaintkitSeed;
+        return result;
+    }
+
+    public GloveData ApplyGloveUpdateRules(GloveData current,
+        GloveData updated)
+    {
+        var result = updated.DeepClone();
+        if (!CanUseWear(current.SteamID)) result.PaintkitWear = current.PaintkitWear;
+        if (!CanUseSeed(current.SteamID)) result.PaintkitSeed = current.PaintkitSeed;
         return result;
     }
 
@@ -183,6 +221,16 @@ public class ItemPermissionService
     public bool CanUseAgents(ulong steamId) => HasPermission(steamId, Config.Agents);
 
     public bool CanUseMusicKits(ulong steamId) => HasPermission(steamId, Config.MusicKits);
+
+    public bool CanUseGraffiti(ulong steamId) => HasPermission(steamId, Config.Graffiti);
+
+    public bool CanUsePatches(ulong steamId) => HasPermission(steamId, Config.Patches);
+
+    public bool CanUseNametag(ulong steamId) => HasPermission(steamId, Config.Nametag);
+
+    public bool CanUseWear(ulong steamId) => HasPermission(steamId, Config.Wear);
+
+    public bool CanUseSeed(ulong steamId) => HasPermission(steamId, Config.Seed);
 
     private bool HasPermission(ulong steamId,
         string permission)

@@ -43,9 +43,12 @@ public class PlayerLocalizationService
     public string MenuTitleKeychains => Localizer["menu.keychains.title"];
     public string MenuTitleAgents => Localizer["menu.agents.title"];
     public string MenuTitleMusicKits => Localizer["menu.musickits.title"];
+    public string MenuTitleGraffiti => Localizer["menu.graffiti.title"];
     public string MenuTitleWeaponProperties => Localizer["menu.weaponproperties.title"];
     public string MenuTitleKnifeProperties => Localizer["menu.knifeproperties.title"];
     public string MenuTitleGloveProperties => Localizer["menu.gloveproperties.title"];
+    public string MenuTitleAgentProperties => Localizer["menu.agentproperties.title"];
+    public string MenuAgentPropertiesSetPatch(int slot, string patchName) => Localizer["menu.agentproperties.setpatch", slot, patchName];
     public string MenuTitleStickerProperties => Localizer["menu.stickerproperties.title"];
     public string MenuTitleKeychainProperties => Localizer["menu.keychainproperties.title"];
     public string MenuPropertiesEmpty => Localizer["menu.properties.empty"];
@@ -72,4 +75,11 @@ public class PlayerLocalizationService
         Localizer["menu.skinproperties.stattrakcount", stattrak];
 
     public string MenuUnset => Localizer["menu.unset"];
+
+    public string GraffitiNoPermission => Localizer["graffiti.nopermission"];
+    public string GraffitiNotChosen => Localizer["graffiti.notchosen"];
+    public string GraffitiNotAlive => Localizer["graffiti.notalive"];
+    public string GraffitiNoSurface => Localizer["graffiti.nosurface"];
+    public string GraffitiCooldown(int seconds) => Localizer["graffiti.cooldown", seconds];
+    public string GraffitiSelected(string graffitiName) => Localizer["graffiti.selected", graffitiName];
 }

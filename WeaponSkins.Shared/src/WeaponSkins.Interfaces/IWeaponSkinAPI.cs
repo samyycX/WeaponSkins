@@ -37,10 +37,30 @@ public interface IWeaponSkinAPI
     IReadOnlyDictionary<string, MusicKitDefinition> MusicKits { get; }
 
     /// <summary>
+    /// All graffiti definitions indexed by name.
+    /// </summary>
+    IReadOnlyDictionary<string, GraffitiDefinition> Graffiti { get; }
+
+    /// <summary>
+    /// The colours a graffiti whose Tintable is true can be sprayed in, indexed by name. Graffiti art is untinted: the game washes the image in the tint's HexColor (Panorama wash-color).
+    /// </summary>
+    IReadOnlyDictionary<string, GraffitiTintDefinition> GraffitiTints { get; }
+
+    /// <summary>
+    /// All patch definitions indexed by name. Patches go on agents, five slots per team (TryGetAgentPatches).
+    /// </summary>
+    IReadOnlyDictionary<string, PatchDefinition> Patches { get; }
+
+    /// <summary>
+    /// All patch packs indexed by name.
+    /// </summary>
+    IReadOnlyDictionary<string, PatchCollectionDefinition> PatchCollections { get; }
+
+    /// <summary>
     /// The game's inventory image for an item: a path under panorama/images/econ/, without extension, or null when the game ships none.
     /// </summary>
-    /// <param name="kind">One of agent, music, sticker, capsule, keychain, keychaincollection.</param>
-    /// <param name="name">The definition's Name; for keychaincollection, the collection's name.</param>
+    /// <param name="kind">One of agent, music, sticker, capsule, keychain, keychaincollection, graffiti, graffititournament, patch, patchcapsule.</param>
+    /// <param name="name">The definition's Name; for keychaincollection, the collection's name; for graffititournament, the tournament's event id.</param>
     string? GetImageKey(string kind,
         string name);
 
@@ -49,6 +69,20 @@ public interface IWeaponSkinAPI
     /// </summary>
     bool TryGetMusicKit(ulong steamid,
         out int musicKitIndex);
+
+    /// <summary>
+    /// The graffiti the player has chosen, if any and if they may use graffiti. The tint is 0 for a graffiti that takes none.
+    /// </summary>
+    bool TryGetGraffiti(ulong steamid,
+        out int graffitiIndex,
+        out int tintIndex);
+
+    /// <summary>
+    /// The patches the player has chosen for their agent on a team, if any and if they may use patches: one patch index per slot, 0 for an empty slot.
+    /// </summary>
+    bool TryGetAgentPatches(ulong steamid,
+        Team team,
+        [MaybeNullWhen(false)] out IReadOnlyList<int> patchIndices);
 
     void SetWeaponSkins(IEnumerable<WeaponSkinData> skins,
         bool permanent = false);

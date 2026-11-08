@@ -17,6 +17,7 @@ public class WeaponSkinAPI : IWeaponSkinAPI
     private EconService EconService { get; init; }
     private ItemPermissionService ItemPermissionService { get; init; }
     private WeaponSkinGetterAPI WeaponSkinGetterAPI { get; init; }
+    private AgentPatchService AgentPatchService { get; init; }
 
     public IReadOnlyDictionary<string, ItemDefinition> Items => EconService.Items.AsReadOnly();
 
@@ -32,6 +33,15 @@ public class WeaponSkinAPI : IWeaponSkinAPI
 
     public IReadOnlyDictionary<string, MusicKitDefinition> MusicKits => EconService.MusicKits.AsReadOnly();
 
+    public IReadOnlyDictionary<string, GraffitiDefinition> Graffiti => EconService.Graffiti.AsReadOnly();
+
+    public IReadOnlyDictionary<string, GraffitiTintDefinition> GraffitiTints => EconService.GraffitiTints.AsReadOnly();
+
+    public IReadOnlyDictionary<string, PatchDefinition> Patches => EconService.Patches.AsReadOnly();
+
+    public IReadOnlyDictionary<string, PatchCollectionDefinition> PatchCollections =>
+        EconService.PatchCollections.AsReadOnly();
+
     public string? GetImageKey(string kind,
         string name) => EconService.GetImageKey(kind, name);
 
@@ -40,7 +50,8 @@ public class WeaponSkinAPI : IWeaponSkinAPI
         DataService dataService,
         StorageService storageService,
         EconService econService,
-        ItemPermissionService itemPermissionService
+        ItemPermissionService itemPermissionService,
+        AgentPatchService agentPatchService
     )
     {
         InventoryUpdateService = inventoryUpdateService;
@@ -49,6 +60,7 @@ public class WeaponSkinAPI : IWeaponSkinAPI
         EconService = econService;
         ItemPermissionService = itemPermissionService;
         WeaponSkinGetterAPI = weaponSkinGetterAPI;
+        AgentPatchService = agentPatchService;
     }
 
     public void SetWeaponSkins(IEnumerable<WeaponSkinData> skins,
@@ -120,7 +132,7 @@ public class WeaponSkinAPI : IWeaponSkinAPI
             return;
         }
 
-        SetKnifeSkins([newKnife], permanent);
+        SetKnifeSkins([ItemPermissionService.ApplyKnifeUpdateRules(knife, newKnife)], permanent);
     }
 
     public void UpdateGloveSkin(ulong steamid,
@@ -145,7 +157,7 @@ public class WeaponSkinAPI : IWeaponSkinAPI
             return;
         }
 
-        SetGloveSkins([newGlove], permanent);
+        SetGloveSkins([ItemPermissionService.ApplyGloveUpdateRules(glove, newGlove)], permanent);
     }
 
     public bool TryGetWeaponSkin(ulong steamid,
@@ -289,6 +301,75 @@ public class WeaponSkinAPI : IWeaponSkinAPI
         if (permanent)
         {
             var _ = Task.Run(async () => await StorageService.Get().RemoveMusicKitAsync(steamid));
+        }
+    }
+
+    public bool TryGetGraffiti(ulong steamid,
+        out int graffitiIndex,
+        out int tintIndex) =>
+        WeaponSkinGetterAPI.TryGetGraffiti(steamid, out graffitiIndex, out tintIndex);
+
+    public void SetGraffiti(ulong steamid,
+        int graffitiIndex,
+        int tintIndex,
+        bool permanent = true)
+    {
+        DataService.GraffitiDataService.SetGraffiti(steamid, graffitiIndex, tintIndex);
+        if (permanent)
+        {
+            var _ = Task.Run(async () => await StorageService.Get().StoreGraffitiAsync([(steamid, graffitiIndex, tintIndex)]));
+        }
+    }
+
+    public void ResetGraffiti(ulong steamid,
+        bool permanent = true)
+    {
+        DataService.GraffitiDataService.RemoveGraffiti(steamid);
+        if (permanent)
+        {
+            var _ = Task.Run(async () => await StorageService.Get().RemoveGraffitiAsync(steamid));
+        }
+    }
+
+    public bool TryGetAgentPatches(ulong steamid,
+        Team team,
+        [MaybeNullWhen(false)] out IReadOnlyList<int> patchIndices) =>
+        WeaponSkinGetterAPI.TryGetAgentPatches(steamid, team, out patchIndices);
+
+    // A patch index of 0 empties the slot.
+    public void SetAgentPatch(ulong steamid,
+        Team team,
+        int slot,
+        int patchIndex,
+        bool permanent = true)
+    {
+        if (slot is < 0 or >= AgentPatchDataService.Slots)
+        {
+            return;
+        }
+
+        DataService.AgentPatchDataService.SetPatch(steamid, team, slot, patchIndex);
+        AgentPatchService.Refresh(steamid, team);
+        if (permanent)
+        {
+            var storage = StorageService.Get();
+            var _ = Task.Run(async () =>
+            {
+                if (patchIndex == 0) await storage.RemoveAgentPatchAsync(steamid, team, slot);
+                else await storage.StoreAgentPatchesAsync([(steamid, team, slot, patchIndex)]);
+            });
+        }
+    }
+
+    public void ResetAgentPatches(ulong steamid,
+        Team team,
+        bool permanent = true)
+    {
+        DataService.AgentPatchDataService.RemovePatches(steamid, team);
+        AgentPatchService.Refresh(steamid, team);
+        if (permanent)
+        {
+            var _ = Task.Run(async () => await StorageService.Get().RemoveAgentPatchesAsync(steamid, team));
         }
     }
 

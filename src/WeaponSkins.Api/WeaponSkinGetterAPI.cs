@@ -92,5 +92,35 @@ public class WeaponSkinGetterAPI
 
         return false;
     }
+
+    public bool TryGetGraffiti(ulong steamid,
+        out int graffitiIndex,
+        out int tintIndex)
+    {
+        if (ItemPermissionService.CanUseGraffiti(steamid))
+        {
+            return DataService.GraffitiDataService.TryGetGraffiti(steamid, out graffitiIndex, out tintIndex);
+        }
+
+        graffitiIndex = 0;
+        tintIndex = 0;
+        return false;
+    }
+
+    public bool TryGetAgentPatches(ulong steamid,
+        Team team,
+        [MaybeNullWhen(false)] out IReadOnlyList<int> patchIndices)
+    {
+        patchIndices = null;
+        if (!ItemPermissionService.CanUsePatches(steamid)
+            || !DataService.AgentPatchDataService.TryGetPatches(steamid, team, out var patches))
+        {
+            return false;
+        }
+
+        // A copy, so a caller holding an int[] can't write into the stored patches.
+        patchIndices = patches.ToArray();
+        return true;
+    }
 }
 

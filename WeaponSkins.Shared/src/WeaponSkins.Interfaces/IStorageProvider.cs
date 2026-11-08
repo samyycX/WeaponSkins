@@ -227,4 +227,76 @@ public interface IStorageProvider
     /// <param name="steamId">The SteamID64 of the player.</param>
     /// <returns>A task representing the asynchronous operation.</returns>
     Task RemoveMusicKitAsync(ulong steamId);
+
+    // The graffiti members have default bodies so storage plugins built before them keep loading; those just don't save graffiti.
+
+    /// <summary>
+    /// Store the graffiti.
+    /// </summary>
+    /// <param name="graffiti">The graffiti to store, one per player. TintIndex is 0 for a graffiti that takes no tint.</param>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    Task StoreGraffitiAsync(IEnumerable<(ulong SteamID, int GraffitiIndex, int TintIndex)> graffiti) => Task.CompletedTask;
+
+    /// <summary>
+    /// Get a player's graffiti.
+    /// </summary>
+    /// <param name="steamId">The SteamID64 of the player.</param>
+    /// <returns>The graffiti data.</returns>
+    Task<IEnumerable<(ulong SteamID, int GraffitiIndex, int TintIndex)>> GetGraffitiAsync(ulong steamId) =>
+        Task.FromResult(Enumerable.Empty<(ulong SteamID, int GraffitiIndex, int TintIndex)>());
+
+    /// <summary>
+    /// Get all graffiti.
+    /// </summary>
+    /// <returns>The graffiti data.</returns>
+    Task<IEnumerable<(ulong SteamID, int GraffitiIndex, int TintIndex)>> GetAllGraffitiAsync() =>
+        Task.FromResult(Enumerable.Empty<(ulong SteamID, int GraffitiIndex, int TintIndex)>());
+
+    /// <summary>
+    /// Remove a player's graffiti.
+    /// </summary>
+    /// <param name="steamId">The SteamID64 of the player.</param>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    Task RemoveGraffitiAsync(ulong steamId) => Task.CompletedTask;
+
+    // The agent patch members have default bodies too; storage plugins built before them don't save patches.
+
+    /// <summary>
+    /// Store agent patches.
+    /// </summary>
+    /// <param name="patches">The patches to store, one per player, team and slot. Slot is 0 to 4.</param>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    Task StoreAgentPatchesAsync(IEnumerable<(ulong SteamID, Team Team, int Slot, int PatchIndex)> patches) => Task.CompletedTask;
+
+    /// <summary>
+    /// Get a player's agent patches.
+    /// </summary>
+    /// <param name="steamId">The SteamID64 of the player.</param>
+    /// <returns>The patches data.</returns>
+    Task<IEnumerable<(ulong SteamID, Team Team, int Slot, int PatchIndex)>> GetAgentPatchesAsync(ulong steamId) =>
+        Task.FromResult(Enumerable.Empty<(ulong SteamID, Team Team, int Slot, int PatchIndex)>());
+
+    /// <summary>
+    /// Get all agent patches.
+    /// </summary>
+    /// <returns>The patches data.</returns>
+    Task<IEnumerable<(ulong SteamID, Team Team, int Slot, int PatchIndex)>> GetAllAgentPatchesAsync() =>
+        Task.FromResult(Enumerable.Empty<(ulong SteamID, Team Team, int Slot, int PatchIndex)>());
+
+    /// <summary>
+    /// Remove the patch in one slot.
+    /// </summary>
+    /// <param name="steamId">The SteamID64 of the player.</param>
+    /// <param name="team">The team of the player.</param>
+    /// <param name="slot">The slot, 0 to 4.</param>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    Task RemoveAgentPatchAsync(ulong steamId, Team team, int slot) => Task.CompletedTask;
+
+    /// <summary>
+    /// Remove a player's agent patches on a team.
+    /// </summary>
+    /// <param name="steamId">The SteamID64 of the player.</param>
+    /// <param name="team">The team of the player.</param>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    Task RemoveAgentPatchesAsync(ulong steamId, Team team) => Task.CompletedTask;
 }

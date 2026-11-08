@@ -26,6 +26,7 @@ public partial class MenuService
     private LocalizationService LocalizationService { get; init; }
     private ItemPermissionService ItemPermissionService { get; init; }
     private DataService DataService { get; init; }
+    private AgentPatchService AgentPatchService { get; init; }
 
     public MenuService(ISwiftlyCore core,
         ILogger<MenuService> logger,
@@ -33,7 +34,8 @@ public partial class MenuService
         EconService econService,
         LocalizationService localizationService,
         ItemPermissionService itemPermissionService,
-        DataService dataService)
+        DataService dataService,
+        AgentPatchService agentPatchService)
     {
         Core = core;
         Logger = logger;
@@ -42,6 +44,7 @@ public partial class MenuService
         LocalizationService = localizationService;
         ItemPermissionService = itemPermissionService;
         DataService = dataService;
+        AgentPatchService = agentPatchService;
     }
 
     private IMenuBuilder CreateMenu(string id) => Core.Menu.CreateMenu(id);
@@ -63,12 +66,16 @@ public partial class MenuService
             "weaponskins.agents", () => BuildAgentMenu(player)));
         main.Add(CreateCategory(ItemPermissionService.CanUseMusicKits(steamId), loc.MenuTitleMusicKits,
             "weaponskins.musickits", () => BuildMusicKitMenu(player)));
+        main.Add(CreateCategory(ItemPermissionService.CanUseGraffiti(steamId), loc.MenuTitleGraffiti,
+            "weaponskins.graffiti", () => BuildGraffitiMenu(player)));
         main.Add(CreateCategory(ItemPermissionService.CanUseWeaponSkins(steamId), loc.MenuTitleWeaponProperties,
             "weaponskins.weaponproperties", () => BuildWeaponPropertiesMenu(player)));
         main.Add(CreateCategory(ItemPermissionService.CanUseKnifeSkins(steamId), loc.MenuTitleKnifeProperties,
             "weaponskins.knifeproperties", () => BuildKnifePropertiesMenu(player)));
         main.Add(CreateCategory(ItemPermissionService.CanUseGloveSkins(steamId), loc.MenuTitleGloveProperties,
             "weaponskins.gloveproperties", () => BuildGlovePropertiesMenu(player)));
+        main.Add(CreateCategory(ItemPermissionService.CanUsePatches(steamId), loc.MenuTitleAgentProperties,
+            "weaponskins.agentproperties", () => BuildAgentPropertiesMenu(player)));
 
         var menu = main.Build();
         TrackFocus(menu);

@@ -110,6 +110,7 @@ public partial class MenuService
             {
                 if (!player.IsAlive()) return;
                 pawn.SetModel(modelPath);
+                AgentPatchService.Apply(player);
             });
         });
     }

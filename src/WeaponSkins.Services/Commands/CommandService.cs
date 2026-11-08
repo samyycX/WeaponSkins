@@ -4,6 +4,7 @@ using SwiftlyS2.Shared;
 using SwiftlyS2.Shared.Commands;
 
 using WeaponSkins.Database;
+using WeaponSkins.Services;
 
 namespace WeaponSkins;
 
@@ -14,16 +15,19 @@ public partial class CommandService
     private ILogger Logger { get; init; }
     private MenuService MenuService { get; init; }
     private StorageService StorageService { get; init; }
+    private GraffitiService GraffitiService { get; init; }
 
     public CommandService(ISwiftlyCore core,
         ILogger<CommandService> logger,
         MenuService menuService,
-        StorageService storageService)
+        StorageService storageService,
+        GraffitiService graffitiService)
     {
         Core = core;
         Logger = logger;
         MenuService = menuService;
         StorageService = storageService;
+        GraffitiService = graffitiService;
 
         RegisterCommands();
     }
@@ -32,6 +36,7 @@ public partial class CommandService
         Core.Command.RegisterCommand("ws", CommandSkin);
         Core.Command.RegisterCommand("wp", CommandReload);
         Core.Command.RegisterCommand("wp_admin", CommandReloadBySteamId);
+        Core.Command.RegisterCommand("spray", CommandSpray);
     }
 
     private void CommandSkin(ICommandContext context)
@@ -84,5 +89,16 @@ public partial class CommandService
         }
 
         StorageService.ReloadPlayer(player, context.Reply);
+    }
+
+    private void CommandSpray(ICommandContext context)
+    {
+        if (!context.IsSentByPlayer || context.Sender is not { IsValid: true } player)
+        {
+            context.Reply("This command can only be used by players.");
+            return;
+        }
+
+        GraffitiService.Spray(player);
     }
 }

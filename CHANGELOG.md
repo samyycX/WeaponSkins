@@ -19,6 +19,46 @@ file; their notes are on the [releases page](https://github.com/samyycX/WeaponSk
 
 ---
 
+## [0.8.0] - 2026-11-08
+
+- Players can spray graffiti: they pick one under **Graffiti** in `!ws`, plus a colour for
+  the plain ones, then type `!spray` while aiming at a nearby wall or floor. It can go on a
+  key with `bind t sw_spray` in the player's console.
+- Each player has one graffiti on the map at a time, and waits 30 seconds between sprays.
+  To change the wait, add `GraffitiCooldown` under `[Main]` in `config.toml`.
+- Players who own a graffiti in their Steam inventory can also spray with the game's
+  graffiti key, and it shows the graffiti they chose in `!ws`. To keep the game's own
+  graffiti on that key, add `ReplaceNativeGraffiti = false` under `[Main]`.
+- Graffiti can be made VIP-only like the other items: add `Graffiti = "vip"` under
+  `[Main.ItemPermissions]`.
+- Agents can wear patches: **Agent Properties** in `!ws` has five patch slots per team,
+  filled from the game's patch packs. To make them VIP-only, add `Patches = "vip"` under
+  `[Main.ItemPermissions]`.
+- Patch packs no longer show up among the sticker collections in **Weapon Properties**.
+- Name tags, wear and seed can be made VIP-only, like knives or stickers. Existing
+  `config.toml` files don't get the new keys on their own: add `Nametag`, `Wear` or `Seed`
+  under `[Main.ItemPermissions]` with a permission, e.g. `Wear = "vip"`.
+- Without that permission, the setting is greyed out on the properties pages, and the
+  player's items fall back to no name tag, wear 0 or seed 0 until they get it back.
+- A StatTrak™ weapon no longer re-deploys after every kill when the player lacks the
+  sticker or charm permission but still has stickers or a charm saved on it.
+- WeaponSkins adds `wp_player_graffiti` and `wp_player_agent_patches` tables to its
+  database on the first start.
+- The first start after updating takes a little longer while WeaponSkins re-reads the
+  game's item list.
+- If you edited the translation files, add the new `menu.graffiti.title`,
+  `menu.agentproperties.*` and `graffiti.*` keys to them.
+- For plugin developers: `IWeaponSkinAPI` adds `Graffiti`, `GraffitiTints`,
+  `TryGetGraffiti`, `Patches`, `PatchCollections` and `TryGetAgentPatches`, and
+  `GetImageKey` takes `graffiti`, `graffititournament`, `patch` and `patchcapsule`.
+  Graffiti rows carry a `GraffitiDefinition` or `GraffitiTintDefinition` as their `Tag`,
+  tournament rows their event id, patch rows a `PatchDefinition` or
+  `PatchCollectionDefinition`, and patch slot rows the slot number. `IStorageProvider`
+  gains graffiti and agent patch members with default bodies, so storage plugins keep
+  loading but don't save those until they implement them. Restart the server after
+  updating, rather than reloading the plugin, so other plugins see the new
+  `WeaponSkins.Shared.dll`.
+
 ## [0.7.0] - 2026-11-07
 
 Worth updating if skins stop applying after a CS2 update, or players see an old finish on

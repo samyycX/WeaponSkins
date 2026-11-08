@@ -1,7 +1,8 @@
 # WeaponSkins — Copilot Instructions
 
 > A SwiftlyS2 plugin (C#, .NET 10) for Counter-Strike 2: players pick weapon skins,
-> knives, gloves, stickers, charms, agents and music kits from the `!ws` menu.
+> knives, gloves, stickers, charms, agents and their patches, music kits and graffiti from
+> the `!ws` menu.
 > Upstream is `samyycX/WeaponSkins`; contributions arrive as pull requests.
 
 ## Where things are documented
@@ -27,7 +28,7 @@ src/
   WeaponSkins.Configuration/            MainConfigModel, ItemPermissionConfig — config.toml, section [Main]
   WeaponSkins.Database/                 StorageService, DatabaseService (FreeSql + FluentMigrator), sync, models, migrations
   WeaponSkins.Econ/                     EconService: the item catalog, parsed from the game's own files
-  WeaponSkins.Services/                 Commands, Data, Inventory, Menu, Permissions, Player, Stattrak, Localization
+  WeaponSkins.Services/                 Commands, Data, Graffiti, Inventory, Menu, Permissions, Player, Stattrak, Localization
   WeaponSkins.Extensions/               PlayerExtensions (RegiveWeapon / RegiveKnife), dictionary helpers
   WeaponSkins.Utilities/                definition-index classifiers (knife / glove / weapon)
 WeaponSkins.Shared/                     the public contract, namespace WeaponSkins.Shared
@@ -102,14 +103,32 @@ from how the CS2 client caches finishes, and each one fixed a visible bug:
 StatTrak™ counts on `EventPlayerDeath` against the attacker's active weapon and is saved on
 every kill (`StattrakService`).
 
+Graffiti is not an inventory item. `GraffitiService` spawns a `player_spray_decal` on the
+static surface `!spray` aims at, keeps one per player and forgets them on map load. Its
+trace only hits `worldent` and `prop_static` (the world reaches the trace filter as an
+entity), so it passes through the sprayer, their held weapon and anything that moves. The
+game's own graffiti key works only for players who own a graffiti; with
+`ReplaceNativeGraffiti` its decal gets the player's `!ws` sticker kit and tint on the next
+world update after it is created, once the game has filled it in.
+
+Agent patches are not an econ item either: the game draws them from the pawn's
+`m_vecPlayerPatchEconIndices` (five slots), whatever model it wears. `AgentPatchService`
+writes them after the agent model is set (spawn, an agent picked in `!ws`, a reload) and
+when they change. A team with no chosen patches is left alone, so a player's own show.
+
 ## Permissions
 
-`ItemPermissionService` gates each item kind by `[Main.ItemPermissions]` in `config.toml`;
-an empty string means everyone. Reads go through `WeaponSkinGetterAPI` and the
-`TryBuild*View` methods, which return a clone with stickers and charms stripped when the
-player lacks those permissions. Weapon writes go through `ApplyWeaponUpdateRules`, which
-keeps the stored stickers and charm in that case. Agents and music kits are gated in the
-menu only, so saved ones keep showing — the README promises that.
+`ItemPermissionService` gates each item kind, and the name tag, wear and seed settings, by
+`[Main.ItemPermissions]` in `config.toml`; an empty string means everyone. Reads go through
+`WeaponSkinGetterAPI` and the `TryBuild*View` methods, which return a clone with stickers
+and charms stripped, and name tag, wear and seed reset to a new skin's defaults, when the
+player lacks those permissions. Writes go through `ApplyWeaponUpdateRules`,
+`ApplyKnifeUpdateRules` and `ApplyGloveUpdateRules`, which keep the stored values in that
+case. A trimmed view never equals its save, so only a changed save remakes a carried
+weapon or knife — StatTrak™ saves on every kill. Agents and music kits are gated in the
+menu only, so saved ones keep showing — the README promises that. Graffiti is gated in the
+menu, in `!spray`, in the native-spray swap and in `TryGetGraffiti`; patches in the menu,
+when applied and in `TryGetAgentPatches`.
 
 ## Item catalog
 
@@ -154,7 +173,9 @@ misreads `NextTickAsync<T>(Func<T>)`.
 
 - The tables are WeaponPaints-compatible (`wp_player_skins`, `wp_player_knife`,
   `wp_player_gloves`, `wp_player_agents`, `wp_player_music`) so servers can switch from
-  WeaponPaints and websites can read them. **Never rename or retype an existing column.**
+  WeaponPaints and websites can read them; `wp_player_graffiti` and `wp_player_agent_patches`
+  are WeaponSkins' own.
+  **Never rename or retype an existing column.**
 - Schema changes are FluentMigrator migrations in `src/WeaponSkins.Database/Migrations/`,
   numbered `MigrationNNN`, tracked in `__weaponskins_version_info`. Guard a create with
   `Schema.Table(...).Exists()` — the table may already exist from WeaponPaints — and keep
@@ -175,24 +196,25 @@ misreads `NextTickAsync<T>(Func<T>)`.
   every plugin to the exports copy it read at server start, so after a contract change a
   plugin reload keeps the old one — the changelog tells admins to restart.
 - Change it additively. Removing or changing a member breaks every plugin compiled against
-  it. `IStorageProvider` is implemented by external storage plugins, so even a new member
-  there breaks them, and needs the same member on `DatabaseService` and
-  `EmptyStorageProvider`.
+  it. `IStorageProvider` is implemented by external storage plugins, so a new member there
+  needs a default body, as the graffiti and agent patch members have, or those plugins stop
+  loading. It also gets a real one on `DatabaseService` and `EmptyStorageProvider`.
 - The README's API section lists the members; keep it in step.
 
 ## Configuration
 
 `config.toml`, section `[Main]`, bound to `MainConfigModel` through Tomlyn. The file is
-generated from the model's defaults on first load. `StorageService` and
-`ItemPermissionService` follow edits through `IOptionsMonitor`; `EconService` reads
+generated from the model's defaults on first load. `StorageService`, `ItemPermissionService`
+and `GraffitiService` follow edits through `IOptionsMonitor`; `EconService` reads
 `ItemLanguages` once. A new, renamed or removed key updates the README's settings block
 and table, and gets a changelog bullet.
 
 ## Commands
 
-`CommandService` registers `ws` (open the menu), `wp` (reload your saved skins) and
-`wp_admin <SteamID64>` (console/RCON only). Players type `!ws` and `!wp`; the console form
-is `sw_wp_admin`. The README command table is the user-facing list.
+`CommandService` registers `ws` (open the menu), `wp` (reload your saved skins), `spray`
+(spray your graffiti) and `wp_admin <SteamID64>` (console/RCON only). Players type `!ws`,
+`!wp` and `!spray`; the console form is `sw_wp_admin`. The README command table is the
+user-facing list.
 
 ## Translations
 

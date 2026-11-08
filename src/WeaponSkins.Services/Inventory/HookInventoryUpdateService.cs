@@ -26,6 +26,7 @@ public class HookInventoryUpdateService : IInventoryUpdateService, IDisposable
     private WeaponSkinGetterAPI Api { get; }
     private DataService DataService { get; }
     private EconService EconService { get; }
+    private AgentPatchService AgentPatchService { get; }
 
     public HookInventoryUpdateService(ISwiftlyCore core,
         WeaponSkinGetterAPI api,
@@ -33,7 +34,8 @@ public class HookInventoryUpdateService : IInventoryUpdateService, IDisposable
         ILogger<HookInventoryUpdateService> logger,
         ItemPermissionService itemPermissionService,
         DataService dataService,
-        EconService econService)
+        EconService econService,
+        AgentPatchService agentPatchService)
     {
         Core = core;
         Api = api;
@@ -42,6 +44,7 @@ public class HookInventoryUpdateService : IInventoryUpdateService, IDisposable
         ItemPermissionService = itemPermissionService;
         DataService = dataService;
         EconService = econService;
+        AgentPatchService = agentPatchService;
 
         Core.Event.OnEntityCreated += OnEntityCreated;
         Core.Event.OnMapLoad += _ => FinishCacheKeys.Clear();
@@ -197,7 +200,9 @@ public class HookInventoryUpdateService : IInventoryUpdateService, IDisposable
                     {
                         if (!player.IsAlive()) return;
                         pawn.SetModel(modelPath);
+                        AgentPatchService.Apply(player);
                     });
+                    return;
                 }
             }
             else if (DataService.AgentDataService.TryGetDefaultModel(player.SteamID, player.Controller.Team,
@@ -214,8 +219,12 @@ public class HookInventoryUpdateService : IInventoryUpdateService, IDisposable
                 {
                     if (!player.IsAlive()) return;
                     pawn.SetModel(defaultModel);
+                    AgentPatchService.Apply(player);
                 });
+                return;
             }
+
+            AgentPatchService.Apply(player);
         });
     }
 
@@ -225,8 +234,8 @@ public class HookInventoryUpdateService : IInventoryUpdateService, IDisposable
 
         foreach (var skin in skins)
         {
-            if (ItemPermissionService.TryBuildWeaponSkinView(skin, out var runtimeSkin) &&
-                (DataService.WeaponDataService.StoreSkin(skin) || !runtimeSkin.Equals(skin)))
+            // Only a changed save remakes: a permission-trimmed view never equals it, and StatTrak™ saves every kill.
+            if (ItemPermissionService.CanUseWeaponSkins(skin.SteamID) && DataService.WeaponDataService.StoreSkin(skin))
             {
                 changed.GetOrAdd(skin.SteamID, () => new()).Add((skin.Team, skin.DefinitionIndex));
             }
@@ -244,8 +253,8 @@ public class HookInventoryUpdateService : IInventoryUpdateService, IDisposable
         HashSet<(ulong SteamId, Team Team)> changed = new();
         foreach (var knife in knives)
         {
-            if (ItemPermissionService.TryBuildKnifeSkinView(knife, out var runtimeKnife) &&
-                (DataService.KnifeDataService.StoreKnife(knife) || !runtimeKnife.Equals(knife)))
+            // As for weapons, only a changed save.
+            if (ItemPermissionService.CanUseKnifeSkins(knife.SteamID) && DataService.KnifeDataService.StoreKnife(knife))
             {
                 changed.Add((knife.SteamID, knife.Team));
             }
@@ -602,6 +611,8 @@ public class HookInventoryUpdateService : IInventoryUpdateService, IDisposable
         {
             ResetMusicKit(steamId);
         }
+
+        AgentPatchService.Apply(player);
 
         if (!player.IsAlive()) return;
         var pawn = player.PlayerPawn;

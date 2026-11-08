@@ -77,9 +77,12 @@ public partial class MenuService
             Api.UpdateWeaponSkin(steamId, team, definition, apply, true);
 
         main.Add(CreateHero(player.PlayerLanguage.Value, definition, skin.Paintkit));
-        AddNametag(main, loc, skin.Nametag, nametag => Update(s => s.Nametag = nametag));
-        AddWear(main, loc, skin.PaintkitWear, wear => Update(s => s.PaintkitWear = wear));
-        main.Add(CreateSeedInput(loc, skin.PaintkitSeed, seed => Update(s => s.PaintkitSeed = seed)));
+        AddNametag(main, loc, ItemPermissionService.CanUseNametag(steamId), skin.Nametag,
+            nametag => Update(s => s.Nametag = nametag));
+        AddWear(main, loc, ItemPermissionService.CanUseWear(steamId), skin.PaintkitWear,
+            wear => Update(s => s.PaintkitWear = wear));
+        main.Add(CreateSeedInput(loc, ItemPermissionService.CanUseSeed(steamId), skin.PaintkitSeed,
+            seed => Update(s => s.PaintkitSeed = seed)));
         AddStattrak(main, loc, skin.StattrakCount, skin.Quality,
             count => Update(s => s.StattrakCount = count),
             quality => Update(s => s.Quality = quality),

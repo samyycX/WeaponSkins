@@ -225,8 +225,8 @@ public class HookInventoryUpdateService : IInventoryUpdateService, IDisposable
 
         foreach (var skin in skins)
         {
-            if (ItemPermissionService.TryBuildWeaponSkinView(skin, out var runtimeSkin) &&
-                (DataService.WeaponDataService.StoreSkin(skin) || !runtimeSkin.Equals(skin)))
+            // Only a changed save remakes: a permission-trimmed view never equals it, and StatTrak™ saves every kill.
+            if (ItemPermissionService.CanUseWeaponSkins(skin.SteamID) && DataService.WeaponDataService.StoreSkin(skin))
             {
                 changed.GetOrAdd(skin.SteamID, () => new()).Add((skin.Team, skin.DefinitionIndex));
             }
@@ -244,8 +244,8 @@ public class HookInventoryUpdateService : IInventoryUpdateService, IDisposable
         HashSet<(ulong SteamId, Team Team)> changed = new();
         foreach (var knife in knives)
         {
-            if (ItemPermissionService.TryBuildKnifeSkinView(knife, out var runtimeKnife) &&
-                (DataService.KnifeDataService.StoreKnife(knife) || !runtimeKnife.Equals(knife)))
+            // As for weapons, only a changed save.
+            if (ItemPermissionService.CanUseKnifeSkins(knife.SteamID) && DataService.KnifeDataService.StoreKnife(knife))
             {
                 changed.Add((knife.SteamID, knife.Team));
             }

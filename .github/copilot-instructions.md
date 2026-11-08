@@ -104,11 +104,14 @@ every kill (`StattrakService`).
 
 ## Permissions
 
-`ItemPermissionService` gates each item kind by `[Main.ItemPermissions]` in `config.toml`;
-an empty string means everyone. Reads go through `WeaponSkinGetterAPI` and the
-`TryBuild*View` methods, which return a clone with stickers and charms stripped when the
-player lacks those permissions. Weapon writes go through `ApplyWeaponUpdateRules`, which
-keeps the stored stickers and charm in that case. Agents and music kits are gated in the
+`ItemPermissionService` gates each item kind, and the name tag, wear and seed settings, by
+`[Main.ItemPermissions]` in `config.toml`; an empty string means everyone. Reads go through
+`WeaponSkinGetterAPI` and the `TryBuild*View` methods, which return a clone with stickers
+and charms stripped, and name tag, wear and seed reset to a new skin's defaults, when the
+player lacks those permissions. Writes go through `ApplyWeaponUpdateRules`,
+`ApplyKnifeUpdateRules` and `ApplyGloveUpdateRules`, which keep the stored values in that
+case. A trimmed view never equals its save, so only a changed save remakes a carried
+weapon or knife — StatTrak™ saves on every kill. Agents and music kits are gated in the
 menu only, so saved ones keep showing — the README promises that.
 
 ## Item catalog

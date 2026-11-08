@@ -17,4 +17,10 @@ public class ItemPermissionConfig
     public string Agents { get; set; } = "";
 
     public string MusicKits { get; set; } = "";
+
+    public string Nametag { get; set; } = "";
+
+    public string Wear { get; set; } = "";
+
+    public string Seed { get; set; } = "";
 }

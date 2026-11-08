@@ -187,6 +187,9 @@ Stickers = ""
 Keychains = ""   # charms
 Agents = ""
 MusicKits = ""
+Nametag = ""
+Wear = ""
+Seed = ""   # pattern
 ```
 
 | Setting | What it does |
@@ -207,6 +210,8 @@ To limit a feature to players with a permission, put the permission next to it â
 Players get permissions in SwiftlyS2's `addons/swiftlys2/configs/permissions.jsonc`, by adding their SteamID64 under `"Players"`, e.g. `"76561198000000000": ["vip"]`.
 
 Without the permission, the menu entry is greyed out, and the player's saved items of that kind stop showing until they get it back. Agents and music kits are the exception: those keep showing.
+
+`Nametag`, `Wear` and `Seed` do the same for those settings on the **Weapon Properties**, **Knife Properties** and **Glove Properties** pages. Without the permission, the setting is greyed out and the player's items show what a newly chosen skin starts with: no name tag, wear `0`, pattern `0`. Their saved values come back with the permission.
 
 ## ðŸ©º Troubleshooting
 

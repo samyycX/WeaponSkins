@@ -19,6 +19,16 @@ file; their notes are on the [releases page](https://github.com/samyycX/WeaponSk
 
 ---
 
+## [0.8.0] - 2026-11-08
+
+- Name tags, wear and seed can be made VIP-only, like knives or stickers. Existing
+  `config.toml` files don't get the new keys on their own: add `Nametag`, `Wear` or `Seed`
+  under `[Main.ItemPermissions]` with a permission, e.g. `Wear = "vip"`.
+- Without that permission, the setting is greyed out on the properties pages, and the
+  player's items fall back to no name tag, wear 0 or seed 0 until they get it back.
+- A StatTrak™ weapon no longer re-deploys after every kill when the player lacks the
+  sticker or charm permission but still has stickers or a charm saved on it.
+
 ## [0.7.0] - 2026-11-07
 
 Worth updating if skins stop applying after a CS2 update, or players see an old finish on

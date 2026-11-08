@@ -120,7 +120,7 @@ public class WeaponSkinAPI : IWeaponSkinAPI
             return;
         }
 
-        SetKnifeSkins([newKnife], permanent);
+        SetKnifeSkins([ItemPermissionService.ApplyKnifeUpdateRules(knife, newKnife)], permanent);
     }
 
     public void UpdateGloveSkin(ulong steamid,
@@ -145,7 +145,7 @@ public class WeaponSkinAPI : IWeaponSkinAPI
             return;
         }
 
-        SetGloveSkins([newGlove], permanent);
+        SetGloveSkins([ItemPermissionService.ApplyGloveUpdateRules(glove, newGlove)], permanent);
     }
 
     public bool TryGetWeaponSkin(ulong steamid,

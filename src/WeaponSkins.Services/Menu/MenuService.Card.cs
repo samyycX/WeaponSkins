@@ -29,13 +29,14 @@ public partial class MenuService
         };
     }
 
-    private static void AddNametag(IMenuBuilder menu, PlayerLocalizationService loc, string? current, Action<string?> apply)
+    private static void AddNametag(IMenuBuilder menu, PlayerLocalizationService loc, bool enabled, string? current, Action<string?> apply)
     {
         // A chat capture refuses an empty message, so clearing needs its own control.
         var input = new InputComponent(loc.MenuSkinPropertiesNametag, current ?? "", null, ctx => apply(ctx.NewValue))
         {
             MaxLength = 32,
-            EmptyText = loc.MenuSkinPropertiesNametagNone
+            EmptyText = loc.MenuSkinPropertiesNametagNone,
+            Enabled = enabled
         };
         menu.Add(input);
         menu.Add(new ButtonComponent(loc.MenuSkinPropertiesNametagUnset, ctx =>
@@ -51,7 +52,7 @@ public partial class MenuService
     }
 
     // Each control writes the other's state directly, so a change runs one OnChanged and applies once.
-    private static void AddWear(IMenuBuilder menu, PlayerLocalizationService loc, float wear, Action<float> apply)
+    private static void AddWear(IMenuBuilder menu, PlayerLocalizationService loc, bool enabled, float wear, Action<float> apply)
     {
         InputComponent exact = null!;
         // Coarse on purpose: the exact field above it takes any value.
@@ -62,7 +63,8 @@ public partial class MenuService
         })
         {
             ValueFormat = "F2",
-            WrapAround = false
+            WrapAround = false,
+            Enabled = enabled
         };
         exact = new InputComponent(loc.MenuSkinPropertiesWear, FormatWear(wear),
             input => TryParseFloat(input, out var value) && value is >= 0f and <= 1f,
@@ -71,18 +73,22 @@ public partial class MenuService
                 if (!TryParseFloat(ctx.NewValue, out var value)) return;
                 apply(value);
                 Poke(ctx.Session, track, value);
-            });
+            })
+        {
+            Enabled = enabled
+        };
         menu.Add(exact);
         menu.Add(track);
     }
 
     private static string FormatWear(float wear) => wear.ToString("0.######", CultureInfo.InvariantCulture);
 
-    private static InputComponent CreateSeedInput(PlayerLocalizationService loc, int seed, Action<int> apply)
+    private static InputComponent CreateSeedInput(PlayerLocalizationService loc, bool enabled, int seed, Action<int> apply)
     {
         var input = CreateIntInput(loc.MenuSkinPropertiesSeed, seed, value => value is >= 0 and <= MaxSeed, (_, value) => apply(value));
         // Four, not three: a seed of 1000 written by another tool still displays whole.
         input.MaxLength = 4;
+        input.Enabled = enabled;
         return input;
     }
 

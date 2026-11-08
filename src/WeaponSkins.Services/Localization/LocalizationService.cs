@@ -43,6 +43,7 @@ public class PlayerLocalizationService
     public string MenuTitleKeychains => Localizer["menu.keychains.title"];
     public string MenuTitleAgents => Localizer["menu.agents.title"];
     public string MenuTitleMusicKits => Localizer["menu.musickits.title"];
+    public string MenuTitleGraffiti => Localizer["menu.graffiti.title"];
     public string MenuTitleWeaponProperties => Localizer["menu.weaponproperties.title"];
     public string MenuTitleKnifeProperties => Localizer["menu.knifeproperties.title"];
     public string MenuTitleGloveProperties => Localizer["menu.gloveproperties.title"];
@@ -72,4 +73,10 @@ public class PlayerLocalizationService
         Localizer["menu.skinproperties.stattrakcount", stattrak];
 
     public string MenuUnset => Localizer["menu.unset"];
+
+    public string GraffitiNoPermission => Localizer["graffiti.nopermission"];
+    public string GraffitiNotChosen => Localizer["graffiti.notchosen"];
+    public string GraffitiNotAlive => Localizer["graffiti.notalive"];
+    public string GraffitiNoSurface => Localizer["graffiti.nosurface"];
+    public string GraffitiCooldown(int seconds) => Localizer["graffiti.cooldown", seconds];
 }

@@ -6,6 +6,7 @@
   "menu.gloves.title": "手套",
   "menu.stickers.title": "貼紙",
   "menu.keychains.title": "吊飾",
+  "menu.graffiti.title": "塗鴉",
   "menu.skinproperties.setsticker": "貼紙 {0} ({1})",
   "menu.skinproperties.wear": "磨損值",
   "menu.skinproperties.wearinvalid": "無效的磨損值",
@@ -32,5 +33,10 @@
   "menu.reset": "重置",
   "menu.on": "開",
   "menu.off": "關",
-  "menu.weaponproperties.title": "武器屬性"
+  "menu.weaponproperties.title": "武器屬性",
+  "graffiti.nopermission": "你沒有使用塗鴉的權限。",
+  "graffiti.notchosen": "請先在 !ws 中選擇一個塗鴉。",
+  "graffiti.notalive": "你必須存活才能噴塗塗鴉。",
+  "graffiti.nosurface": "請瞄準附近的牆壁或地面。",
+  "graffiti.cooldown": "{0} 秒後可再次噴塗。"
 }

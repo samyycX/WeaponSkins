@@ -227,4 +227,35 @@ public interface IStorageProvider
     /// <param name="steamId">The SteamID64 of the player.</param>
     /// <returns>A task representing the asynchronous operation.</returns>
     Task RemoveMusicKitAsync(ulong steamId);
+
+    // The graffiti members have default bodies so storage plugins built before them keep loading; those just don't save graffiti.
+
+    /// <summary>
+    /// Store the graffiti.
+    /// </summary>
+    /// <param name="graffiti">The graffiti to store, one per player. TintIndex is 0 for a graffiti that takes no tint.</param>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    Task StoreGraffitiAsync(IEnumerable<(ulong SteamID, int GraffitiIndex, int TintIndex)> graffiti) => Task.CompletedTask;
+
+    /// <summary>
+    /// Get a player's graffiti.
+    /// </summary>
+    /// <param name="steamId">The SteamID64 of the player.</param>
+    /// <returns>The graffiti data.</returns>
+    Task<IEnumerable<(ulong SteamID, int GraffitiIndex, int TintIndex)>> GetGraffitiAsync(ulong steamId) =>
+        Task.FromResult(Enumerable.Empty<(ulong SteamID, int GraffitiIndex, int TintIndex)>());
+
+    /// <summary>
+    /// Get all graffiti.
+    /// </summary>
+    /// <returns>The graffiti data.</returns>
+    Task<IEnumerable<(ulong SteamID, int GraffitiIndex, int TintIndex)>> GetAllGraffitiAsync() =>
+        Task.FromResult(Enumerable.Empty<(ulong SteamID, int GraffitiIndex, int TintIndex)>());
+
+    /// <summary>
+    /// Remove a player's graffiti.
+    /// </summary>
+    /// <param name="steamId">The SteamID64 of the player.</param>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    Task RemoveGraffitiAsync(ulong steamId) => Task.CompletedTask;
 }

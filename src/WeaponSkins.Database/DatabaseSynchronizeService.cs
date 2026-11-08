@@ -32,6 +32,7 @@ public class DatabaseSynchronizeService
             var gloves = (await storage.GetAllGlovesAsync().WaitAsync(stopping)).ToArray();
             var agents = (await storage.GetAllAgentsAsync().WaitAsync(stopping)).ToArray();
             var musicKits = (await storage.GetAllMusicKitsAsync().WaitAsync(stopping)).ToArray();
+            var graffiti = (await storage.GetAllGraffitiAsync().WaitAsync(stopping)).ToArray();
             await Core.Scheduler.NextTickAsync(() =>
             {
                 if (stopping.IsCancellationRequested) return;
@@ -40,6 +41,7 @@ public class DatabaseSynchronizeService
                 foreach (var glove in gloves) DataService.GloveDataService.StoreGlove(glove);
                 foreach (var agent in agents) DataService.AgentDataService.SetAgent(agent.SteamID, agent.Team, agent.AgentIndex);
                 foreach (var musicKit in musicKits) DataService.MusicKitDataService.SetMusicKit(musicKit.SteamID, musicKit.MusicKitIndex);
+                foreach (var entry in graffiti) DataService.GraffitiDataService.SetGraffiti(entry.SteamID, entry.GraffitiIndex, entry.TintIndex);
             }).WaitAsync(stopping);
         }
         finally
@@ -61,6 +63,7 @@ public class DatabaseSynchronizeService
             var gloves = (await storage.GetGlovesAsync(steamId).WaitAsync(stopping)).Where(glove => glove.SteamID == steamId).ToArray();
             var agents = (await storage.GetAgentsAsync(steamId).WaitAsync(stopping)).Where(agent => agent.SteamID == steamId).ToArray();
             var musicKits = (await storage.GetMusicKitsAsync(steamId).WaitAsync(stopping)).Where(musicKit => musicKit.SteamID == steamId).ToArray();
+            var graffiti = (await storage.GetGraffitiAsync(steamId).WaitAsync(stopping)).Where(entry => entry.SteamID == steamId).ToArray();
 
             // Not NextTickAsync<T>(Func<T>): SwiftlyS2's obsolete-API scanner misreads it as the async overload.
             var reloaded = false;
@@ -77,12 +80,14 @@ public class DatabaseSynchronizeService
                 DataService.AgentDataService.TryRemoveAgent(steamId, Team.T);
                 DataService.AgentDataService.TryRemoveAgent(steamId, Team.CT);
                 DataService.MusicKitDataService.RemoveMusicKit(steamId);
+                DataService.GraffitiDataService.RemoveGraffiti(steamId);
 
                 foreach (var skin in skins) DataService.WeaponDataService.StoreSkin(skin);
                 foreach (var knife in knives) DataService.KnifeDataService.StoreKnife(knife);
                 foreach (var glove in gloves) DataService.GloveDataService.StoreGlove(glove);
                 foreach (var agent in agents) DataService.AgentDataService.SetAgent(steamId, agent.Team, agent.AgentIndex);
                 if (musicKits.Length > 0) DataService.MusicKitDataService.SetMusicKit(steamId, musicKits[^1].MusicKitIndex);
+                if (graffiti.Length > 0) DataService.GraffitiDataService.SetGraffiti(steamId, graffiti[^1].GraffitiIndex, graffiti[^1].TintIndex);
 
                 InventoryUpdateService.RefreshPlayer(steamId, hadGlove);
                 reloaded = true;

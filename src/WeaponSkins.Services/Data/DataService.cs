@@ -14,12 +14,15 @@ public class DataService
 
     public MusicKitDataService MusicKitDataService { get; init; }
 
+    public GraffitiDataService GraffitiDataService { get; init; }
+
     public DataService(
         WeaponDataService weaponDataService,
         KnifeDataService knifeDataService,
         GloveDataService gloveDataService,
         AgentDataService agentDataService,
-        MusicKitDataService musicKitDataService
+        MusicKitDataService musicKitDataService,
+        GraffitiDataService graffitiDataService
     )
     {
         WeaponDataService = weaponDataService;
@@ -27,5 +30,6 @@ public class DataService
         GloveDataService = gloveDataService;
         AgentDataService = agentDataService;
         MusicKitDataService = musicKitDataService;
+        GraffitiDataService = graffitiDataService;
     }
 }

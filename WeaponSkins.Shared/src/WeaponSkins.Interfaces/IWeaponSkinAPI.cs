@@ -37,9 +37,19 @@ public interface IWeaponSkinAPI
     IReadOnlyDictionary<string, MusicKitDefinition> MusicKits { get; }
 
     /// <summary>
+    /// All graffiti definitions indexed by name.
+    /// </summary>
+    IReadOnlyDictionary<string, GraffitiDefinition> Graffiti { get; }
+
+    /// <summary>
+    /// The colours a graffiti whose Tintable is true can be sprayed in, indexed by name.
+    /// </summary>
+    IReadOnlyDictionary<string, GraffitiTintDefinition> GraffitiTints { get; }
+
+    /// <summary>
     /// The game's inventory image for an item: a path under panorama/images/econ/, without extension, or null when the game ships none.
     /// </summary>
-    /// <param name="kind">One of agent, music, sticker, capsule, keychain, keychaincollection.</param>
+    /// <param name="kind">One of agent, music, sticker, capsule, keychain, keychaincollection, graffiti.</param>
     /// <param name="name">The definition's Name; for keychaincollection, the collection's name.</param>
     string? GetImageKey(string kind,
         string name);
@@ -49,6 +59,13 @@ public interface IWeaponSkinAPI
     /// </summary>
     bool TryGetMusicKit(ulong steamid,
         out int musicKitIndex);
+
+    /// <summary>
+    /// The graffiti the player has chosen, if any and if they may use graffiti. The tint is 0 for a graffiti that takes none.
+    /// </summary>
+    bool TryGetGraffiti(ulong steamid,
+        out int graffitiIndex,
+        out int tintIndex);
 
     void SetWeaponSkins(IEnumerable<WeaponSkinData> skins,
         bool permanent = false);

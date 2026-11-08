@@ -12,5 +12,7 @@ public class MainConfigModel
 
     public List<string> ItemLanguages { get; set; } = [];
 
+    public int GraffitiCooldown { get; set; } = 30;
+
     public ItemPermissionConfig ItemPermissions { get; set; } = new();
 }

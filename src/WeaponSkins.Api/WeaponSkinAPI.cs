@@ -32,6 +32,10 @@ public class WeaponSkinAPI : IWeaponSkinAPI
 
     public IReadOnlyDictionary<string, MusicKitDefinition> MusicKits => EconService.MusicKits.AsReadOnly();
 
+    public IReadOnlyDictionary<string, GraffitiDefinition> Graffiti => EconService.Graffiti.AsReadOnly();
+
+    public IReadOnlyDictionary<string, GraffitiTintDefinition> GraffitiTints => EconService.GraffitiTints.AsReadOnly();
+
     public string? GetImageKey(string kind,
         string name) => EconService.GetImageKey(kind, name);
 
@@ -289,6 +293,33 @@ public class WeaponSkinAPI : IWeaponSkinAPI
         if (permanent)
         {
             var _ = Task.Run(async () => await StorageService.Get().RemoveMusicKitAsync(steamid));
+        }
+    }
+
+    public bool TryGetGraffiti(ulong steamid,
+        out int graffitiIndex,
+        out int tintIndex) =>
+        WeaponSkinGetterAPI.TryGetGraffiti(steamid, out graffitiIndex, out tintIndex);
+
+    public void SetGraffiti(ulong steamid,
+        int graffitiIndex,
+        int tintIndex,
+        bool permanent = true)
+    {
+        DataService.GraffitiDataService.SetGraffiti(steamid, graffitiIndex, tintIndex);
+        if (permanent)
+        {
+            var _ = Task.Run(async () => await StorageService.Get().StoreGraffitiAsync([(steamid, graffitiIndex, tintIndex)]));
+        }
+    }
+
+    public void ResetGraffiti(ulong steamid,
+        bool permanent = true)
+    {
+        DataService.GraffitiDataService.RemoveGraffiti(steamid);
+        if (permanent)
+        {
+            var _ = Task.Run(async () => await StorageService.Get().RemoveGraffitiAsync(steamid));
         }
     }
 

@@ -8,6 +8,7 @@
   "menu.keychains.title": "Keychains",
   "menu.agents.title": "Agents",
   "menu.musickits.title": "Music Kits",
+  "menu.graffiti.title": "Graffiti",
   "menu.weaponproperties.title": "Weapon Properties",
   "menu.skinproperties.setsticker": "Sticker {0} ({1})",
   "menu.skinproperties.wear": "Wear",
@@ -34,5 +35,10 @@
   "menu.keychainproperties.resetoffset": "Reset Offset",
   "menu.reset": "Reset",
   "menu.on": "On",
-  "menu.off": "Off"
+  "menu.off": "Off",
+  "graffiti.nopermission": "You don't have access to graffiti.",
+  "graffiti.notchosen": "Choose a graffiti in !ws first.",
+  "graffiti.notalive": "You must be alive to spray graffiti.",
+  "graffiti.nosurface": "Aim at a nearby wall or floor.",
+  "graffiti.cooldown": "You can spray again in {0}s."
 }

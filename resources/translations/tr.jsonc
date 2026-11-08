@@ -7,6 +7,7 @@
   "menu.stickers.title": "Çıkartmalar",
   "menu.keychains.title": "Anahtarlıklar",
   "menu.agents.title": "Ajanlar",
+  "menu.graffiti.title": "Grafitiler",
   "menu.skinproperties.setsticker": "Çıkartma {0} ({1})",
   "menu.skinproperties.wear": "Aşınma",
   "menu.skinproperties.wearinvalid": "Geçersiz aşınma değeri",
@@ -33,5 +34,10 @@
   "menu.reset": "Sıfırla",
   "menu.on": "Açık",
   "menu.off": "Kapalı",
-  "menu.weaponproperties.title": "Silah Özellikleri"
+  "menu.weaponproperties.title": "Silah Özellikleri",
+  "graffiti.nopermission": "Grafitilere erişiminiz yok.",
+  "graffiti.notchosen": "Önce !ws üzerinden bir grafiti seçin.",
+  "graffiti.notalive": "Grafiti yapmak için hayatta olmalısınız.",
+  "graffiti.nosurface": "Yakındaki bir duvara veya zemine nişan alın.",
+  "graffiti.cooldown": "{0} sn sonra tekrar grafiti yapabilirsiniz."
 }

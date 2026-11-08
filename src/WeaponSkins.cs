@@ -54,6 +54,7 @@ public partial class WeaponSkins : BasePlugin
             .AddStattrakService()
             .AddLocalizationService()
             .AddItemPermissionService()
+            .AddGraffitiService()
             .AddCommandService();
 
 
@@ -74,6 +75,7 @@ public partial class WeaponSkins : BasePlugin
             .UseStattrakService()
             .UseLocalizationService()
             .UseItemPermissionService()
+            .UseGraffitiService()
             .UseCommandService();
     }
 

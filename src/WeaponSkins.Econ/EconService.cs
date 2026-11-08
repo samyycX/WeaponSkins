@@ -54,8 +54,14 @@ public class EconService
 
     public Dictionary<string /* Name */, MusicKitDefinition> MusicKits { get; set; } = new(StringComparer.OrdinalIgnoreCase);
 
+    public Dictionary<string /* Name */, GraffitiDefinition> Graffiti { get; set; } = new(StringComparer.OrdinalIgnoreCase);
+
+    public Dictionary<string /* Name */, GraffitiTintDefinition> GraffitiTints { get; set; } = new(StringComparer.OrdinalIgnoreCase);
+
+    public Dictionary<int /* tournament_event_id */, GraffitiTournamentDefinition> GraffitiTournaments { get; set; } = new();
+
     // Kept off the WeaponSkins.Shared records; IWeaponSkinAPI.GetImageKey serves them.
-    private Dictionary<string /* kind + ":" + Name, kind = agent/music/keychain/keychaincollection/sticker/capsule */, string /* panorama/images/econ-relative key */> ImageKeys { get; set; } = new();
+    private Dictionary<string /* kind + ":" + Name, kind = agent/music/keychain/keychaincollection/sticker/capsule/graffiti */, string /* panorama/images/econ-relative key */> ImageKeys { get; set; } = new();
 
     // Loot lists name charms by their item name, not the definition index Keychains is keyed by.
     private Dictionary<string, KeychainDefinition> KeychainsByItemName { get; } = new(StringComparer.OrdinalIgnoreCase);
@@ -67,7 +73,7 @@ public class EconService
 
     private Dictionary<string, string> RevolvingLootLists { get; } = new(StringComparer.OrdinalIgnoreCase);
 
-    private const int SchemaVersion = 28;
+    private const int SchemaVersion = 29;
 
     public EconService(ISwiftlyCore core,
         ILogger<EconService> logger,
@@ -104,7 +110,7 @@ public class EconService
                     File.ReadAllText(Path.Combine(Core.PluginDataDirectory, "version.lock")));
             if (new HashSet<string>(itemLanguages).SetEquals(lockVersion?.ItemLanguages ?? []) && lockVersion?.EconDataVersion == version && lockVersion.SchemaVersion == SchemaVersion)
             {
-                var files = new[] { "items.json", "agents.json", "weapon_to_paintkits.json", "sticker_collections.json", "keychains.json", "keychain_collections.json", "musickits.json", "image_keys.json" };
+                var files = new[] { "items.json", "agents.json", "weapon_to_paintkits.json", "sticker_collections.json", "keychains.json", "keychain_collections.json", "musickits.json", "graffiti.json", "graffiti_tints.json", "graffiti_tournaments.json", "image_keys.json" };
                 var allFilesExist = files.All(f => File.Exists(Path.Combine(Core.PluginDataDirectory, f)));
 
                 if (allFilesExist)
@@ -126,6 +132,12 @@ public class EconService
                         File.ReadAllText(Path.Combine(Core.PluginDataDirectory, "keychain_collections.json")))!;
                     MusicKits = JsonSerializer.Deserialize<Dictionary<string, MusicKitDefinition>>(
                         File.ReadAllText(Path.Combine(Core.PluginDataDirectory, "musickits.json")))!;
+                    Graffiti = JsonSerializer.Deserialize<Dictionary<string, GraffitiDefinition>>(
+                        File.ReadAllText(Path.Combine(Core.PluginDataDirectory, "graffiti.json")))!;
+                    GraffitiTints = JsonSerializer.Deserialize<Dictionary<string, GraffitiTintDefinition>>(
+                        File.ReadAllText(Path.Combine(Core.PluginDataDirectory, "graffiti_tints.json")))!;
+                    GraffitiTournaments = JsonSerializer.Deserialize<Dictionary<int, GraffitiTournamentDefinition>>(
+                        File.ReadAllText(Path.Combine(Core.PluginDataDirectory, "graffiti_tournaments.json")))!;
                     ImageKeys = JsonSerializer.Deserialize<Dictionary<string, string>>(
                         File.ReadAllText(Path.Combine(Core.PluginDataDirectory, "image_keys.json")))!;
 
@@ -222,6 +234,10 @@ public class EconService
         Logger.LogInformation($"Parsed {MusicKits.Count} music kits in {watch.ElapsedMilliseconds}ms.");
         watch.Restart();
 
+        ParseGraffiti();
+        Logger.LogInformation($"Parsed {Graffiti.Count} graffiti and {GraffitiTints.Count} tints in {watch.ElapsedMilliseconds}ms.");
+        watch.Restart();
+
         var version = new EconVersion { ItemLanguages = Config.ItemLanguages, EconDataVersion = GetVersion(items), SchemaVersion = SchemaVersion };
 
         File.WriteAllText(Path.Combine(Core.PluginDataDirectory, "version.lock"), JsonSerializer.Serialize(version));
@@ -259,6 +275,15 @@ public class EconService
 
         File.WriteAllText(Path.Combine(dataDirectory, "musickits.json"),
             JsonSerializer.Serialize(MusicKits, options));
+
+        File.WriteAllText(Path.Combine(dataDirectory, "graffiti.json"),
+            JsonSerializer.Serialize(Graffiti, options));
+
+        File.WriteAllText(Path.Combine(dataDirectory, "graffiti_tints.json"),
+            JsonSerializer.Serialize(GraffitiTints, options));
+
+        File.WriteAllText(Path.Combine(dataDirectory, "graffiti_tournaments.json"),
+            JsonSerializer.Serialize(GraffitiTournaments, options));
 
         File.WriteAllText(Path.Combine(dataDirectory, "image_keys.json"),
             JsonSerializer.Serialize(ImageKeys, options));
@@ -738,6 +763,74 @@ public class EconService
 
         stopwatch.Stop();
         Logger.LogInformation($"Parsed {MusicKits.Count} music kits in {stopwatch.ElapsedMilliseconds}ms.");
+    }
+
+    // Graffiti are sticker kits, picked out by cs2-lib's test; "default" ones are plain shapes sprayed in a tint.
+    public void ParseGraffiti()
+    {
+        foreach (var section in Root.Children)
+        {
+            if (section.Name == "graffiti_tints")
+            {
+                foreach (var tint in section.Children)
+                {
+                    var index = tint.Value["id"].EToInt32();
+                    GraffitiTints[tint.Name] = new GraffitiTintDefinition
+                    {
+                        Name = tint.Name,
+                        Index = index,
+                        HexColor = tint.Value["hex_color"].EToString(),
+                        LocalizedNames = GetLocalizedNames($"#Attrib_SprayTintValue_{index}", tint.Name)
+                    };
+                }
+            }
+            else if (section.Name == "sticker_kits")
+            {
+                foreach (var kit in section.Children)
+                {
+                    var name = kit.Value["name"]?.EToString() ?? string.Empty;
+                    var itemName = kit.Value["item_name"]?.EToString() ?? string.Empty;
+                    var material = kit.Value["sticker_material"]?.EToString() ?? string.Empty;
+                    if (!name.StartsWith("spray_", StringComparison.OrdinalIgnoreCase)
+                        && !itemName.Contains("#SprayKit", StringComparison.OrdinalIgnoreCase)
+                        && !material.Contains("_graffiti", StringComparison.OrdinalIgnoreCase))
+                    {
+                        continue;
+                    }
+
+                    var rarityName = kit.Value["item_rarity"];
+                    var definition = new GraffitiDefinition
+                    {
+                        Name = name,
+                        Index = int.Parse(kit.Name),
+                        LocalizedNames = GetLocalizedNames(itemName, name),
+                        Rarity = rarityName == null ? Rarities["default"] : Rarities[rarityName.EToString()],
+                        Tintable = material.StartsWith("default", StringComparison.OrdinalIgnoreCase)
+                    };
+                    Graffiti[definition.Name] = definition;
+                    AddImageKey("graffiti:" + definition.Name, "stickers/" + material);
+
+                    if (kit.Value["tournament_event_id"] is not { } eventValue)
+                    {
+                        continue;
+                    }
+
+                    var eventId = eventValue.EToInt32();
+                    if (!GraffitiTournaments.TryGetValue(eventId, out var tournament))
+                    {
+                        tournament = new GraffitiTournamentDefinition
+                        {
+                            EventId = eventId,
+                            LocalizedNames = GetLocalizedNames($"#CSGO_Tournament_Event_NameShort_{eventId}"),
+                            Graffiti = []
+                        };
+                        GraffitiTournaments[eventId] = tournament;
+                    }
+
+                    tournament.Graffiti.Add(definition.Name);
+                }
+            }
+        }
     }
 
     public void ParseColors()

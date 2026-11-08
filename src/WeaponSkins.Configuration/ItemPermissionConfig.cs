@@ -18,6 +18,8 @@ public class ItemPermissionConfig
 
     public string MusicKits { get; set; } = "";
 
+    public string Graffiti { get; set; } = "";
+
     public string Nametag { get; set; } = "";
 
     public string Wear { get; set; } = "";

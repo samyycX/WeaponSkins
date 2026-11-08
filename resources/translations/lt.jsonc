@@ -8,6 +8,7 @@
   "menu.keychains.title": "Pakabukai",
   "menu.agents.title": "Agentai",
   "menu.musickits.title": "Muzikos rinkiniai",
+  "menu.graffiti.title": "Grafičiai",
   "menu.weaponproperties.title": "Ginklų nustatymai",
   "menu.skinproperties.setsticker": "Lipdukas {0} ({1})",
   "menu.skinproperties.wear": "Nusidėvėjimas",
@@ -34,5 +35,10 @@
   "menu.keychainproperties.resetoffset": "Atstatyti poslinkį",
   "menu.reset": "Atstatyti",
   "menu.on": "Įjungta",
-  "menu.off": "Išjungta"
+  "menu.off": "Išjungta",
+  "graffiti.nopermission": "Neturite teisės naudoti grafičių.",
+  "graffiti.notchosen": "Pirmiausia pasirinkite grafitį per !ws.",
+  "graffiti.notalive": "Purkšti grafitį galite tik būdami gyvi.",
+  "graffiti.nosurface": "Nusitaikykite į netoliese esančią sieną ar grindis.",
+  "graffiti.cooldown": "Vėl purkšti galėsite po {0} s."
 }

@@ -203,4 +203,28 @@ public class EmptyStorageProvider : IStorageProvider
         WarnEmpty();
         return Task.CompletedTask;
     }
+
+    public Task StoreGraffitiAsync(IEnumerable<(ulong SteamID, int GraffitiIndex, int TintIndex)> graffiti)
+    {
+        WarnEmpty();
+        return Task.CompletedTask;
+    }
+
+    public Task<IEnumerable<(ulong SteamID, int GraffitiIndex, int TintIndex)>> GetGraffitiAsync(ulong steamId)
+    {
+        WarnEmpty();
+        return Task.FromResult<IEnumerable<(ulong, int, int)>>(new List<(ulong, int, int)>());
+    }
+
+    public Task<IEnumerable<(ulong SteamID, int GraffitiIndex, int TintIndex)>> GetAllGraffitiAsync()
+    {
+        WarnEmpty();
+        return Task.FromResult<IEnumerable<(ulong, int, int)>>(new List<(ulong, int, int)>());
+    }
+
+    public Task RemoveGraffitiAsync(ulong steamId)
+    {
+        WarnEmpty();
+        return Task.CompletedTask;
+    }
 }

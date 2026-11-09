@@ -68,6 +68,8 @@ public partial class MenuService
             "weaponskins.musickits", () => BuildMusicKitMenu(player)));
         main.Add(CreateCategory(ItemPermissionService.CanUseGraffiti(steamId), loc.MenuTitleGraffiti,
             "weaponskins.graffiti", () => BuildGraffitiMenu(player)));
+        main.Add(CreateCategory(ItemPermissionService.CanUsePins(steamId), loc.MenuTitlePins,
+            "weaponskins.pins", () => BuildPinMenu(player)));
         main.Add(CreateCategory(ItemPermissionService.CanUseWeaponSkins(steamId), loc.MenuTitleWeaponProperties,
             "weaponskins.weaponproperties", () => BuildWeaponPropertiesMenu(player)));
         main.Add(CreateCategory(ItemPermissionService.CanUseKnifeSkins(steamId), loc.MenuTitleKnifeProperties,

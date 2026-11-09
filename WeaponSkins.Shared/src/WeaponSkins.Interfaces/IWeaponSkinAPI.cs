@@ -57,9 +57,14 @@ public interface IWeaponSkinAPI
     IReadOnlyDictionary<string, PatchCollectionDefinition> PatchCollections { get; }
 
     /// <summary>
+    /// All collectible pin definitions indexed by name. A player's pin shows next to their name on the scoreboard (TryGetPin).
+    /// </summary>
+    IReadOnlyDictionary<string, PinDefinition> Pins { get; }
+
+    /// <summary>
     /// The game's inventory image for an item: a path under panorama/images/econ/, without extension, or null when the game ships none.
     /// </summary>
-    /// <param name="kind">One of agent, music, sticker, capsule, keychain, keychaincollection, graffiti, graffititournament, patch, patchcapsule.</param>
+    /// <param name="kind">One of agent, music, sticker, capsule, keychain, keychaincollection, graffiti, graffititournament, patch, patchcapsule, pin.</param>
     /// <param name="name">The definition's Name; for keychaincollection, the collection's name; for graffititournament, the tournament's event id.</param>
     string? GetImageKey(string kind,
         string name);
@@ -83,6 +88,12 @@ public interface IWeaponSkinAPI
     bool TryGetAgentPatches(ulong steamid,
         Team team,
         [MaybeNullWhen(false)] out IReadOnlyList<int> patchIndices);
+
+    /// <summary>
+    /// The pin the player has chosen, if any and if they may use pins.
+    /// </summary>
+    bool TryGetPin(ulong steamid,
+        out int pinIndex);
 
     void SetWeaponSkins(IEnumerable<WeaponSkinData> skins,
         bool permanent = false);

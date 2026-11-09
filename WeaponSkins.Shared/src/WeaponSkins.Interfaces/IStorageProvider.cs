@@ -299,4 +299,35 @@ public interface IStorageProvider
     /// <param name="team">The team of the player.</param>
     /// <returns>A task representing the asynchronous operation.</returns>
     Task RemoveAgentPatchesAsync(ulong steamId, Team team) => Task.CompletedTask;
+
+    // The pin members have default bodies too; storage plugins built before them don't save pins.
+
+    /// <summary>
+    /// Store the pins.
+    /// </summary>
+    /// <param name="pins">The pins to store, one per player.</param>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    Task StorePinsAsync(IEnumerable<(ulong SteamID, int PinIndex)> pins) => Task.CompletedTask;
+
+    /// <summary>
+    /// Get a player's pin.
+    /// </summary>
+    /// <param name="steamId">The SteamID64 of the player.</param>
+    /// <returns>The pins data.</returns>
+    Task<IEnumerable<(ulong SteamID, int PinIndex)>> GetPinsAsync(ulong steamId) =>
+        Task.FromResult(Enumerable.Empty<(ulong SteamID, int PinIndex)>());
+
+    /// <summary>
+    /// Get all pins.
+    /// </summary>
+    /// <returns>The pins data.</returns>
+    Task<IEnumerable<(ulong SteamID, int PinIndex)>> GetAllPinsAsync() =>
+        Task.FromResult(Enumerable.Empty<(ulong SteamID, int PinIndex)>());
+
+    /// <summary>
+    /// Remove a player's pin.
+    /// </summary>
+    /// <param name="steamId">The SteamID64 of the player.</param>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    Task RemovePinAsync(ulong steamId) => Task.CompletedTask;
 }

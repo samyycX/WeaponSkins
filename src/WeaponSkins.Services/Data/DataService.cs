@@ -18,6 +18,8 @@ public class DataService
 
     public AgentPatchDataService AgentPatchDataService { get; init; }
 
+    public PinDataService PinDataService { get; init; }
+
     public DataService(
         WeaponDataService weaponDataService,
         KnifeDataService knifeDataService,
@@ -25,7 +27,8 @@ public class DataService
         AgentDataService agentDataService,
         MusicKitDataService musicKitDataService,
         GraffitiDataService graffitiDataService,
-        AgentPatchDataService agentPatchDataService
+        AgentPatchDataService agentPatchDataService,
+        PinDataService pinDataService
     )
     {
         WeaponDataService = weaponDataService;
@@ -35,5 +38,6 @@ public class DataService
         MusicKitDataService = musicKitDataService;
         GraffitiDataService = graffitiDataService;
         AgentPatchDataService = agentPatchDataService;
+        PinDataService = pinDataService;
     }
 }

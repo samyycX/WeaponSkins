@@ -22,6 +22,8 @@ public class ItemPermissionConfig
 
     public string Patches { get; set; } = "";
 
+    public string Pins { get; set; } = "";
+
     public string Nametag { get; set; } = "";
 
     public string Wear { get; set; } = "";

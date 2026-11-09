@@ -19,6 +19,34 @@ file; their notes are on the [releases page](https://github.com/samyycX/WeaponSk
 
 ---
 
+## [0.9.0] - 2026-11-09
+
+- Players can show a collectible pin next to their name on the scoreboard, for everyone to
+  see: they pick one under **Pins** in `!ws`. **Reset** brings back the pin from their own
+  inventory.
+- Pins can be made VIP-only like the other items. Existing `config.toml` files don't get
+  the new key on their own: add `Pins = "vip"` under `[Main.ItemPermissions]`.
+- Without that permission, **Pins** is greyed out in `!ws`, and the scoreboard shows the
+  player's own pin again from their next spawn.
+- **Weapon Skins** in `!ws` opens on weapon categories — Rifles, Pistols, SMGs, Shotguns,
+  Snipers, Heavy and Other — instead of one long list of every gun.
+- WeaponSkins adds a `wp_player_pins` table to its database on the first start. It is the
+  table WeaponPaints keeps pins in, so a database switched from WeaponPaints keeps its
+  players' pins.
+- The first start after updating takes a little longer while WeaponSkins re-reads the
+  game's item list.
+- If you edited the translation files, add the new `menu.pins.title` and
+  `menu.skins.category.*` keys to them.
+- For plugin developers: `IWeaponSkinAPI` adds `Pins` and `TryGetPin`, `GetImageKey`
+  takes `pin`, and pin rows carry a `PinDefinition` as their `Tag`. `IStorageProvider`
+  gains pin members with default bodies, so storage plugins keep loading but don't save
+  pins until they implement them. Restart the server after updating, rather than
+  reloading the plugin, so other plugins see the new `WeaponSkins.Shared.dll`.
+- For plugin developers: `weaponskins.weapons` now lists the categories, and each opens
+  `weaponskins.weapons.<key>` with its guns. A category row carries its key (`rifles`,
+  `pistols`, `smgs`, `shotguns`, `snipers`, `heavy`, `other`) as its `Tag` and its page's
+  menu id as its component id. The finishes page is still `weaponskins.weapons.paintkits`.
+
 ## [0.8.0] - 2026-11-08
 
 - Players can spray graffiti: they pick one under **Graffiti** in `!ws`, plus a colour for

@@ -18,6 +18,7 @@ public class WeaponSkinAPI : IWeaponSkinAPI
     private ItemPermissionService ItemPermissionService { get; init; }
     private WeaponSkinGetterAPI WeaponSkinGetterAPI { get; init; }
     private AgentPatchService AgentPatchService { get; init; }
+    private PinService PinService { get; init; }
 
     public IReadOnlyDictionary<string, ItemDefinition> Items => EconService.Items.AsReadOnly();
 
@@ -42,6 +43,8 @@ public class WeaponSkinAPI : IWeaponSkinAPI
     public IReadOnlyDictionary<string, PatchCollectionDefinition> PatchCollections =>
         EconService.PatchCollections.AsReadOnly();
 
+    public IReadOnlyDictionary<string, PinDefinition> Pins => EconService.Pins.AsReadOnly();
+
     public string? GetImageKey(string kind,
         string name) => EconService.GetImageKey(kind, name);
 
@@ -51,7 +54,8 @@ public class WeaponSkinAPI : IWeaponSkinAPI
         StorageService storageService,
         EconService econService,
         ItemPermissionService itemPermissionService,
-        AgentPatchService agentPatchService
+        AgentPatchService agentPatchService,
+        PinService pinService
     )
     {
         InventoryUpdateService = inventoryUpdateService;
@@ -61,6 +65,7 @@ public class WeaponSkinAPI : IWeaponSkinAPI
         ItemPermissionService = itemPermissionService;
         WeaponSkinGetterAPI = weaponSkinGetterAPI;
         AgentPatchService = agentPatchService;
+        PinService = pinService;
     }
 
     public void SetWeaponSkins(IEnumerable<WeaponSkinData> skins,
@@ -370,6 +375,33 @@ public class WeaponSkinAPI : IWeaponSkinAPI
         if (permanent)
         {
             var _ = Task.Run(async () => await StorageService.Get().RemoveAgentPatchesAsync(steamid, team));
+        }
+    }
+
+    public bool TryGetPin(ulong steamid,
+        out int pinIndex) =>
+        WeaponSkinGetterAPI.TryGetPin(steamid, out pinIndex);
+
+    public void SetPin(ulong steamid,
+        int pinIndex,
+        bool permanent = true)
+    {
+        DataService.PinDataService.SetPin(steamid, pinIndex);
+        PinService.Refresh(steamid);
+        if (permanent)
+        {
+            var _ = Task.Run(async () => await StorageService.Get().StorePinsAsync([(steamid, pinIndex)]));
+        }
+    }
+
+    public void ResetPin(ulong steamid,
+        bool permanent = true)
+    {
+        DataService.PinDataService.RemovePin(steamid);
+        PinService.Refresh(steamid);
+        if (permanent)
+        {
+            var _ = Task.Run(async () => await StorageService.Get().RemovePinAsync(steamid));
         }
     }
 

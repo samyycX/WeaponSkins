@@ -1,8 +1,8 @@
 # WeaponSkins — Copilot Instructions
 
 > A SwiftlyS2 plugin (C#, .NET 10) for Counter-Strike 2: players pick weapon skins,
-> knives, gloves, stickers, charms, agents and their patches, music kits and graffiti from
-> the `!ws` menu.
+> knives, gloves, stickers, charms, agents and their patches, music kits, graffiti and pins
+> from the `!ws` menu.
 > Upstream is `samyycX/WeaponSkins`; contributions arrive as pull requests.
 
 ## Where things are documented
@@ -30,7 +30,7 @@ src/
   WeaponSkins.Econ/                     EconService: the item catalog, parsed from the game's own files
   WeaponSkins.Services/                 Commands, Data, Graffiti, Inventory, Menu, Permissions, Player, Stattrak, Localization
   WeaponSkins.Extensions/               PlayerExtensions (RegiveWeapon / RegiveKnife), dictionary helpers
-  WeaponSkins.Utilities/                definition-index classifiers (knife / glove / weapon)
+  WeaponSkins.Utilities/                definition-index classifiers (knife / glove / weapon), a gun's WeaponCategory
 WeaponSkins.Shared/                     the public contract, namespace WeaponSkins.Shared
 resources/translations/*.jsonc          menu strings; en.jsonc is the reference
 SwiftlyS2.CS2.dll                       not referenced by the build; SwiftlyS2.CS2 comes from NuGet
@@ -53,9 +53,9 @@ neighbouring files rather than the folder.
   subscribe to game events and register commands, so **a service nobody resolves silently
   does nothing.** A new service gets its own `src/WeaponSkins.Injections/XxxInjection.cs`
   with both halves, and both are added to the chains in `WeaponSkins.cs`.
-- `Unload` disposes the provider. `HookInventoryUpdateService` restores players' original
-  music kits there and `StorageService` cancels in-flight loads; a new service holding
-  per-player game state does the same.
+- `Unload` disposes the provider. `HookInventoryUpdateService` and `PinService` restore
+  players' original music kits and pins there, and `StorageService` cancels in-flight loads;
+  a new service holding per-player game state does the same.
 - `ConfigureSharedInterface` publishes `WeaponSkinAPI` under the key `WeaponSkins.API`.
 
 ## State and storage
@@ -116,6 +116,12 @@ Agent patches are not an econ item either: the game draws them from the pawn's
 writes them after the agent model is set (spawn, an agent picked in `!ws`, a reload) and
 when they change. A team with no chosen patches is left alone, so a player's own show.
 
+Pins are written to the controller, not given as items: the scoreboard draws a player's pin
+from `InventoryServices.Rank[5]`, which the game fills from their own inventory. `PinService`
+saves that value once per session before its first write, re-asserts the chosen pin on every
+spawn and reload (an equal value is not rewritten), and writes the saved value back on reset,
+when the permission is gone, and on unload. A player with no chosen pin is left alone.
+
 ## Permissions
 
 `ItemPermissionService` gates each item kind, and the name tag, wear and seed settings, by
@@ -127,8 +133,8 @@ player lacks those permissions. Writes go through `ApplyWeaponUpdateRules`,
 case. A trimmed view never equals its save, so only a changed save remakes a carried
 weapon or knife — StatTrak™ saves on every kill. Agents and music kits are gated in the
 menu only, so saved ones keep showing — the README promises that. Graffiti is gated in the
-menu, in `!spray`, in the native-spray swap and in `TryGetGraffiti`; patches in the menu,
-when applied and in `TryGetAgentPatches`.
+menu, in `!spray`, in the native-spray swap and in `TryGetGraffiti`; patches and pins in the
+menu, when applied and in `TryGetAgentPatches` / `TryGetPin`.
 
 ## Item catalog
 
@@ -155,6 +161,11 @@ component menus, not the legacy `MenusAPI`. Menu ids are `weaponskins.*`.
   updates that README paragraph in the same change.
 - Main-menu categories pass the submenu's menu id as the component id (`CreateCategory`),
   so a renderer with a sidebar can mark the open page.
+- **Weapon Skins** lists one row per `WeaponCategory` (`Utilities.GetWeaponCategory`, by
+  the `Items` key; a gun it doesn't name lands in Other), each opening
+  `weaponskins.weapons.<key>` with that category's guns. A category row passes its page's
+  id as the component id too, so a renderer can draw the categories as tabs, and carries
+  its key as the `Tag`.
 - Linked controls — the wear slider and exact field, the StatTrak™ and Souvenir switches —
   set each other through `Poke`, which writes the other control's state without running
   its handler, so one change applies once.
@@ -172,9 +183,9 @@ misreads `NextTickAsync<T>(Func<T>)`.
 ## Database
 
 - The tables are WeaponPaints-compatible (`wp_player_skins`, `wp_player_knife`,
-  `wp_player_gloves`, `wp_player_agents`, `wp_player_music`) so servers can switch from
-  WeaponPaints and websites can read them; `wp_player_graffiti` and `wp_player_agent_patches`
-  are WeaponSkins' own.
+  `wp_player_gloves`, `wp_player_agents`, `wp_player_music`, `wp_player_pins`) so servers can
+  switch from WeaponPaints and websites can read them; `wp_player_graffiti` and
+  `wp_player_agent_patches` are WeaponSkins' own.
   **Never rename or retype an existing column.**
 - Schema changes are FluentMigrator migrations in `src/WeaponSkins.Database/Migrations/`,
   numbered `MigrationNNN`, tracked in `__weaponskins_version_info`. Guard a create with
@@ -197,8 +208,8 @@ misreads `NextTickAsync<T>(Func<T>)`.
   plugin reload keeps the old one — the changelog tells admins to restart.
 - Change it additively. Removing or changing a member breaks every plugin compiled against
   it. `IStorageProvider` is implemented by external storage plugins, so a new member there
-  needs a default body, as the graffiti and agent patch members have, or those plugins stop
-  loading. It also gets a real one on `DatabaseService` and `EmptyStorageProvider`.
+  needs a default body, as the graffiti, agent patch and pin members have, or those plugins
+  stop loading. It also gets a real one on `DatabaseService` and `EmptyStorageProvider`.
 - The README's API section lists the members; keep it in step.
 
 ## Configuration

@@ -19,6 +19,11 @@ file; their notes are on the [releases page](https://github.com/samyycX/WeaponSk
 
 ---
 
+## [0.9.0] - 2026-11-09
+
+- Added pins
+- Added weapon skins categories
+
 ## [0.8.0] - 2026-11-08
 
 - Players can spray graffiti: they pick one under **Graffiti** in `!ws`, plus a colour for

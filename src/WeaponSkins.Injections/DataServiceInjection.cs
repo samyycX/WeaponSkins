@@ -16,6 +16,7 @@ public static class DataServiceInjection
             .AddSingleton<MusicKitDataService>()
             .AddSingleton<GraffitiDataService>()
             .AddSingleton<AgentPatchDataService>()
+            .AddSingleton<PinDataService>()
             .AddSingleton<DataService>();
     }
 

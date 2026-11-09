@@ -37,6 +37,7 @@ public class PlayerLocalizationService
 
     public string MenuTitle => Localizer["menu.title"];
     public string MenuTitleSkins => Localizer["menu.skins.title"];
+    public string MenuSkinsCategory(string category) => Localizer[$"menu.skins.category.{category}"];
     public string MenuTitleKnifes => Localizer["menu.knifes.title"];
     public string MenuTitleGloves => Localizer["menu.gloves.title"];
     public string MenuTitleStickers => Localizer["menu.stickers.title"];
@@ -44,6 +45,7 @@ public class PlayerLocalizationService
     public string MenuTitleAgents => Localizer["menu.agents.title"];
     public string MenuTitleMusicKits => Localizer["menu.musickits.title"];
     public string MenuTitleGraffiti => Localizer["menu.graffiti.title"];
+    public string MenuTitlePins => Localizer["menu.pins.title"];
     public string MenuTitleWeaponProperties => Localizer["menu.weaponproperties.title"];
     public string MenuTitleKnifeProperties => Localizer["menu.knifeproperties.title"];
     public string MenuTitleGloveProperties => Localizer["menu.gloveproperties.title"];

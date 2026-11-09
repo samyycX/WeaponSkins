@@ -122,5 +122,17 @@ public class WeaponSkinGetterAPI
         patchIndices = patches.ToArray();
         return true;
     }
+
+    public bool TryGetPin(ulong steamid,
+        out int pinIndex)
+    {
+        if (ItemPermissionService.CanUsePins(steamid))
+        {
+            return DataService.PinDataService.TryGetPin(steamid, out pinIndex);
+        }
+
+        pinIndex = 0;
+        return false;
+    }
 }
 

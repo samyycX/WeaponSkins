@@ -27,6 +27,7 @@ public class HookInventoryUpdateService : IInventoryUpdateService, IDisposable
     private DataService DataService { get; }
     private EconService EconService { get; }
     private AgentPatchService AgentPatchService { get; }
+    private PinService PinService { get; }
 
     public HookInventoryUpdateService(ISwiftlyCore core,
         WeaponSkinGetterAPI api,
@@ -35,7 +36,8 @@ public class HookInventoryUpdateService : IInventoryUpdateService, IDisposable
         ItemPermissionService itemPermissionService,
         DataService dataService,
         EconService econService,
-        AgentPatchService agentPatchService)
+        AgentPatchService agentPatchService,
+        PinService pinService)
     {
         Core = core;
         Api = api;
@@ -45,6 +47,7 @@ public class HookInventoryUpdateService : IInventoryUpdateService, IDisposable
         DataService = dataService;
         EconService = econService;
         AgentPatchService = agentPatchService;
+        PinService = pinService;
 
         Core.Event.OnEntityCreated += OnEntityCreated;
         Core.Event.OnMapLoad += _ => FinishCacheKeys.Clear();
@@ -141,6 +144,7 @@ public class HookInventoryUpdateService : IInventoryUpdateService, IDisposable
             ApplyPlayerGlove(player);
             ApplyPlayerAgent(player);
             ApplyPlayerMusicKit(player);
+            PinService.Apply(player);
         });
 
         Core.Scheduler.DelayBySeconds(0.1f, () =>
@@ -612,6 +616,7 @@ public class HookInventoryUpdateService : IInventoryUpdateService, IDisposable
             ResetMusicKit(steamId);
         }
 
+        PinService.Apply(player);
         AgentPatchService.Apply(player);
 
         if (!player.IsAlive()) return;

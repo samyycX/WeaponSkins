@@ -44,6 +44,7 @@ public class ItemPermissionService
             MusicKits = source.MusicKits,
             Graffiti = source.Graffiti,
             Patches = source.Patches,
+            Pins = source.Pins,
             Nametag = source.Nametag,
             Wear = source.Wear,
             Seed = source.Seed
@@ -225,6 +226,8 @@ public class ItemPermissionService
     public bool CanUseGraffiti(ulong steamId) => HasPermission(steamId, Config.Graffiti);
 
     public bool CanUsePatches(ulong steamId) => HasPermission(steamId, Config.Patches);
+
+    public bool CanUsePins(ulong steamId) => HasPermission(steamId, Config.Pins);
 
     public bool CanUseNametag(ulong steamId) => HasPermission(steamId, Config.Nametag);
 

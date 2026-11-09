@@ -1,7 +1,7 @@
 <div align="center">
   <img src="https://pan.samyyc.dev/s/VYmMXE" alt="WeaponSkins" />
   <h1><strong>WeaponSkins</strong></h1>
-  <p>Players pick weapon skins, knives, gloves, stickers, charms, agents and their patches, music kits and graffiti for CS2 from an in-game menu.</p>
+  <p>Players pick weapon skins, knives, gloves, stickers, charms, agents and their patches, music kits, graffiti and pins for CS2 from an in-game menu.</p>
 </div>
 
 <p align="center">
@@ -14,13 +14,13 @@
 </p>
 
 > [!NOTE]
-> **Switching from WeaponPaints?** Your players keep their skins, knives and gloves. Follow [Switching from WeaponPaints](#-switching-from-weaponpaints) **before** you start the server with WeaponSkins.
+> **Switching from WeaponPaints?** Your players keep their skins, knives, gloves and pins. Follow [Switching from WeaponPaints](#-switching-from-weaponpaints) **before** you start the server with WeaponSkins.
 
 ---
 
 ## ✨ Features
 
-- 🎨 **Skins, knives and gloves** — plus stickers, charms, agents and their patches, music kits and graffiti
+- 🎨 **Skins, knives and gloves** — plus stickers, charms, agents and their patches, music kits, graffiti and pins
 - 🔧 **Fine-tune each item** — wear, pattern, name tag, souvenir, and StatTrak™ that counts kills
 - 👥 **Separate T and CT loadouts**
 - 🌍 **Item names in each player's own game language**
@@ -128,7 +128,7 @@ If you switch to another setup later, skins saved with the old one aren't copied
 
 ## 🔄 Switching from WeaponPaints
 
-Players keep their saved skins, knives and gloves. Agents and music kits aren't carried over, so players pick those again.
+Players keep their saved skins, knives, gloves and pins. Agents and music kits aren't carried over, so players pick those again.
 
 Follow these steps in order. Steps 1 and 2 use phpMyAdmin, or your host's database tool.
 
@@ -167,11 +167,13 @@ Follow these steps in order. Steps 1 and 2 use phpMyAdmin, or your host's databa
 | `!spray` | Players | Sprays your graffiti on the wall or floor you aim at |
 | `sw_wp_admin <SteamID64>` | Server console / RCON | Reloads a connected player's saved skins |
 
-In the `!ws` menu, players choose weapon skins, knives, gloves, agents, music kits and graffiti. Wear, pattern, name tag, StatTrak™, stickers and charms are under **Weapon Properties**, **Knife Properties** and **Glove Properties**, and patches under **Agent Properties**. Choices are saved straight away, separately for T and CT — music kits and graffiti count for both. Options a player has no permission for are greyed out.
+In the `!ws` menu, players choose weapon skins, knives, gloves, agents, music kits, graffiti and pins. **Weapon Skins** sorts the guns into Rifles, Pistols, SMGs, Shotguns, Snipers, Heavy and Other (the Zeus x27). Wear, pattern, name tag, StatTrak™, stickers and charms are under **Weapon Properties**, **Knife Properties** and **Glove Properties**, and patches under **Agent Properties**. Choices are saved straight away, separately for T and CT — music kits, graffiti and pins count for both. Options a player has no permission for are greyed out.
 
 Players spray their graffiti with `!spray` while aiming at a nearby wall or floor, and can put it on a key from their console, e.g. `bind t sw_spray` — that replaces the game's own graffiti key. Each player has one `!spray` graffiti on the map at a time: a new one replaces the last. Players who own a graffiti in their Steam inventory can also use the game's graffiti key: their spray shows the graffiti chosen in `!ws`.
 
 **Agent Properties** has five patch slots, filled from the game's patch packs. The patches go on the agent the player wears on that team, whether it was chosen in `!ws` or comes from their own inventory.
+
+A collectible pin chosen under **Pins** shows next to the player's name on the scoreboard, for everyone. **Reset** brings back the pin from their own inventory.
 
 ## ⚙️ Settings
 
@@ -196,6 +198,7 @@ Agents = ""
 MusicKits = ""
 Graffiti = ""
 Patches = ""
+Pins = ""
 Nametag = ""
 Wear = ""
 Seed = ""   # pattern
@@ -220,7 +223,7 @@ To limit a feature to players with a permission, put the permission next to it �
 
 Players get permissions in SwiftlyS2's `addons/swiftlys2/configs/permissions.jsonc`, by adding their SteamID64 under `"Players"`, e.g. `"76561198000000000": ["vip"]`.
 
-Without the permission, the menu entry is greyed out, and the player's saved items of that kind stop showing until they get it back — for graffiti, `!spray` stops working and the game's graffiti key sprays their own graffiti again. Agents and music kits are the exception: those keep showing. `Patches` greys out **Agent Properties**.
+Without the permission, the menu entry is greyed out, and the player's saved items of that kind stop showing until they get it back — for graffiti, `!spray` stops working and the game's graffiti key sprays their own graffiti again; for pins, the scoreboard shows their own pin again from their next spawn. Agents and music kits are the exception: those keep showing. `Patches` greys out **Agent Properties**.
 
 `Nametag`, `Wear` and `Seed` do the same for those settings on the **Weapon Properties**, **Knife Properties** and **Glove Properties** pages. Without the permission, the setting is greyed out and the player's items show what a newly chosen skin starts with: no name tag, wear `0`, pattern `0`. Their saved values come back with the permission.
 
@@ -258,13 +261,13 @@ _weaponSkins?.UpdateWeaponSkin(steamId, Team.T, 7, skin => skin.Paintkit = 44, p
 
 | Members | Purpose |
 |---------|---------|
-| `TryGet*Skin(s)`, `TryGetMusicKit`, `TryGetGraffiti`, `TryGetAgentPatches` | Read a player's weapon, knife, glove, agent, music kit, graffiti or agent patch selections. `TryGetAgentPatches` gives one patch index per slot, `0` for an empty one |
+| `TryGet*Skin(s)`, `TryGetMusicKit`, `TryGetGraffiti`, `TryGetAgentPatches`, `TryGetPin` | Read a player's weapon, knife, glove, agent, music kit, graffiti, agent patch or pin selections. `TryGetAgentPatches` gives one patch index per slot, `0` for an empty one |
 | `Set*Skins`, `Update*Skin`, `Reset*Skin` | Change or remove them; `permanent: true` also saves to storage. Item permissions still apply |
-| `Items`, `WeaponToPaintkits`, `StickerCollections`, `Keychains`, `Agents`, `MusicKits`, `Graffiti`, `GraffitiTints`, `Patches`, `PatchCollections` | The parsed item catalog |
-| `GetImageKey(kind, name)` | The game's inventory image for an item — `kind` is `agent`, `music`, `sticker`, `capsule`, `keychain`, `keychaincollection`, `graffiti`, `graffititournament` (whose `name` is the event id), `patch` or `patchcapsule` — as a path under `panorama/images/econ/` without extension, or `null` when the game ships none. Graffiti art is untinted: the game washes it in the tint's `HexColor` (Panorama `wash-color`) |
-| `SetExternalStorageProvider` | Provide the storage for `StorageBackend = "external"`. Its graffiti and agent patch members are optional: without them, those aren't saved |
+| `Items`, `WeaponToPaintkits`, `StickerCollections`, `Keychains`, `Agents`, `MusicKits`, `Graffiti`, `GraffitiTints`, `Patches`, `PatchCollections`, `Pins` | The parsed item catalog |
+| `GetImageKey(kind, name)` | The game's inventory image for an item — `kind` is `agent`, `music`, `sticker`, `capsule`, `keychain`, `keychaincollection`, `graffiti`, `graffititournament` (whose `name` is the event id), `patch`, `patchcapsule` or `pin` — as a path under `panorama/images/econ/` without extension, or `null` when the game ships none. Graffiti art is untinted: the game washes it in the tint's `HexColor` (Panorama `wash-color`) |
+| `SetExternalStorageProvider` | Provide the storage for `StorageBackend = "external"`. Its graffiti, agent patch and pin members are optional: without them, those aren't saved |
 
-Menu rows carry the item they stand for as their component `Tag` — an `AgentDefinition`, `MusicKitDefinition`, `GraffitiDefinition`, `GraffitiTintDefinition`, `StickerDefinition`, `StickerCollectionDefinition`, `PatchDefinition`, `PatchCollectionDefinition` or `KeychainDefinition`, a charm collection's name (`string`), a graffiti tournament's event id (`int`), a sticker or patch slot (`int`, from 0), or an econ index (`ushort` for weapons, knives and gloves, `int` for paint kits) — so a custom menu renderer can draw images and selection state from the API.
+Menu rows carry the item they stand for as their component `Tag` — an `AgentDefinition`, `MusicKitDefinition`, `GraffitiDefinition`, `GraffitiTintDefinition`, `StickerDefinition`, `StickerCollectionDefinition`, `PatchDefinition`, `PatchCollectionDefinition`, `PinDefinition` or `KeychainDefinition`, a charm collection's name (`string`), a weapon category's key (`string`: `rifles`, `pistols`, `smgs`, `shotguns`, `snipers`, `heavy` or `other`), a graffiti tournament's event id (`int`), a sticker or patch slot (`int`, from 0), or an econ index (`ushort` for weapons, knives and gloves, `int` for paint kits) — so a custom menu renderer can draw images and selection state from the API. A row that opens a page carries that page's menu id as its component id: the main menu's entries, and the weapon categories, whose pages are `weaponskins.weapons.<key>`.
 
 ## 🛠️ Building
 

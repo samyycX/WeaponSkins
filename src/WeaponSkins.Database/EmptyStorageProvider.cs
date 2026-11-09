@@ -257,4 +257,28 @@ public class EmptyStorageProvider : IStorageProvider
         WarnEmpty();
         return Task.CompletedTask;
     }
+
+    public Task StorePinsAsync(IEnumerable<(ulong SteamID, int PinIndex)> pins)
+    {
+        WarnEmpty();
+        return Task.CompletedTask;
+    }
+
+    public Task<IEnumerable<(ulong SteamID, int PinIndex)>> GetPinsAsync(ulong steamId)
+    {
+        WarnEmpty();
+        return Task.FromResult<IEnumerable<(ulong, int)>>(new List<(ulong, int)>());
+    }
+
+    public Task<IEnumerable<(ulong SteamID, int PinIndex)>> GetAllPinsAsync()
+    {
+        WarnEmpty();
+        return Task.FromResult<IEnumerable<(ulong, int)>>(new List<(ulong, int)>());
+    }
+
+    public Task RemovePinAsync(ulong steamId)
+    {
+        WarnEmpty();
+        return Task.CompletedTask;
+    }
 }

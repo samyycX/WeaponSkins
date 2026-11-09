@@ -64,8 +64,10 @@ public class EconService
 
     public Dictionary<string /* Name */, PatchCollectionDefinition> PatchCollections { get; set; } = new(StringComparer.OrdinalIgnoreCase);
 
+    public Dictionary<string /* Name */, PinDefinition> Pins { get; set; } = new(StringComparer.OrdinalIgnoreCase);
+
     // Kept off the WeaponSkins.Shared records; IWeaponSkinAPI.GetImageKey serves them.
-    private Dictionary<string /* kind + ":" + Name (event id for graffititournament), kind = agent/music/keychain/keychaincollection/sticker/capsule/graffiti/graffititournament/patch/patchcapsule */, string /* panorama/images/econ-relative key */> ImageKeys { get; set; } = new();
+    private Dictionary<string /* kind + ":" + Name (event id for graffititournament), kind = agent/music/keychain/keychaincollection/sticker/capsule/graffiti/graffititournament/patch/patchcapsule/pin */, string /* panorama/images/econ-relative key */> ImageKeys { get; set; } = new();
 
     // Loot lists name charms by their item name, not the definition index Keychains is keyed by.
     private Dictionary<string, KeychainDefinition> KeychainsByItemName { get; } = new(StringComparer.OrdinalIgnoreCase);
@@ -77,7 +79,7 @@ public class EconService
 
     private Dictionary<string, string> RevolvingLootLists { get; } = new(StringComparer.OrdinalIgnoreCase);
 
-    private const int SchemaVersion = 31;
+    private const int SchemaVersion = 32;
 
     public EconService(ISwiftlyCore core,
         ILogger<EconService> logger,
@@ -114,7 +116,7 @@ public class EconService
                     File.ReadAllText(Path.Combine(Core.PluginDataDirectory, "version.lock")));
             if (new HashSet<string>(itemLanguages).SetEquals(lockVersion?.ItemLanguages ?? []) && lockVersion?.EconDataVersion == version && lockVersion.SchemaVersion == SchemaVersion)
             {
-                var files = new[] { "items.json", "agents.json", "weapon_to_paintkits.json", "sticker_collections.json", "keychains.json", "keychain_collections.json", "musickits.json", "graffiti.json", "graffiti_tints.json", "graffiti_tournaments.json", "patches.json", "patch_collections.json", "image_keys.json" };
+                var files = new[] { "items.json", "agents.json", "weapon_to_paintkits.json", "sticker_collections.json", "keychains.json", "keychain_collections.json", "musickits.json", "graffiti.json", "graffiti_tints.json", "graffiti_tournaments.json", "patches.json", "patch_collections.json", "pins.json", "image_keys.json" };
                 var allFilesExist = files.All(f => File.Exists(Path.Combine(Core.PluginDataDirectory, f)));
 
                 if (allFilesExist)
@@ -146,6 +148,8 @@ public class EconService
                         File.ReadAllText(Path.Combine(Core.PluginDataDirectory, "patches.json")))!;
                     PatchCollections = JsonSerializer.Deserialize<Dictionary<string, PatchCollectionDefinition>>(
                         File.ReadAllText(Path.Combine(Core.PluginDataDirectory, "patch_collections.json")))!;
+                    Pins = JsonSerializer.Deserialize<Dictionary<string, PinDefinition>>(
+                        File.ReadAllText(Path.Combine(Core.PluginDataDirectory, "pins.json")))!;
                     ImageKeys = JsonSerializer.Deserialize<Dictionary<string, string>>(
                         File.ReadAllText(Path.Combine(Core.PluginDataDirectory, "image_keys.json")))!;
 
@@ -251,6 +255,10 @@ public class EconService
         Logger.LogInformation($"Parsed {Patches.Count} patches and {PatchCollections.Count} patch packs in {watch.ElapsedMilliseconds}ms.");
         watch.Restart();
 
+        ParsePins();
+        Logger.LogInformation($"Parsed {Pins.Count} pins in {watch.ElapsedMilliseconds}ms.");
+        watch.Restart();
+
         var version = new EconVersion { ItemLanguages = Config.ItemLanguages, EconDataVersion = GetVersion(items), SchemaVersion = SchemaVersion };
 
         File.WriteAllText(Path.Combine(Core.PluginDataDirectory, "version.lock"), JsonSerializer.Serialize(version));
@@ -303,6 +311,9 @@ public class EconService
 
         File.WriteAllText(Path.Combine(dataDirectory, "patch_collections.json"),
             JsonSerializer.Serialize(PatchCollections, options));
+
+        File.WriteAllText(Path.Combine(dataDirectory, "pins.json"),
+            JsonSerializer.Serialize(Pins, options));
 
         File.WriteAllText(Path.Combine(dataDirectory, "image_keys.json"),
             JsonSerializer.Serialize(ImageKeys, options));
@@ -942,6 +953,52 @@ public class EconService
                     Patches = patches
                 };
                 AddImageKey("patchcapsule:" + name, ImageInventory(item));
+            }
+        }
+    }
+
+    // Pins are the items built on a pin prefab. Most attendance pins have a commodity twin with the same
+    // name and art, so each name is kept once, as its attendance pin.
+    public void ParsePins()
+    {
+        foreach (var section in Root.Children)
+        {
+            if (section.Name != "items")
+            {
+                continue;
+            }
+
+            var pins = new Dictionary<string, (KVObject Item, string? Token, bool Attendance)>(StringComparer.OrdinalIgnoreCase);
+            foreach (var item in section.Children)
+            {
+                var prefab = item.Value["prefab"]?.EToString();
+                if (prefab is not ("attendance_pin" or "commodity_pin" or "flair_pin"))
+                {
+                    continue;
+                }
+
+                var token = item.Value["item_name"]?.EToString();
+                var attendance = prefab == "attendance_pin";
+                var key = token ?? item.Name;
+                if (!pins.TryGetValue(key, out var kept) || (attendance && !kept.Attendance))
+                {
+                    pins[key] = (item, token, attendance);
+                }
+            }
+
+            foreach (var (item, token, _) in pins.Values)
+            {
+                var name = item.Value["name"]?.EToString() ?? item.Name;
+                var rarityName = item.Value["item_rarity"];
+                var definition = new PinDefinition
+                {
+                    Name = name,
+                    Index = int.Parse(item.Name),
+                    LocalizedNames = GetLocalizedNames(token ?? string.Empty, name),
+                    Rarity = rarityName == null ? Rarities["default"] : Rarities[rarityName.EToString()]
+                };
+                Pins[definition.Name] = definition;
+                AddImageKey("pin:" + definition.Name, ImageInventory(item));
             }
         }
     }

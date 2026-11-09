@@ -2,15 +2,17 @@ using SwiftlyS2.Shared.Menu;
 using SwiftlyS2.Shared.Menu.Components;
 using SwiftlyS2.Shared.Players;
 
+using WeaponSkins.Shared;
+
 namespace WeaponSkins;
 
 public partial class MenuService
 {
     public IMenu BuildWeaponSkinMenu(IPlayer player)
     {
-        var main = CreateMenu("weaponskins.weapons")
-            .WithTitle(LocalizationService[player].MenuTitleSkins);
-
+        var loc = LocalizationService[player];
+        var categories = new Dictionary<WeaponCategory, List<(ItemDefinition Item, List<PaintkitDefinition> Paintkits)>>();
+        var categoryByIndex = new Dictionary<int, WeaponCategory>();
         foreach (var (weapon, paintkits) in EconService.WeaponToPaintkits)
         {
             var item = EconService.Items[weapon];
@@ -19,6 +21,46 @@ public partial class MenuService
                 continue;
             }
 
+            var category = Utilities.GetWeaponCategory(weapon);
+            categories.GetOrAdd(category, () => []).Add((item, paintkits));
+            categoryByIndex[item.Index] = category;
+        }
+
+        var main = CreateMenu("weaponskins.weapons")
+            .WithTitle(loc.MenuTitleSkins);
+
+        foreach (var category in Enum.GetValues<WeaponCategory>())
+        {
+            if (!categories.TryGetValue(category, out var weapons))
+            {
+                continue;
+            }
+
+            var key = category.Key();
+            var title = loc.MenuSkinsCategory(key);
+            var menuId = "weaponskins.weapons." + key;
+            // The page's id as the component id, as CreateCategory does, so a tab strip can mark the open one.
+            main.Add(new SubmenuComponent(title, _ => BuildWeaponCategoryMenu(player, menuId, title, weapons), menuId) { Tag = key });
+        }
+
+        var menu = main.Build();
+        TrackFocus(menu, p => TryGetWeaponInHand(p, out var weapon)
+                              && categoryByIndex.TryGetValue(weapon.AttributeManager.Item.ItemDefinitionIndex, out var category)
+            ? category.Key()
+            : null);
+        return menu;
+    }
+
+    private IMenu BuildWeaponCategoryMenu(IPlayer player,
+        string menuId,
+        string title,
+        List<(ItemDefinition Item, List<PaintkitDefinition> Paintkits)> weapons)
+    {
+        var main = CreateMenu(menuId)
+            .WithTitle(title);
+
+        foreach (var (item, paintkits) in weapons)
+        {
             var itemName = EconService.GetLocalizedName(item.LocalizedNames, player.PlayerLanguage.Value);
             var submenuOption = CreateSubmenu(itemName, _ =>
             {

@@ -2,6 +2,13 @@
   "menu.title": "Weapon Skins",
   "menu.unset": "Remover",
   "menu.skins.title": "Weapon Skins",
+  "menu.skins.category.rifles": "Rifles",
+  "menu.skins.category.pistols": "Pistols",
+  "menu.skins.category.smgs": "SMGs",
+  "menu.skins.category.shotguns": "Shotguns",
+  "menu.skins.category.snipers": "Snipers",
+  "menu.skins.category.heavy": "Heavy",
+  "menu.skins.category.other": "Outras",
   "menu.knifes.title": "Facas",
   "menu.gloves.title": "Luvas",
   "menu.stickers.title": "Adesivos",
@@ -9,6 +16,7 @@
   "menu.agents.title": "Agentes",
   "menu.musickits.title": "Music Kit",
   "menu.graffiti.title": "Grafites",
+  "menu.pins.title": "Pins",
   "menu.weaponproperties.title": "Propriedades da Arma",
   "menu.skinproperties.setsticker": "Adesivo {0} ({1})",
   "menu.skinproperties.wear": "Wear",
@@ -43,5 +51,5 @@
   "graffiti.notalive": "[red]Você precisa estar vivo para aplicar um grafite.",
   "graffiti.nosurface": "Mire em uma parede ou no chão próximo.",
   "graffiti.cooldown": "Você poderá aplicar outro grafite em [gold]{0}s.",
-  "graffiti.selected": "Grafite definido como [green]{0}.[newline][default]Use [gold]!spray [default]para aplicá-lo."
+  "graffiti.selected": "Grafite definido como [green]{0}. [newline][default]Use [gold]!spray [default]para aplicá-lo."
 }

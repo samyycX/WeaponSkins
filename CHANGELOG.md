@@ -19,6 +19,10 @@ file; their notes are on the [releases page](https://github.com/samyycX/WeaponSk
 
 ---
 
+## [0.9.1] - 2026-11-12
+
+- Updated pt-BR translations
+
 ## [0.9.0] - 2026-11-09
 
 - Added pins

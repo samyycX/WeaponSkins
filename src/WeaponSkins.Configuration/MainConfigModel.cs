@@ -16,5 +16,7 @@ public class MainConfigModel
 
     public bool ReplaceNativeGraffiti { get; set; } = true;
 
+    public bool SprayWithUseKey { get; set; } = false;
+
     public ItemPermissionConfig ItemPermissions { get; set; } = new();
 }

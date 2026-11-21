@@ -28,6 +28,14 @@ file; their notes are on the [releases page](https://github.com/samyycX/WeaponSk
   player's items show without StatTrak™ or Souvenir until they get it back.
 - A player without the `StatTrak` permission doesn't add kills to their StatTrak™ counts.
   The counts they had show again once they get it back.
+- Players can spray their graffiti with the use key (**E**) as well as with `!spray`
+  ([#61](https://github.com/samyycX/WeaponSkins/issues/61)). It's off by default, and
+  existing `config.toml` files don't get the new key on their own: add
+  `SprayWithUseKey = true` under `[Main]` to turn it on.
+- With it on, the key keeps its normal job, so a press that picks up a weapon, opens a
+  door or defuses the bomb while aiming at a nearby wall or floor sprays too, at most once
+  per `GraffitiCooldown`. It doesn't spray while a menu is open, except one from a plugin
+  still on SwiftlyS2's old menu system. It shows no chat message when it can't spray.
 - The server console no longer fills with lines for every weapon, knife and glove
   WeaponSkins puts a skin on.
 

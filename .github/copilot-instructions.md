@@ -113,7 +113,15 @@ trace only hits `worldent` and `prop_static` (the world reaches the trace filter
 entity), so it passes through the sprayer, their held weapon and anything that moves. The
 game's own graffiti key works only for players who own a graffiti; with
 `ReplaceNativeGraffiti` its decal gets the player's `!ws` sticker kit and tint on the next
-world update after it is created, once the game has filled it in.
+world update after it is created, once the game has filled it in. With `SprayWithUseKey`,
+a USE press (`OnClientKeyStateChanged`, raised on the game thread) runs the same spray
+without a reply, so its failures stay silent: report a new failure through `reply`, never
+`SendChat`. It is skipped while `Core.Menu.GetSession` finds a menu open, since USE
+selects rows there. SwiftlyS2's menus handle the press first, so one that closes a menu
+leaves no session to find: `OnTick`, which runs before the frame's key events, records who
+had a menu open, and those players are skipped too. Legacy `MenusAPI` menus are not
+checked, on purpose: the API is obsolete, so calling it adds CS0618 warnings and trips
+SwiftlyS2's obsolete-API scanner.
 
 Agent patches are not an econ item either: the game draws them from the pawn's
 `m_vecPlayerPatchEconIndices` (five slots), whatever model it wears. `AgentPatchService`

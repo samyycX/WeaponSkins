@@ -21,23 +21,12 @@ file; their notes are on the [releases page](https://github.com/samyycX/WeaponSk
 
 ## [0.10.0] - 2026-11-21
 
-- StatTrak™ and Souvenir can be made VIP-only, like name tags, wear and seed. Existing
-  `config.toml` files don't get the new keys on their own: add `StatTrak` or `Souvenir`
-  under `[Main.ItemPermissions]` with a permission, e.g. `StatTrak = "vip"`.
-- Without that permission, the setting is greyed out on the properties pages, and the
-  player's items show without StatTrak™ or Souvenir until they get it back.
-- A player without the `StatTrak` permission doesn't add kills to their StatTrak™ counts.
-  The counts they had show again once they get it back.
-- Players can spray their graffiti with the use key (**E**) as well as with `!spray`
-  ([#61](https://github.com/samyycX/WeaponSkins/issues/61)). It's off by default, and
-  existing `config.toml` files don't get the new key on their own: add
-  `SprayWithUseKey = true` under `[Main]` to turn it on.
-- With it on, the key keeps its normal job, so a press that picks up a weapon, opens a
-  door or defuses the bomb while aiming at a nearby wall or floor sprays too, at most once
-  per `GraffitiCooldown`. It doesn't spray while a menu is open, except one from a plugin
-  still on SwiftlyS2's old menu system. It shows no chat message when it can't spray.
-- The server console no longer fills with lines for every weapon, knife and glove
-  WeaponSkins puts a skin on.
+- StatTrak™ and Souvenir can be made VIP-only: add `StatTrak` or `Souvenir` under
+  `[Main.ItemPermissions]` in `config.toml`, e.g. `StatTrak = "vip"`.
+- Players can also spray their graffiti with the use key (**E**): add
+  `SprayWithUseKey = true` under `[Main]`
+  ([#61](https://github.com/samyycX/WeaponSkins/issues/61)).
+- The server console no longer logs a line every time a skin is applied.
 
 ## [0.9.0] - 2026-11-09
 

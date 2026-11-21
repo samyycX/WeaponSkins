@@ -504,8 +504,8 @@ public class HookInventoryUpdateService : IInventoryUpdateService, IDisposable
         item.AccountIDUpdated();
         item.InitializedUpdated();
         item.CustomNameUpdated();
-        item.AttributeListUpdated();
-        item.NetworkedDynamicAttributesUpdated();
+        item.AttributeList.AttributesUpdated();
+        item.NetworkedDynamicAttributes.AttributesUpdated();
         weapon.FallbackPaintKitUpdated();
         weapon.FallbackSeedUpdated();
         weapon.FallbackWearUpdated();
@@ -553,8 +553,8 @@ public class HookInventoryUpdateService : IInventoryUpdateService, IDisposable
             econGloves.ItemIDHighUpdated();
             econGloves.AccountIDUpdated();
             econGloves.InitializedUpdated();
-            econGloves.AttributeListUpdated();
-            econGloves.NetworkedDynamicAttributesUpdated();
+            econGloves.AttributeList.AttributesUpdated();
+            econGloves.NetworkedDynamicAttributes.AttributesUpdated();
             // Moving this counter is the client's cue to re-apply the gloves from the item above.
             pawn.EconGlovesChanged++;
             pawn.EconGlovesChangedUpdated();

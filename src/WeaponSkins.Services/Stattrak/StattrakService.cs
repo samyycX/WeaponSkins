@@ -16,18 +16,21 @@ public class StattrakService
     private DataService DataService { get; init; }
     private WeaponSkinAPI WeaponSkinAPI { get; init; }
     private IInventoryUpdateService InventoryUpdateService { get; init; }
+    private ItemPermissionService ItemPermissionService { get; init; }
     private ILogger<StattrakService> Logger { get; init; }
 
     public StattrakService(ISwiftlyCore core,
         DataService dataService,
         WeaponSkinAPI weaponSkinAPI,
         IInventoryUpdateService inventoryService,
+        ItemPermissionService itemPermissionService,
         ILogger<StattrakService> logger)
     {
         Core = core;
         DataService = dataService;
         WeaponSkinAPI = weaponSkinAPI;
         InventoryUpdateService = inventoryService;
+        ItemPermissionService = itemPermissionService;
         Logger = logger;
 
         Core.GameEvent.HookPost<EventPlayerDeath>(OnPlayerDeath);
@@ -37,6 +40,7 @@ public class StattrakService
     {
         var attacker = Core.PlayerManager.GetPlayer(@event.Attacker);
         if (attacker is null || attacker is { IsValid: false, IsFakeClient: false }) return HookResult.Continue;
+        if (!ItemPermissionService.CanUseStatTrak(attacker.SteamID)) return HookResult.Continue;
 
         if (!@event.UserIdController.IsValid) return HookResult.Continue;
 

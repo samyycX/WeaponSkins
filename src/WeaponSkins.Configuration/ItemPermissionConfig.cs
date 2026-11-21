@@ -29,4 +29,8 @@ public class ItemPermissionConfig
     public string Wear { get; set; } = "";
 
     public string Seed { get; set; } = "";
+
+    public string StatTrak { get; set; } = "";
+
+    public string Souvenir { get; set; } = "";
 }

@@ -40,8 +40,8 @@ internal static class WeaponAppearance
         item.AccountIDUpdated();
         item.InitializedUpdated();
         item.CustomNameUpdated();
-        item.AttributeListUpdated();
-        item.NetworkedDynamicAttributesUpdated();
+        item.AttributeList.AttributesUpdated();
+        item.NetworkedDynamicAttributes.AttributesUpdated();
         weapon.FallbackPaintKitUpdated();
         weapon.FallbackSeedUpdated();
         weapon.FallbackWearUpdated();

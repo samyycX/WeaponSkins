@@ -47,7 +47,9 @@ public class ItemPermissionService
             Pins = source.Pins,
             Nametag = source.Nametag,
             Wear = source.Wear,
-            Seed = source.Seed
+            Seed = source.Seed,
+            StatTrak = source.StatTrak,
+            Souvenir = source.Souvenir
         };
     }
 
@@ -78,6 +80,8 @@ public class ItemPermissionService
         if (!CanUseNametag(data.SteamID)) result.Nametag = null;
         if (!CanUseWear(data.SteamID)) result.PaintkitWear = 0f;
         if (!CanUseSeed(data.SteamID)) result.PaintkitSeed = 0;
+        if (!CanUseStatTrak(data.SteamID)) result.StattrakCount = 0;
+        if (!CanUseQuality(data.SteamID, result.Quality)) result.Quality = EconItemQuality.Normal;
 
         return true;
     }
@@ -111,6 +115,8 @@ public class ItemPermissionService
         if (!CanUseNametag(data.SteamID)) result.Nametag = null;
         if (!CanUseWear(data.SteamID)) result.PaintkitWear = 0f;
         if (!CanUseSeed(data.SteamID)) result.PaintkitSeed = 0;
+        if (!CanUseStatTrak(data.SteamID)) result.StattrakCount = 0;
+        if (!CanUseQuality(data.SteamID, result.Quality)) result.Quality = EconItemQuality.Unusual;
         return true;
     }
 
@@ -186,6 +192,11 @@ public class ItemPermissionService
         if (!CanUseNametag(current.SteamID)) result.Nametag = current.Nametag;
         if (!CanUseWear(current.SteamID)) result.PaintkitWear = current.PaintkitWear;
         if (!CanUseSeed(current.SteamID)) result.PaintkitSeed = current.PaintkitSeed;
+        if (!CanUseStatTrak(current.SteamID)) result.StattrakCount = current.StattrakCount;
+        if (!CanUseQuality(current.SteamID, current.Quality) || !CanUseQuality(current.SteamID, result.Quality))
+        {
+            result.Quality = current.Quality;
+        }
 
         return result;
     }
@@ -197,6 +208,12 @@ public class ItemPermissionService
         if (!CanUseNametag(current.SteamID)) result.Nametag = current.Nametag;
         if (!CanUseWear(current.SteamID)) result.PaintkitWear = current.PaintkitWear;
         if (!CanUseSeed(current.SteamID)) result.PaintkitSeed = current.PaintkitSeed;
+        if (!CanUseStatTrak(current.SteamID)) result.StattrakCount = current.StattrakCount;
+        if (!CanUseQuality(current.SteamID, current.Quality) || !CanUseQuality(current.SteamID, result.Quality))
+        {
+            result.Quality = current.Quality;
+        }
+
         return result;
     }
 
@@ -234,6 +251,18 @@ public class ItemPermissionService
     public bool CanUseWear(ulong steamId) => HasPermission(steamId, Config.Wear);
 
     public bool CanUseSeed(ulong steamId) => HasPermission(steamId, Config.Seed);
+
+    public bool CanUseStatTrak(ulong steamId) => HasPermission(steamId, Config.StatTrak);
+
+    public bool CanUseSouvenir(ulong steamId) => HasPermission(steamId, Config.Souvenir);
+
+    private bool CanUseQuality(ulong steamId,
+        EconItemQuality quality)
+    {
+        if (quality == EconItemQuality.StatTrak) return CanUseStatTrak(steamId);
+        if (quality == EconItemQuality.Souvenir) return CanUseSouvenir(steamId);
+        return true;
+    }
 
     private bool HasPermission(ulong steamId,
         string permission)

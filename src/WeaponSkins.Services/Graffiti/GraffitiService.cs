@@ -19,6 +19,7 @@ public class GraffitiService
 
     private readonly Dictionary<ulong, CHandle<CPlayerSprayDecal>> _sprays = new();
     private readonly Dictionary<ulong, long> _nextSprayAt = new();
+    private readonly HashSet<int> _inMenuAtTick = new();
     private ISwiftlyCore Core { get; init; }
     private DataService DataService { get; init; }
     private ItemPermissionService ItemPermissionService { get; init; }
@@ -43,34 +44,42 @@ public class GraffitiService
             _nextSprayAt.Clear();
         };
         Core.Event.OnEntityCreated += OnEntityCreated;
+        Core.Event.OnTick += OnTick;
+        Core.Event.OnClientKeyStateChanged += OnClientKeyStateChanged;
     }
 
     public void Spray(IPlayer player)
+    {
+        Spray(player, player.SendChat);
+    }
+
+    private void Spray(IPlayer player,
+        Action<string>? reply)
     {
         var loc = LocalizationService[player];
         var steamId = player.SteamID;
         if (!ItemPermissionService.CanUseGraffiti(steamId))
         {
-            player.SendChat(loc.GraffitiNoPermission);
+            reply?.Invoke(loc.GraffitiNoPermission);
             return;
         }
 
         if (!DataService.GraffitiDataService.TryGetGraffiti(steamId, out var graffitiIndex, out var tintIndex))
         {
-            player.SendChat(loc.GraffitiNotChosen);
+            reply?.Invoke(loc.GraffitiNotChosen);
             return;
         }
 
         if (!player.IsAlive || player.PlayerPawn is not { IsValid: true } pawn || pawn.EyePosition is not { } eye)
         {
-            player.SendChat(loc.GraffitiNotAlive);
+            reply?.Invoke(loc.GraffitiNotAlive);
             return;
         }
 
         var now = Environment.TickCount64;
         if (_nextSprayAt.TryGetValue(steamId, out var nextSprayAt) && now < nextSprayAt)
         {
-            player.SendChat(loc.GraffitiCooldown((int)Math.Ceiling((nextSprayAt - now) / 1000.0)));
+            reply?.Invoke(loc.GraffitiCooldown((int)Math.Ceiling((nextSprayAt - now) / 1000.0)));
             return;
         }
 
@@ -85,7 +94,7 @@ public class GraffitiService
                 .Build());
         if (!trace.DidHit || trace.StartInSolid)
         {
-            player.SendChat(loc.GraffitiNoSurface);
+            reply?.Invoke(loc.GraffitiNoSurface);
             return;
         }
 
@@ -96,7 +105,7 @@ public class GraffitiService
         left -= normal * left.Dot(normal);
         if (left.Length() < 0.1f)
         {
-            player.SendChat(loc.GraffitiNoSurface);
+            reply?.Invoke(loc.GraffitiNoSurface);
             return;
         }
 
@@ -126,6 +135,45 @@ public class GraffitiService
         using var sound = new SoundEvent("SprayCan.Paint");
         sound.Recipients.AddRecipient(player.PlayerID);
         sound.Emit();
+    }
+
+    // SwiftlyS2's menus see USE first, so a press that closes one needs this pre-input snapshot.
+    private void OnTick()
+    {
+        _inMenuAtTick.Clear();
+        if (!Options.CurrentValue.SprayWithUseKey)
+        {
+            return;
+        }
+
+        var playerCap = Core.PlayerManager.PlayerCap;
+        for (var playerId = 0; playerId < playerCap; playerId++)
+        {
+            if (Core.PlayerManager.GetPlayer(playerId) is { } player
+                && Core.Menu.GetSession(player) is not null
+                && !player.IsFakeClient)
+            {
+                _inMenuAtTick.Add(playerId);
+            }
+        }
+    }
+
+    private void OnClientKeyStateChanged(IOnClientKeyStateChangedEvent @event)
+    {
+        if (@event.Key != KeyKind.E || !@event.Pressed || !Options.CurrentValue.SprayWithUseKey)
+        {
+            return;
+        }
+
+        // With a menu open, USE selects its highlighted row instead.
+        if (_inMenuAtTick.Contains(@event.PlayerId)
+            || Core.PlayerManager.GetPlayer(@event.PlayerId) is not { IsValid: true, IsFakeClient: false } player
+            || Core.Menu.GetSession(player) is not null)
+        {
+            return;
+        }
+
+        Spray(player, reply: null);
     }
 
     // The game's own graffiti key sprays a graffiti from the player's Steam inventory, so it only

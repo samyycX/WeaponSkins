@@ -19,9 +19,14 @@ file; their notes are on the [releases page](https://github.com/samyycX/WeaponSk
 
 ---
 
-## [0.9.1] - 2026-11-12
+## [0.10.0] - 2026-11-21
 
-- Updated pt-BR translations
+- StatTrak™ and Souvenir can be made VIP-only: add `StatTrak` or `Souvenir` under
+  `[Main.ItemPermissions]` in `config.toml`, e.g. `StatTrak = "vip"`.
+- Players can also spray their graffiti with the use key (**E**): add
+  `SprayWithUseKey = true` under `[Main]`
+  ([#61](https://github.com/samyycX/WeaponSkins/issues/61)).
+- The server console no longer logs a line every time a skin is applied.
 
 ## [0.9.0] - 2026-11-09
 

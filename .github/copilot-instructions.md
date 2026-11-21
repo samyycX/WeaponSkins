@@ -89,7 +89,11 @@ from how the CS2 client caches finishes, and each one fixed a visible bug:
   the new entity before it is selected or networked. `RemakeKnife` only acts when the
   player has a knife, because `RegiveKnife` always hands one out.
 - Every apply writes a fresh random `ItemID`, and every networked field written is followed
-  by its `*Updated()` notifier — a schema write without one never reaches clients.
+  by its `*Updated()` notifier — a schema write without one never reaches clients. For the
+  attribute lists that is each list's `AttributesUpdated()`, never the item's
+  `AttributeListUpdated()` / `NetworkedDynamicAttributesUpdated()`: the embedded struct has
+  no network encoder of its own, so marking it makes the engine log an unresolved change on
+  every apply.
 - Weapon wear always goes through `FinishCacheKeys.Resolve`. The client caches a finish by
   paint, seed and wear to three decimals, together with the stickers it was built with, so
   each sticker layout claims its own 0.001 wear step. Claims reset on map load.
@@ -124,17 +128,23 @@ when the permission is gone, and on unload. A player with no chosen pin is left 
 
 ## Permissions
 
-`ItemPermissionService` gates each item kind, and the name tag, wear and seed settings, by
-`[Main.ItemPermissions]` in `config.toml`; an empty string means everyone. Reads go through
-`WeaponSkinGetterAPI` and the `TryBuild*View` methods, which return a clone with stickers
-and charms stripped, and name tag, wear and seed reset to a new skin's defaults, when the
-player lacks those permissions. Writes go through `ApplyWeaponUpdateRules`,
+`ItemPermissionService` gates each item kind, and the name tag, wear, seed, StatTrak™ and
+Souvenir settings, by `[Main.ItemPermissions]` in `config.toml`; an empty string means
+everyone. Reads go through `WeaponSkinGetterAPI` and the `TryBuild*View` methods, which
+return a clone with stickers and charms stripped, and name tag, wear and seed reset to a new
+skin's defaults, when the player lacks those permissions. A StatTrak™ or Souvenir quality
+falls back the same way, to the plain one storage loads (`Normal` for weapons, `Unusual` for
+knives), and the StatTrak™ count to `0`. Writes go through `ApplyWeaponUpdateRules`,
 `ApplyKnifeUpdateRules` and `ApplyGloveUpdateRules`, which keep the stored values in that
-case. A trimmed view never equals its save, so only a changed save remakes a carried
-weapon or knife — StatTrak™ saves on every kill. Agents and music kits are gated in the
-menu only, so saved ones keep showing — the README promises that. Graffiti is gated in the
-menu, in `!spray`, in the native-spray swap and in `TryGetGraffiti`; patches and pins in the
-menu, when applied and in `TryGetAgentPatches` / `TryGetPin`.
+case; quality is one field, so an update that would set or clear StatTrak™ or Souvenir
+without its permission keeps the stored one. A trimmed view never equals its save, so only
+a changed save remakes a carried weapon or knife — StatTrak™ saves on every kill.
+`StattrakService` counts only for players with the StatTrak™ permission, and on the stored
+record itself: a trimmed view saved back would lose the stripped values and remake the
+weapon on every kill. Agents and music kits are gated in the menu only, so saved ones keep
+showing — the README promises that. Graffiti is gated in the menu, in `!spray`, in the
+native-spray swap and in `TryGetGraffiti`; patches and pins in the menu, when applied and in
+`TryGetAgentPatches` / `TryGetPin`.
 
 ## Item catalog
 

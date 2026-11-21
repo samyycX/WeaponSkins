@@ -31,7 +31,8 @@ public partial class MenuService
             wear => Update(k => k.PaintkitWear = wear));
         main.Add(CreateSeedInput(loc, ItemPermissionService.CanUseSeed(steamId), knife.PaintkitSeed,
             seed => Update(k => k.PaintkitSeed = seed)));
-        AddStattrak(main, loc, knife.StattrakCount, knife.Quality,
+        AddStattrak(main, loc, ItemPermissionService.CanUseStatTrak(steamId), ItemPermissionService.CanUseSouvenir(steamId),
+            knife.StattrakCount, knife.Quality,
             count => Update(k => k.StattrakCount = count),
             quality => Update(k => k.Quality = quality),
             withSouvenir: false);

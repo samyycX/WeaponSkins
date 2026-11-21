@@ -95,13 +95,17 @@ public partial class MenuService
     // Quality is one field: Poke shows the other switch off without its handler resetting the quality.
     private static void AddStattrak(IMenuBuilder menu,
         PlayerLocalizationService loc,
+        bool stattrakEnabled,
+        bool souvenirEnabled,
         int count,
         EconItemQuality quality,
         Action<int> setCount,
         Action<EconItemQuality> setQuality,
         bool withSouvenir)
     {
-        menu.Add(CreateIntInput(loc.MenuSkinPropertiesStattrakCount(count), count, value => value >= 0, (_, value) => setCount(value)));
+        var counter = CreateIntInput(loc.MenuSkinPropertiesStattrakCount(count), count, value => value >= 0, (_, value) => setCount(value));
+        counter.Enabled = stattrakEnabled;
+        menu.Add(counter);
 
         ToggleComponent? souvenir = null;
         var stattrak = CreateToggle(loc.MenuSkinPropertiesStattrak, quality == EconItemQuality.StatTrak, loc, ctx =>
@@ -113,6 +117,7 @@ public partial class MenuService
 
             setQuality(ctx.NewValue ? EconItemQuality.StatTrak : EconItemQuality.Normal);
         });
+        stattrak.Enabled = stattrakEnabled;
         menu.Add(stattrak);
 
         if (!withSouvenir)
@@ -129,6 +134,7 @@ public partial class MenuService
 
             setQuality(ctx.NewValue ? EconItemQuality.Souvenir : EconItemQuality.Normal);
         });
+        souvenir.Enabled = souvenirEnabled;
         menu.Add(souvenir);
     }
 

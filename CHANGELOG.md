@@ -19,6 +19,18 @@ file; their notes are on the [releases page](https://github.com/samyycX/WeaponSk
 
 ---
 
+## [0.10.0] - 2026-11-21
+
+- StatTrak™ and Souvenir can be made VIP-only, like name tags, wear and seed. Existing
+  `config.toml` files don't get the new keys on their own: add `StatTrak` or `Souvenir`
+  under `[Main.ItemPermissions]` with a permission, e.g. `StatTrak = "vip"`.
+- Without that permission, the setting is greyed out on the properties pages, and the
+  player's items show without StatTrak™ or Souvenir until they get it back.
+- A player without the `StatTrak` permission doesn't add kills to their StatTrak™ counts.
+  The counts they had show again once they get it back.
+- The server console no longer fills with lines for every weapon, knife and glove
+  WeaponSkins puts a skin on.
+
 ## [0.9.0] - 2026-11-09
 
 - Added pins

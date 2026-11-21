@@ -202,6 +202,8 @@ Pins = ""
 Nametag = ""
 Wear = ""
 Seed = ""   # pattern
+StatTrak = ""
+Souvenir = ""
 ```
 
 | Setting | What it does |
@@ -225,7 +227,7 @@ Players get permissions in SwiftlyS2's `addons/swiftlys2/configs/permissions.jso
 
 Without the permission, the menu entry is greyed out, and the player's saved items of that kind stop showing until they get it back — for graffiti, `!spray` stops working and the game's graffiti key sprays their own graffiti again; for pins, the scoreboard shows their own pin again from their next spawn. Agents and music kits are the exception: those keep showing. `Patches` greys out **Agent Properties**.
 
-`Nametag`, `Wear` and `Seed` do the same for those settings on the **Weapon Properties**, **Knife Properties** and **Glove Properties** pages. Without the permission, the setting is greyed out and the player's items show what a newly chosen skin starts with: no name tag, wear `0`, pattern `0`. Their saved values come back with the permission.
+`Nametag`, `Wear`, `Seed`, `StatTrak` and `Souvenir` do the same for those settings on the **Weapon Properties**, **Knife Properties** and **Glove Properties** pages. Without the permission, the setting is greyed out and the player's items show what a newly chosen skin starts with: no name tag, wear `0`, pattern `0`, no StatTrak™ or Souvenir — and their StatTrak™ kills aren't counted meanwhile. Their saved values come back with the permission.
 
 ## 🩺 Troubleshooting
 

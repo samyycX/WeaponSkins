@@ -1,6 +1,9 @@
 {
   "menu.title": "武器皮肤",
   "menu.unset": "取消设置",
+  "menu.team.title": "选择要配置的阵营",
+  "menu.team.t": "恐怖分子",
+  "menu.team.ct": "反恐精英",
   "menu.skins.title": "武器皮肤",
   "menu.skins.category.rifles": "步枪",
   "menu.skins.category.pistols": "手枪",

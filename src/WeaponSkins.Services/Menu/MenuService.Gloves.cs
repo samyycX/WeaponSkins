@@ -6,7 +6,7 @@ namespace WeaponSkins;
 
 public partial class MenuService
 {
-    public IMenu BuildGloveSkinMenu(IPlayer player)
+    public IMenu BuildGloveSkinMenu(IPlayer player, Team menuTeam)
     {
         var main = CreateMenu("weaponskins.gloves")
             .WithTitle(LocalizationService[player].MenuTitleGloves);
@@ -24,14 +24,14 @@ public partial class MenuService
             {
                 var skinMenu = CreateMenu("weaponskins.gloves.paintkits").WithTitle(itemName);
                 skinMenu.Add(CreateButton(LocalizationService[player].MenuReset,
-                    p => Api.ResetGloveSkin(p.SteamID, p.Controller.Team, true)));
+                    p => Api.ResetGloveSkin(p.SteamID, EditedTeam(p, menuTeam), true)));
 
                 foreach (var paintkit in paintkits.OrderByDescending(p => p.Rarity.Id))
                 {
                     var option = CreateRarityButton(
                         EconService.GetLocalizedName(paintkit.LocalizedNames, player.PlayerLanguage.Value),
                         paintkit.Rarity.Color.HexColor,
-                        p => Api.UpdateGloveSkin(p.SteamID, p.Controller.Team, glove =>
+                        p => Api.UpdateGloveSkin(p.SteamID, EditedTeam(p, menuTeam), glove =>
                         {
                             glove.DefinitionIndex = (ushort)item.Index;
                             glove.Paintkit = paintkit.Index;
@@ -41,7 +41,7 @@ public partial class MenuService
                 }
 
                 var built = skinMenu.Build();
-                TrackFocus(built, p => TryGetGloveDataInHand(p, out var inHand) && Utilities.IsGloveDefinitionIndex(inHand.DefinitionIndex) ? inHand.Paintkit : null);
+                TrackFocus(built, p => TryGetGloveDataInHand(p, menuTeam, out var inHand) && Utilities.IsGloveDefinitionIndex(inHand.DefinitionIndex) ? inHand.Paintkit : null);
                 return built;
             });
 
@@ -50,7 +50,7 @@ public partial class MenuService
         }
 
         var menu = main.Build();
-        TrackFocus(menu, p => TryGetGloveDataInHand(p, out var inHand) ? inHand.DefinitionIndex : null);
+        TrackFocus(menu, p => TryGetGloveDataInHand(p, menuTeam, out var inHand) ? inHand.DefinitionIndex : null);
         return menu;
     }
 }

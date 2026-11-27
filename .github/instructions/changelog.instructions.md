@@ -45,12 +45,12 @@ One-line summary, only when the release has a theme or a reason to hurry.
 1. **Outcome, not mechanism.** "Stickers added to a skin did not show on the weapon in
    hand" — not how the client caches finishes. Internals belong in code comments.
 2. **Name the symptom they saw.** The command (`!ws`, `!wp`, `sw_wp_admin`), the
-   `config.toml` key, the console error or the menu entry, in `backticks` or **bold**.
+   `config.jsonc` key, the console error or the menu entry, in `backticks` or **bold**.
 3. **One bullet per change.** If a bullet needs a semicolon and a subclause, it is two
    bullets, or it is too much detail.
 4. **Call out anything that needs admin action:**
    - files that must be deleted before unzipping (the update steps assume a clean folder);
-   - a new, renamed or removed `config.toml` key;
+   - a new, renamed or removed `config.jsonc` key;
    - a new migration, especially one touching the WeaponPaints-shared `wp_player_*`
      tables that websites and other tools also read;
    - a `WeaponSkins.Shared` change, which needs a server restart rather than a plugin

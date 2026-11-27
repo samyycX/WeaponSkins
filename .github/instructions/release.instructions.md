@@ -67,7 +67,7 @@ There is no `resources/gamedata/`: WeaponSkins uses no signatures or offsets, an
 leftover folder from an old install makes SwiftlyS2 log
 `Failed to load signature GiveNamedItem!`.
 
-`config.toml` is generated on first load in
+`config.jsonc` is generated on first load in
 `addons/swiftlys2/configs/plugins/WeaponSkins/`. The parsed item catalog and the SQLite
 database (`weaponskins.db`) live in the plugin's data directory.
 

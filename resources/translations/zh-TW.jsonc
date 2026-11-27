@@ -1,6 +1,9 @@
 {
   "menu.title": "武器塗裝",
   "menu.unset": "取消設定",
+  "menu.team.title": "選擇要設定的陣營",
+  "menu.team.t": "恐怖份子",
+  "menu.team.ct": "反恐小組",
   "menu.skins.title": "武器塗裝",
   "menu.skins.category.rifles": "步槍",
   "menu.skins.category.pistols": "手槍",

@@ -25,7 +25,7 @@ src/
   WeaponSkins.cs                        entrypoint: PluginMetadata (the only version), DI, shared interface
   WeaponSkins.Injections/               one Add*/Use* extension pair per service
   WeaponSkins.Api/                      WeaponSkinAPI (IWeaponSkinAPI) and WeaponSkinGetterAPI (permission-filtered reads)
-  WeaponSkins.Configuration/            MainConfigModel, ItemPermissionConfig — config.toml, section [Main]
+  WeaponSkins.Configuration/            MainConfigModel, ItemPermissionConfig, ItemPermission — config.jsonc, section "Main"; TomlConfigMigration
   WeaponSkins.Database/                 StorageService, DatabaseService (FreeSql + FluentMigrator), sync, models, migrations
   WeaponSkins.Econ/                     EconService: the item catalog, parsed from the game's own files
   WeaponSkins.Services/                 Commands, Data, Graffiti, Inventory, Menu, Permissions, Player, Stattrak, Localization
@@ -68,7 +68,7 @@ neighbouring files rather than the folder.
   the `Core.Database` connection named `weaponskins`, `sqlite` uses `weaponskins.db` in the
   plugin data directory, and `external` waits for another plugin to call
   `SetExternalStorageProvider` (`EmptyStorageProvider` stands in until then). It
-  reconfigures on every `config.toml` save.
+  reconfigures on every `config.jsonc` save.
 - At startup `DatabaseSynchronizeService.SynchronizeAsync` loads every saved row into
   `DataService`. `ReloadPlayerAsync` replaces one player's state; it backs `!wp`,
   `sw_wp_admin`, and joins when `SyncFromDatabaseWhenPlayerJoin` is on.
@@ -137,8 +137,10 @@ when the permission is gone, and on unload. A player with no chosen pin is left 
 ## Permissions
 
 `ItemPermissionService` gates each item kind, and the name tag, wear, seed, StatTrak™ and
-Souvenir settings, by `[Main.ItemPermissions]` in `config.toml`; an empty string means
-everyone. Reads go through `WeaponSkinGetterAPI` and the `TryBuild*View` methods, which
+Souvenir settings, by `ItemPermissions` in `config.jsonc`. Each entry has `Enabled` and
+`Permission`, and every `CanUse*` goes through the one check: enabled, and the permission
+empty or held, so `"Enabled": false` acts everywhere as if no player had the permission.
+Reads go through `WeaponSkinGetterAPI` and the `TryBuild*View` methods, which
 return a clone with stickers and charms stripped, and name tag, wear and seed reset to a new
 skin's defaults, when the player lacks those permissions. A StatTrak™ or Souvenir quality
 falls back the same way, to the plain one storage loads (`Normal` for weapons, `Unusual` for
@@ -179,6 +181,15 @@ component menus, not the legacy `MenusAPI`. Menu ids are `weaponskins.*`.
   updates that README paragraph in the same change.
 - Main-menu categories pass the submenu's menu id as the component id (`CreateCategory`),
   so a renderer with a sidebar can mark the open page.
+- `!ws` opens `weaponskins.main` for the player's team. A player on neither T nor CT gets
+  `weaponskins.team` first, whose rows are buttons rather than submenus: the main menu
+  they open stays a root, which renderers walk up to, and a renderer that auto-opens a
+  root's first submenu would otherwise pick T unasked. The main menu's own `Tag` is the
+  `Team` it was opened for. Every menu read or write takes its team from `EditedTeam`:
+  the player's own while they are on T or CT, else that one.
+- A row the player has no permission for is disabled, and with `HideWhenDisabled` hidden
+  too (`Shown`). Hide with the static `Visible`, never `VisibleWhen`: renderers drawing off
+  the game thread can't evaluate a per-session rule.
 - **Weapon Skins** lists one row per `WeaponCategory` (`Utilities.GetWeaponCategory`, by
   the `Items` key; a gun it doesn't name lands in Other), each opening
   `weaponskins.weapons.<key>` with that category's guns. A category row passes its page's
@@ -232,11 +243,39 @@ misreads `NextTickAsync<T>(Func<T>)`.
 
 ## Configuration
 
-`config.toml`, section `[Main]`, bound to `MainConfigModel` through Tomlyn. The file is
-generated from the model's defaults on first load. `StorageService`, `ItemPermissionService`
-and `GraffitiService` follow edits through `IOptionsMonitor`; `EconService` reads
-`ItemLanguages` once. A new, renamed or removed key updates the README's settings block
-and table, and gets a changelog bullet.
+`config.jsonc`, section `Main`, bound to `MainConfigModel`. The file is generated from the
+model's defaults on first load, and every load adds the keys an existing file is missing
+(`addMissingKeys`), down to an `ItemPermissions` entry's `Enabled` or `Permission`, leaving
+the rest of it alone. Every key carries a one-line `[Description]`, which SwiftlyS2 writes
+as the `//` comment above it in a new file or above an inserted key, so a new key gets one
+in the same change. The exception is `ItemPermission`'s `Enabled` and `Permission`: the
+`ItemPermissions` description explains them once, where theirs would repeat under all 15
+entries. `StorageService`, `ItemPermissionService`, `GraffitiService` and `MenuService`
+follow edits through `IOptionsMonitor`; `EconService` reads `ItemLanguages` once. A new,
+renamed or removed key updates the README's settings block and table, and gets a changelog
+bullet.
+
+The binder silently skips a string where an object is expected, so `"KnifeSkins": "vip"`,
+the old form, would open knives to everyone. `ItemPermissionConfig.ReadPlainPermissions`
+reads such items after binding: in a `PostConfigure` in `Load`, and in the migration. Not a
+`TypeConverter`: `TypeDescriptor` resolves the converter's type by name from the default
+load context, so for a plugin, which SwiftlyS2 loads into its own, it never finds it.
+
+Versions before 0.11.0 used `config.toml`. `TomlConfigMigration` runs first in `Load`: when
+there is a `config.toml` but no `config.jsonc`, it binds `config.toml` into `MainConfigModel`
+through Tomlyn and has SwiftlyS2 write a `config.<guid>.jsonc` of its own from a subclass
+whose defaults are those values, so the file matches a new one but for its values. Servers
+started from one install share the config folder, so that file is moved to `config.jsonc`
+without overwriting; when another server got there first, the migration deletes only its own
+file and goes on with theirs. (On Linux .NET checks, then renames, so a server losing by
+microseconds replaces it with an identical file.) Then `config.toml` is renamed to
+`config.toml.old` (`.old.1` and on if that exists): already gone means another server did
+it, and one that can't be renamed gets a warning naming both files while the load goes on.
+A `config.toml` that doesn't parse or bind, or a migrated file that can't be written or
+moved in, stops the load instead of falling back to the defaults, and leaves `config.toml`
+as it was. `config.jsonc` is never deleted. With both files there, `config.jsonc` wins and a
+warning names `config.toml`. The migration, and the Tomlyn packages with it, can go in a
+later version.
 
 ## Commands
 
@@ -259,8 +298,10 @@ must stay key-complete.
 - `SwiftlyS2.CS2` is pinned in `WeaponSkins.csproj` (the comment there says why) and floats
   in `WeaponSkins.Shared.csproj`. Both use `ExcludeAssets="runtime"`: the host provides it,
   and so does `Microsoft.Extensions.*` where it is marked the same way.
-- What SwiftlyS2 does not provide — FreeSql, FluentMigrator, the database drivers, Tomlyn,
-  ValveKeyValue — ships in the zip next to `WeaponSkins.dll`.
+- What SwiftlyS2 does not provide — FreeSql, FluentMigrator, the database drivers,
+  ValveKeyValue — ships in the zip next to `WeaponSkins.dll`. Tomlyn and
+  Tomlyn.Extensions.Configuration come with SwiftlyS2, and only the `config.toml`
+  migration uses them.
 
 ## Build & release
 

@@ -6,7 +6,7 @@ namespace WeaponSkins;
 
 public partial class MenuService
 {
-    public IMenu BuildKnifeSkinMenu(IPlayer player)
+    public IMenu BuildKnifeSkinMenu(IPlayer player, Team menuTeam)
     {
         var main = CreateMenu("weaponskins.knifes")
             .WithTitle(LocalizationService[player].MenuTitleKnifes);
@@ -24,14 +24,14 @@ public partial class MenuService
             {
                 var skinMenu = CreateMenu("weaponskins.knifes.paintkits").WithTitle(itemName);
                 skinMenu.Add(CreateButton(LocalizationService[player].MenuReset,
-                    p => Api.ResetKnifeSkin(p.SteamID, p.Controller.Team, true)));
+                    p => Api.ResetKnifeSkin(p.SteamID, EditedTeam(p, menuTeam), true)));
 
                 foreach (var paintkit in paintkits.OrderByDescending(p => p.Rarity.Id))
                 {
                     var option = CreateRarityButton(
                         EconService.GetLocalizedName(paintkit.LocalizedNames, player.PlayerLanguage.Value),
                         paintkit.Rarity.Color.HexColor,
-                        p => Api.UpdateKnifeSkin(p.SteamID, p.Controller.Team, knife =>
+                        p => Api.UpdateKnifeSkin(p.SteamID, EditedTeam(p, menuTeam), knife =>
                         {
                             knife.DefinitionIndex = (ushort)item.Index;
                             knife.Paintkit = paintkit.Index;
@@ -41,7 +41,7 @@ public partial class MenuService
                 }
 
                 var built = skinMenu.Build();
-                TrackFocus(built, p => TryGetKnifeDataInHand(p, out var inHand) ? inHand.Paintkit : null);
+                TrackFocus(built, p => TryGetKnifeDataInHand(p, menuTeam, out var inHand) ? inHand.Paintkit : null);
                 return built;
             });
 
@@ -50,7 +50,7 @@ public partial class MenuService
         }
 
         var menu = main.Build();
-        TrackFocus(menu, p => TryGetKnifeDataInHand(p, out var inHand) ? inHand.DefinitionIndex : null);
+        TrackFocus(menu, p => TryGetKnifeDataInHand(p, menuTeam, out var inHand) ? inHand.DefinitionIndex : null);
         return menu;
     }
 }

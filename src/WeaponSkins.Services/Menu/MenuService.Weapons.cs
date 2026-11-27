@@ -8,7 +8,7 @@ namespace WeaponSkins;
 
 public partial class MenuService
 {
-    public IMenu BuildWeaponSkinMenu(IPlayer player)
+    public IMenu BuildWeaponSkinMenu(IPlayer player, Team menuTeam)
     {
         var loc = LocalizationService[player];
         var categories = new Dictionary<WeaponCategory, List<(ItemDefinition Item, List<PaintkitDefinition> Paintkits)>>();
@@ -40,7 +40,7 @@ public partial class MenuService
             var title = loc.MenuSkinsCategory(key);
             var menuId = "weaponskins.weapons." + key;
             // The page's id as the component id, as CreateCategory does, so a tab strip can mark the open one.
-            main.Add(new SubmenuComponent(title, _ => BuildWeaponCategoryMenu(player, menuId, title, weapons), menuId) { Tag = key });
+            main.Add(new SubmenuComponent(title, _ => BuildWeaponCategoryMenu(player, menuTeam, menuId, title, weapons), menuId) { Tag = key });
         }
 
         var menu = main.Build();
@@ -52,6 +52,7 @@ public partial class MenuService
     }
 
     private IMenu BuildWeaponCategoryMenu(IPlayer player,
+        Team menuTeam,
         string menuId,
         string title,
         List<(ItemDefinition Item, List<PaintkitDefinition> Paintkits)> weapons)
@@ -66,20 +67,20 @@ public partial class MenuService
             {
                 var skinMenu = CreateMenu("weaponskins.weapons.paintkits").WithTitle(itemName);
                 skinMenu.Add(CreateButton(LocalizationService[player].MenuReset,
-                    p => Api.ResetWeaponSkin(p.SteamID, p.Controller.Team, (ushort)item.Index, true)));
+                    p => Api.ResetWeaponSkin(p.SteamID, EditedTeam(p, menuTeam), (ushort)item.Index, true)));
 
                 foreach (var paintkit in paintkits.OrderByDescending(p => p.Rarity.Id))
                 {
                     var option = CreateRarityButton(
                         EconService.GetLocalizedName(paintkit.LocalizedNames, player.PlayerLanguage.Value),
                         paintkit.Rarity.Color.HexColor,
-                        p => Api.UpdateWeaponSkin(p.SteamID, p.Controller.Team, (ushort)item.Index, skin => skin.Paintkit = paintkit.Index, true));
+                        p => Api.UpdateWeaponSkin(p.SteamID, EditedTeam(p, menuTeam), (ushort)item.Index, skin => skin.Paintkit = paintkit.Index, true));
                     option.Tag = paintkit.Index;
                     skinMenu.Add(option);
                 }
 
                 var built = skinMenu.Build();
-                TrackFocus(built, p => TryGetWeaponDataInHand(p, out var inHand) ? inHand.Paintkit : null);
+                TrackFocus(built, p => TryGetWeaponDataInHand(p, menuTeam, out var inHand) ? inHand.Paintkit : null);
                 return built;
             });
 

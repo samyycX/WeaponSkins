@@ -1,6 +1,9 @@
 {
   "menu.title": "Ginklų skinai",
   "menu.unset": "Nuimti",
+  "menu.team.title": "Pasirinkite ekipuotę",
+  "menu.team.t": "Teroristai",
+  "menu.team.ct": "Antiteroristai",
   "menu.skins.title": "Ginklų skinai",
   "menu.skins.category.rifles": "Šautuvai",
   "menu.skins.category.pistols": "Pistoletai",

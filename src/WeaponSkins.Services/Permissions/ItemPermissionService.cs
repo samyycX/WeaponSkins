@@ -35,21 +35,35 @@ public class ItemPermissionService
 
         return new ItemPermissionConfig
         {
-            WeaponSkins = source.WeaponSkins,
-            KnifeSkins = source.KnifeSkins,
-            GloveSkins = source.GloveSkins,
-            Stickers = source.Stickers,
-            Keychains = source.Keychains,
-            Agents = source.Agents,
-            MusicKits = source.MusicKits,
-            Graffiti = source.Graffiti,
-            Patches = source.Patches,
-            Pins = source.Pins,
-            Nametag = source.Nametag,
-            Wear = source.Wear,
-            Seed = source.Seed,
-            StatTrak = source.StatTrak,
-            Souvenir = source.Souvenir
+            WeaponSkins = CloneItem(source.WeaponSkins),
+            KnifeSkins = CloneItem(source.KnifeSkins),
+            GloveSkins = CloneItem(source.GloveSkins),
+            Stickers = CloneItem(source.Stickers),
+            Keychains = CloneItem(source.Keychains),
+            Agents = CloneItem(source.Agents),
+            MusicKits = CloneItem(source.MusicKits),
+            Graffiti = CloneItem(source.Graffiti),
+            Patches = CloneItem(source.Patches),
+            Pins = CloneItem(source.Pins),
+            Nametag = CloneItem(source.Nametag),
+            Wear = CloneItem(source.Wear),
+            Seed = CloneItem(source.Seed),
+            StatTrak = CloneItem(source.StatTrak),
+            Souvenir = CloneItem(source.Souvenir)
+        };
+    }
+
+    private static ItemPermission CloneItem(ItemPermission? source)
+    {
+        if (source == null)
+        {
+            return new ItemPermission();
+        }
+
+        return new ItemPermission
+        {
+            Enabled = source.Enabled,
+            Permission = source.Permission
         };
     }
 
@@ -265,9 +279,10 @@ public class ItemPermissionService
     }
 
     private bool HasPermission(ulong steamId,
-        string permission)
+        ItemPermission item)
     {
-        if (string.IsNullOrWhiteSpace(permission)) return true;
-        return Core.Permission.PlayerHasPermission(steamId, permission);
+        if (!item.Enabled) return false;
+        if (string.IsNullOrWhiteSpace(item.Permission)) return true;
+        return Core.Permission.PlayerHasPermission(steamId, item.Permission);
     }
 }

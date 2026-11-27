@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 
@@ -9,8 +10,6 @@ using SwiftlyS2.Shared.Plugins;
 using SwiftlyS2.Shared.SchemaDefinitions;
 using SwiftlyS2.Shared.SteamAPI;
 
-using Tomlyn.Extensions.Configuration;
-
 using WeaponSkins.Configuration;
 using WeaponSkins.Injections;
 using WeaponSkins.Services;
@@ -21,7 +20,7 @@ namespace WeaponSkins;
 
 [PluginMetadata(
     Id = "WeaponSkins",
-    Version = "0.10.0",
+    Version = "0.11.0",
     Name = "WeaponSkins",
     Author = "samyyc & ELDment",
     Description = "A swiftlys2 plugin to change player's skins."
@@ -36,10 +35,12 @@ public partial class WeaponSkins : BasePlugin
 
     public override void Load(bool hotReload)
     {
-        Core.Configuration.InitializeTomlWithModel<MainConfigModel>("config.toml", "Main")
+        TomlConfigMigration.Run(Core);
+
+        Core.Configuration.InitializeJsonWithModel<MainConfigModel>("config.jsonc", "Main", addMissingKeys: true)
             .Configure(builder =>
             {
-                builder.AddTomlFile("config.toml", false, true);
+                builder.AddJsonFile("config.jsonc", optional: false, reloadOnChange: true);
             });
 
         var collection = new ServiceCollection()
@@ -62,7 +63,9 @@ public partial class WeaponSkins : BasePlugin
 
         collection
             .AddOptions<MainConfigModel>()
-            .BindConfiguration("Main");
+            .BindConfiguration("Main")
+            .PostConfigure<IConfiguration>((model, configuration) =>
+                model.ItemPermissions?.ReadPlainPermissions(configuration.GetSection("Main:ItemPermissions")));
 
         _provider = collection.BuildServiceProvider();
 
@@ -85,7 +88,8 @@ public partial class WeaponSkins : BasePlugin
 
     public override void Unload()
     {
-        _provider.Dispose();
+        // SwiftlyS2 also calls Unload when Load throws, which can be before the provider exists.
+        _provider?.Dispose();
     }
 
     public override void ConfigureSharedInterface(IInterfaceManager interfaceManager)

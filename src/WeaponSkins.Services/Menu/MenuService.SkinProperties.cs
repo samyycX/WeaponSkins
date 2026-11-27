@@ -8,11 +8,11 @@ namespace WeaponSkins;
 
 public partial class MenuService
 {
-    // Weapons only, never knives or gloves, that the player has a skin applied to on their current team.
-    public IMenu BuildWeaponPropertiesMenu(IPlayer player)
+    // Weapons only, never knives or gloves, that the player has a skin applied to on the team being edited.
+    public IMenu BuildWeaponPropertiesMenu(IPlayer player, Team menuTeam)
     {
         var loc = LocalizationService[player];
-        var team = player.Controller.Team;
+        var team = EditedTeam(player, menuTeam);
         var language = player.PlayerLanguage.Value;
         var main = CreateMenu("weaponskins.weaponproperties")
             .WithTitle(loc.MenuTitleWeaponProperties);

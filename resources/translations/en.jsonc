@@ -1,6 +1,9 @@
 {
   "menu.title": "Weapon Skins",
   "menu.unset": "Unset",
+  "menu.team.title": "Choose Loadout",
+  "menu.team.t": "Terrorist",
+  "menu.team.ct": "Counter-Terrorist",
   "menu.skins.title": "Weapon Skins",
   "menu.skins.category.rifles": "Rifles",
   "menu.skins.category.pistols": "Pistols",

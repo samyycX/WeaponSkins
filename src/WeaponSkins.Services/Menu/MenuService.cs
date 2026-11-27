@@ -3,6 +3,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 using SwiftlyS2.Shared;
 using SwiftlyS2.Shared.Menu;
@@ -11,6 +12,7 @@ using SwiftlyS2.Shared.Players;
 using SwiftlyS2.Shared.SchemaDefinitions;
 using SwiftlyS2.Shared.Translation;
 
+using WeaponSkins.Configuration;
 using WeaponSkins.Econ;
 using WeaponSkins.Services;
 using WeaponSkins.Shared;
@@ -27,6 +29,7 @@ public partial class MenuService
     private ItemPermissionService ItemPermissionService { get; init; }
     private DataService DataService { get; init; }
     private AgentPatchService AgentPatchService { get; init; }
+    private IOptionsMonitor<MainConfigModel> Options { get; init; }
 
     public MenuService(ISwiftlyCore core,
         ILogger<MenuService> logger,
@@ -35,7 +38,8 @@ public partial class MenuService
         LocalizationService localizationService,
         ItemPermissionService itemPermissionService,
         DataService dataService,
-        AgentPatchService agentPatchService)
+        AgentPatchService agentPatchService,
+        IOptionsMonitor<MainConfigModel> options)
     {
         Core = core;
         Logger = logger;
@@ -45,11 +49,41 @@ public partial class MenuService
         ItemPermissionService = itemPermissionService;
         DataService = dataService;
         AgentPatchService = agentPatchService;
+        Options = options;
     }
 
     private IMenuBuilder CreateMenu(string id) => Core.Menu.CreateMenu(id);
 
     public void OpenMainMenu(IPlayer player)
+    {
+        var team = player.Controller.Team;
+        if (team is Team.T or Team.CT)
+        {
+            OpenMainMenu(player, team);
+            return;
+        }
+
+        OpenTeamMenu(player);
+    }
+
+    // Buttons, not submenus: main opens as a root of its own, so renderers find it at the top and Back closes it.
+    private void OpenTeamMenu(IPlayer player)
+    {
+        var loc = LocalizationService[player];
+        var picker = CreateMenu("weaponskins.team")
+            .WithTitle(loc.MenuTitleTeam);
+
+        foreach (var (team, title) in new[] { (Team.T, loc.MenuTeamT), (Team.CT, loc.MenuTeamCT) })
+        {
+            var row = CreateButton(title, p => OpenMainMenu(p, team));
+            row.Tag = team;
+            picker.Add(row);
+        }
+
+        picker.Build().Open(player);
+    }
+
+    private void OpenMainMenu(IPlayer player, Team team)
     {
         var loc = LocalizationService[player];
         var steamId = player.SteamID;
@@ -57,13 +91,13 @@ public partial class MenuService
             .WithTitle(loc.MenuTitle);
 
         main.Add(CreateCategory(ItemPermissionService.CanUseWeaponSkins(steamId), loc.MenuTitleSkins,
-            "weaponskins.weapons", () => BuildWeaponSkinMenu(player)));
+            "weaponskins.weapons", () => BuildWeaponSkinMenu(player, team)));
         main.Add(CreateCategory(ItemPermissionService.CanUseKnifeSkins(steamId), loc.MenuTitleKnifes,
-            "weaponskins.knifes", () => BuildKnifeSkinMenu(player)));
+            "weaponskins.knifes", () => BuildKnifeSkinMenu(player, team)));
         main.Add(CreateCategory(ItemPermissionService.CanUseGloveSkins(steamId), loc.MenuTitleGloves,
-            "weaponskins.gloves", () => BuildGloveSkinMenu(player)));
+            "weaponskins.gloves", () => BuildGloveSkinMenu(player, team)));
         main.Add(CreateCategory(ItemPermissionService.CanUseAgents(steamId), loc.MenuTitleAgents,
-            "weaponskins.agents", () => BuildAgentMenu(player)));
+            "weaponskins.agents", () => BuildAgentMenu(player, team)));
         main.Add(CreateCategory(ItemPermissionService.CanUseMusicKits(steamId), loc.MenuTitleMusicKits,
             "weaponskins.musickits", () => BuildMusicKitMenu(player)));
         main.Add(CreateCategory(ItemPermissionService.CanUseGraffiti(steamId), loc.MenuTitleGraffiti,
@@ -71,24 +105,36 @@ public partial class MenuService
         main.Add(CreateCategory(ItemPermissionService.CanUsePins(steamId), loc.MenuTitlePins,
             "weaponskins.pins", () => BuildPinMenu(player)));
         main.Add(CreateCategory(ItemPermissionService.CanUseWeaponSkins(steamId), loc.MenuTitleWeaponProperties,
-            "weaponskins.weaponproperties", () => BuildWeaponPropertiesMenu(player)));
+            "weaponskins.weaponproperties", () => BuildWeaponPropertiesMenu(player, team)));
         main.Add(CreateCategory(ItemPermissionService.CanUseKnifeSkins(steamId), loc.MenuTitleKnifeProperties,
-            "weaponskins.knifeproperties", () => BuildKnifePropertiesMenu(player)));
+            "weaponskins.knifeproperties", () => BuildKnifePropertiesMenu(player, team)));
         main.Add(CreateCategory(ItemPermissionService.CanUseGloveSkins(steamId), loc.MenuTitleGloveProperties,
-            "weaponskins.gloveproperties", () => BuildGlovePropertiesMenu(player)));
+            "weaponskins.gloveproperties", () => BuildGlovePropertiesMenu(player, team)));
         main.Add(CreateCategory(ItemPermissionService.CanUsePatches(steamId), loc.MenuTitleAgentProperties,
-            "weaponskins.agentproperties", () => BuildAgentPropertiesMenu(player)));
+            "weaponskins.agentproperties", () => BuildAgentPropertiesMenu(player, team)));
 
         var menu = main.Build();
+        // For renderers: a spectator's own team doesn't say which loadout these pages edit.
+        menu.Tag = team;
         TrackFocus(menu);
         menu.Open(player);
     }
 
     // The component id is the id of the menu it opens, so a renderer with a
     // category sidebar can mark the page the player is on.
-    private static SubmenuComponent CreateCategory(bool enabled, string title, string menuId, Func<IMenu> build)
+    private SubmenuComponent CreateCategory(bool enabled, string title, string menuId, Func<IMenu> build)
     {
-        return new SubmenuComponent(title, _ => enabled ? build() : null, menuId) { Enabled = enabled };
+        return new SubmenuComponent(title, _ => enabled ? build() : null, menuId) { Enabled = enabled, Visible = Shown(enabled) };
+    }
+
+    // Static Visible rather than VisibleWhen, which renderers drawing off the game thread can't evaluate.
+    private bool Shown(bool enabled) => enabled || !Options.CurrentValue.HideWhenDisabled;
+
+    // Deliberately live: a player who switches sides mid-menu edits their new side.
+    private static Team EditedTeam(IPlayer player, Team menuTeam)
+    {
+        var team = player.Controller.Team;
+        return team is Team.T or Team.CT ? team : menuTeam;
     }
 
     public bool TryGetWeaponInHand(IPlayer player,
@@ -116,6 +162,7 @@ public partial class MenuService
 
 
     public bool TryGetWeaponDataInHand(IPlayer player,
+        Team menuTeam,
         [MaybeNullWhen(false)] out WeaponSkinData dataInHand)
     {
         dataInHand = null;
@@ -125,7 +172,7 @@ public partial class MenuService
         }
 
         var defIndex = weaponInHand.AttributeManager.Item.ItemDefinitionIndex;
-        if (!Api.TryGetWeaponSkin(player.SteamID, player.Controller.Team, defIndex, out dataInHand))
+        if (!Api.TryGetWeaponSkin(player.SteamID, EditedTeam(player, menuTeam), defIndex, out dataInHand))
         {
             return false;
         }
@@ -134,15 +181,17 @@ public partial class MenuService
     }
 
     public bool TryGetKnifeDataInHand(IPlayer player,
+        Team menuTeam,
         [MaybeNullWhen(false)] out KnifeSkinData dataInHand)
     {
-        return Api.TryGetKnifeSkin(player.SteamID, player.Controller.Team, out dataInHand);
+        return Api.TryGetKnifeSkin(player.SteamID, EditedTeam(player, menuTeam), out dataInHand);
     }
 
     public bool TryGetGloveDataInHand(IPlayer player,
+        Team menuTeam,
         [MaybeNullWhen(false)] out GloveData dataInHand)
     {
-        return Api.TryGetGloveSkin(player.SteamID, player.Controller.Team, out dataInHand);
+        return Api.TryGetGloveSkin(player.SteamID, EditedTeam(player, menuTeam), out dataInHand);
     }
 
     private string GetAgentName(AgentDefinition agent, string language)

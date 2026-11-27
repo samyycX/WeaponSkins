@@ -36,6 +36,9 @@ public class PlayerLocalizationService
 
 
     public string MenuTitle => Localizer["menu.title"];
+    public string MenuTitleTeam => Localizer["menu.team.title"];
+    public string MenuTeamT => Localizer["menu.team.t"];
+    public string MenuTeamCT => Localizer["menu.team.ct"];
     public string MenuTitleSkins => Localizer["menu.skins.title"];
     public string MenuSkinsCategory(string category) => Localizer[$"menu.skins.category.{category}"];
     public string MenuTitleKnifes => Localizer["menu.knifes.title"];

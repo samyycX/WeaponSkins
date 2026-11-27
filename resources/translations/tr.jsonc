@@ -1,6 +1,9 @@
 {
   "menu.title": "Silah Kaplamaları",
   "menu.unset": "Kaldır",
+  "menu.team.title": "Teçhizat Seçin",
+  "menu.team.t": "Terörist",
+  "menu.team.ct": "Anti-Terörist",
   "menu.skins.title": "Silah Kaplamaları",
   "menu.skins.category.rifles": "Tüfekler",
   "menu.skins.category.pistols": "Tabancalar",

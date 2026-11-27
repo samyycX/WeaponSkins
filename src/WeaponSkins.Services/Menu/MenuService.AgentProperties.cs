@@ -9,12 +9,12 @@ namespace WeaponSkins;
 
 public partial class MenuService
 {
-    // Patches for the agent the player wears on their current team, whichever agent that is.
-    private IMenu BuildAgentPropertiesMenu(IPlayer player)
+    // Patches for the agent the player wears on the team being edited, whichever agent that is.
+    private IMenu BuildAgentPropertiesMenu(IPlayer player, Team menuTeam)
     {
         var loc = LocalizationService[player];
         var language = player.PlayerLanguage.Value;
-        var team = player.Controller.Team;
+        var team = EditedTeam(player, menuTeam);
         var main = CreateMenu("weaponskins.agentproperties")
             .WithTitle(loc.MenuTitleAgentProperties);
         IMenu slots = null!;

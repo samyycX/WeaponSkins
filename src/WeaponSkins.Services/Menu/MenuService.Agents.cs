@@ -8,14 +8,14 @@ namespace WeaponSkins;
 
 public partial class MenuService
 {
-    private IMenu BuildAgentMenu(IPlayer player)
+    private IMenu BuildAgentMenu(IPlayer player, Team menuTeam)
     {
         var main = CreateMenu("weaponskins.agents")
             .WithTitle(LocalizationService[player].MenuTitleAgents);
 
         main.Add(CreateButton(LocalizationService[player].MenuReset, p =>
         {
-            var team = p.Controller.Team;
+            var team = EditedTeam(p, menuTeam);
             DataService.AgentDataService.TryRemoveAgent(p.SteamID, team);
             if (DataService.AgentDataService.TryGetDefaultModel(p.SteamID, team, out var defaultModel))
             {
@@ -25,7 +25,7 @@ public partial class MenuService
             Api.ResetAgentSkin(p.SteamID, team, true);
         }));
 
-        var team = player.Controller.Team;
+        var team = EditedTeam(player, menuTeam);
 
         // Team 3 = CT ("ctm_" models), team 2 = T ("tm_" models).
         var teamPrefix = (int)team == 3 ? "ctm_" : "tm_";
@@ -41,7 +41,7 @@ public partial class MenuService
             var title = EconService.GetLocalizedName(agent.LocalizedNames, player.PlayerLanguage.Value);
             var button = CreateRarityButton(title, agent.Rarity.Color.HexColor, p =>
             {
-                var team = p.Controller.Team;
+                var team = EditedTeam(p, menuTeam);
 
                 if (p.IsAlive())
                 {

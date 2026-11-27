@@ -29,14 +29,15 @@ public partial class MenuService
         };
     }
 
-    private static void AddNametag(IMenuBuilder menu, PlayerLocalizationService loc, bool enabled, string? current, Action<string?> apply)
+    private void AddNametag(IMenuBuilder menu, PlayerLocalizationService loc, bool enabled, string? current, Action<string?> apply)
     {
         // A chat capture refuses an empty message, so clearing needs its own control.
         var input = new InputComponent(loc.MenuSkinPropertiesNametag, current ?? "", null, ctx => apply(ctx.NewValue))
         {
             MaxLength = 32,
             EmptyText = loc.MenuSkinPropertiesNametagNone,
-            Enabled = enabled
+            Enabled = enabled,
+            Visible = Shown(enabled)
         };
         menu.Add(input);
         menu.Add(new ButtonComponent(loc.MenuSkinPropertiesNametagUnset, ctx =>
@@ -47,12 +48,13 @@ public partial class MenuService
             return ValueTask.CompletedTask;
         })
         {
+            Visible = input.Visible,
             VisibleWhen = session => !string.IsNullOrEmpty(input.GetValue(session))
         });
     }
 
     // Each control writes the other's state directly, so a change runs one OnChanged and applies once.
-    private static void AddWear(IMenuBuilder menu, PlayerLocalizationService loc, bool enabled, float wear, Action<float> apply)
+    private void AddWear(IMenuBuilder menu, PlayerLocalizationService loc, bool enabled, float wear, Action<float> apply)
     {
         InputComponent exact = null!;
         // Coarse on purpose: the exact field above it takes any value.
@@ -64,7 +66,8 @@ public partial class MenuService
         {
             ValueFormat = "F2",
             WrapAround = false,
-            Enabled = enabled
+            Enabled = enabled,
+            Visible = Shown(enabled)
         };
         exact = new InputComponent(loc.MenuSkinPropertiesWear, FormatWear(wear),
             input => TryParseFloat(input, out var value) && value is >= 0f and <= 1f,
@@ -75,7 +78,8 @@ public partial class MenuService
                 Poke(ctx.Session, track, value);
             })
         {
-            Enabled = enabled
+            Enabled = enabled,
+            Visible = Shown(enabled)
         };
         menu.Add(exact);
         menu.Add(track);
@@ -83,17 +87,18 @@ public partial class MenuService
 
     private static string FormatWear(float wear) => wear.ToString("0.######", CultureInfo.InvariantCulture);
 
-    private static InputComponent CreateSeedInput(PlayerLocalizationService loc, bool enabled, int seed, Action<int> apply)
+    private InputComponent CreateSeedInput(PlayerLocalizationService loc, bool enabled, int seed, Action<int> apply)
     {
         var input = CreateIntInput(loc.MenuSkinPropertiesSeed, seed, value => value is >= 0 and <= MaxSeed, (_, value) => apply(value));
         // Four, not three: a seed of 1000 written by another tool still displays whole.
         input.MaxLength = 4;
         input.Enabled = enabled;
+        input.Visible = Shown(enabled);
         return input;
     }
 
     // Quality is one field: Poke shows the other switch off without its handler resetting the quality.
-    private static void AddStattrak(IMenuBuilder menu,
+    private void AddStattrak(IMenuBuilder menu,
         PlayerLocalizationService loc,
         bool stattrakEnabled,
         bool souvenirEnabled,
@@ -105,6 +110,7 @@ public partial class MenuService
     {
         var counter = CreateIntInput(loc.MenuSkinPropertiesStattrakCount(count), count, value => value >= 0, (_, value) => setCount(value));
         counter.Enabled = stattrakEnabled;
+        counter.Visible = Shown(stattrakEnabled);
         menu.Add(counter);
 
         ToggleComponent? souvenir = null;
@@ -118,6 +124,7 @@ public partial class MenuService
             setQuality(ctx.NewValue ? EconItemQuality.StatTrak : EconItemQuality.Normal);
         });
         stattrak.Enabled = stattrakEnabled;
+        stattrak.Visible = Shown(stattrakEnabled);
         menu.Add(stattrak);
 
         if (!withSouvenir)
@@ -135,6 +142,7 @@ public partial class MenuService
             setQuality(ctx.NewValue ? EconItemQuality.Souvenir : EconItemQuality.Normal);
         });
         souvenir.Enabled = souvenirEnabled;
+        souvenir.Visible = Shown(souvenirEnabled);
         menu.Add(souvenir);
     }
 

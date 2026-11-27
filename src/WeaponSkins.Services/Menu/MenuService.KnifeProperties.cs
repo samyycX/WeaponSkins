@@ -7,11 +7,11 @@ namespace WeaponSkins;
 
 public partial class MenuService
 {
-    public IMenu BuildKnifePropertiesMenu(IPlayer player)
+    public IMenu BuildKnifePropertiesMenu(IPlayer player, Team menuTeam)
     {
         var loc = LocalizationService[player];
         var steamId = player.SteamID;
-        var team = player.Controller.Team;
+        var team = EditedTeam(player, menuTeam);
         var main = CreateMenu("weaponskins.knifeproperties")
             .WithTitle(loc.MenuTitleKnifeProperties);
 

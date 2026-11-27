@@ -53,11 +53,11 @@ There are three ways to store players' skins. Pick one and follow its steps:
 
 No database needed.
 
-1. Open `addons/swiftlys2/configs/plugins/WeaponSkins/config.toml`.
+1. Open `addons/swiftlys2/configs/plugins/WeaponSkins/config.jsonc`.
 2. Change `StorageBackend` to `"sqlite"`:
 
-   ```toml
-   StorageBackend = "sqlite"
+   ```jsonc
+   "StorageBackend": "sqlite",
    ```
 
 3. Save the file and restart the server.
@@ -89,7 +89,7 @@ Uses this server's own SwiftlyS2 database — the `default` connection.
 
    Put your database's address, name, login and password in `host`, `database`, `user` and `pass`. For MariaDB keep `"driver": "mysql"`; for PostgreSQL use `"postgresql"` and port `5432`.
 
-3. In WeaponSkins' `config.toml`, keep `StorageBackend = "inherit"` — it's the default.
+3. In WeaponSkins' `config.jsonc`, keep `"StorageBackend": "inherit"` — it's the default.
 4. Restart the server.
 
 ### 3. Dedicated skins database
@@ -119,10 +119,10 @@ A separate database just for skins, which several servers can share.
 
    Put your database's address, name, login and password in `host`, `database`, `user` and `pass`. For MariaDB keep `"driver": "mysql"`; for PostgreSQL use `"postgresql"` and port `5432`. Write the name `weaponskins` exactly like that, in lowercase.
 
-3. In WeaponSkins' `config.toml`, keep `StorageBackend = "inherit"` — it's the default.
+3. In WeaponSkins' `config.jsonc`, keep `"StorageBackend": "inherit"` — it's the default.
 4. Restart the server.
 
-**Same skins on several servers?** Add the same `weaponskins` connection on each server, and set `SyncFromDatabaseWhenPlayerJoin = true` on each, so a player's changes on one server show up on the others.
+**Same skins on several servers?** Add the same `weaponskins` connection on each server, and set `"SyncFromDatabaseWhenPlayerJoin": true` on each, so a player's changes on one server show up on the others.
 
 If you switch to another setup later, skins saved with the old one aren't copied over.
 
@@ -167,11 +167,11 @@ Follow these steps in order. Steps 1 and 2 use phpMyAdmin, or your host's databa
 | `!spray` | Players | Sprays your graffiti on the wall or floor you aim at |
 | `sw_wp_admin <SteamID64>` | Server console / RCON | Reloads a connected player's saved skins |
 
-In the `!ws` menu, players choose weapon skins, knives, gloves, agents, music kits, graffiti and pins. **Weapon Skins** sorts the guns into Rifles, Pistols, SMGs, Shotguns, Snipers, Heavy and Other (the Zeus x27). Wear, pattern, name tag, StatTrak™, stickers and charms are under **Weapon Properties**, **Knife Properties** and **Glove Properties**, and patches under **Agent Properties**. Choices are saved straight away, separately for T and CT — music kits, graffiti and pins count for both. Options a player has no permission for are greyed out.
+In the `!ws` menu, players choose weapon skins, knives, gloves, agents, music kits, graffiti and pins. **Weapon Skins** sorts the guns into Rifles, Pistols, SMGs, Shotguns, Snipers, Heavy and Other (the Zeus x27). Wear, pattern, name tag, StatTrak™, stickers and charms are under **Weapon Properties**, **Knife Properties** and **Glove Properties**, and patches under **Agent Properties**. Choices are saved straight away, separately for T and CT — music kits, graffiti and pins count for both. Players on neither team, such as spectators, first choose whether to edit their T or CT loadout. Options a player can't use are greyed out, or hidden with `"HideWhenDisabled": true`.
 
 Players spray their graffiti with `!spray` while aiming at a nearby wall or floor, and can put it on a key from their console, e.g. `bind t sw_spray` — that replaces the game's own graffiti key. Each player has one `!spray` graffiti on the map at a time: a new one replaces the last. Players who own a graffiti in their Steam inventory can also use the game's graffiti key: their spray shows the graffiti chosen in `!ws`.
 
-With `SprayWithUseKey = true`, pressing the use key (**E** by default) sprays as well, like `!spray` but without a chat message when it can't. The key keeps its normal job, so a press that picks up a weapon, opens a door or defuses the bomb while aiming at a nearby wall or floor sprays too — at most once per `GraffitiCooldown`. It doesn't spray while a menu is open, but menus from plugins still on SwiftlyS2's old menu system aren't recognised, so the use key can still spray there.
+With `"SprayWithUseKey": true`, pressing the use key (**E** by default) sprays as well, like `!spray` but without a chat message when it can't. The key keeps its normal job, so a press that picks up a weapon, opens a door or defuses the bomb while aiming at a nearby wall or floor sprays too — at most once per `GraffitiCooldown`. It doesn't spray while a menu is open, but menus from plugins still on SwiftlyS2's old menu system aren't recognised, so the use key can still spray there.
 
 **Agent Properties** has five patch slots, filled from the game's patch packs. The patches go on the agent the player wears on that team, whether it was chosen in `!ws` or comes from their own inventory.
 
@@ -179,34 +179,37 @@ A collectible pin chosen under **Pins** shows next to the player's name on the s
 
 ## ⚙️ Settings
 
-All settings are in `addons/swiftlys2/configs/plugins/WeaponSkins/config.toml`. Changes apply when you save the file, except `ItemLanguages`, which needs a restart. The defaults:
+All settings are in `addons/swiftlys2/configs/plugins/WeaponSkins/config.jsonc`. WeaponSkins creates it on the first start, with a comment above each setting saying what it does. On later starts it adds any setting the file is missing, with its comment, and leaves your values as they are. Changes apply when you save the file, except `ItemLanguages`, which needs a restart.
 
-```toml
-[Main]
-StorageBackend = "inherit"
-InventoryUpdateBackend = "hook"
-SyncFromDatabaseWhenPlayerJoin = false
-ItemLanguages = []
-GraffitiCooldown = 30
-ReplaceNativeGraffiti = true
-SprayWithUseKey = false
+Versions before 0.11.0 kept the settings in `config.toml`. On the first start, WeaponSkins copies them into `config.jsonc` and renames `config.toml` to `config.toml.old`. To go back to an older version, rename it back to `config.toml`. If you later update again, WeaponSkins keeps the `config.jsonc` from the first update and only warns that `config.toml` is ignored: to bring over settings changed meanwhile, delete `config.jsonc` before updating.
 
-[Main.ItemPermissions]
-WeaponSkins = ""
-KnifeSkins = ""
-GloveSkins = ""
-Stickers = ""
-Keychains = ""   # charms
-Agents = ""
-MusicKits = ""
-Graffiti = ""
-Patches = ""
-Pins = ""
-Nametag = ""
-Wear = ""
-Seed = ""   # pattern
-StatTrak = ""
-Souvenir = ""
+The defaults:
+
+```jsonc
+{
+  "Main": {
+    "StorageBackend": "inherit",
+    "InventoryUpdateBackend": "hook",
+    "SyncFromDatabaseWhenPlayerJoin": false,
+    "ItemLanguages": [],
+    "GraffitiCooldown": 30,
+    "ReplaceNativeGraffiti": true,
+    "SprayWithUseKey": false,
+    "HideWhenDisabled": false,
+    "ItemPermissions": {
+      "WeaponSkins": {
+        "Enabled": true,
+        "Permission": ""
+      },
+      "KnifeSkins": {
+        "Enabled": true,
+        "Permission": ""
+      },
+      // ...the same for GloveSkins, Stickers, Keychains (charms), Agents, MusicKits, Graffiti,
+      // Patches, Pins, Nametag, Wear, Seed (pattern), StatTrak and Souvenir
+    }
+  }
+}
 ```
 
 | Setting | What it does |
@@ -218,20 +221,30 @@ Souvenir = ""
 | `GraffitiCooldown` | Seconds a player waits between graffiti sprayed with `!spray`. `0` turns the wait off |
 | `ReplaceNativeGraffiti` | `true` shows a player's `!ws` graffiti when they spray with the game's own graffiti key. `false` leaves those sprays as the game makes them |
 | `SprayWithUseKey` | `true` also sprays a player's graffiti when they press the use key (**E**), like `!spray` and with the same `GraffitiCooldown`. `false` leaves the key to its normal job |
-| `ItemPermissions` | VIP-only features — see below |
+| `HideWhenDisabled` | `true` hides the menu options a player can't use — no permission, or `"Enabled": false` — instead of greying them out. See [VIP-only features](#vip-only-features) |
+| `ItemPermissions` | Turns features off, or makes them VIP-only — see below |
 
 **Language codes** — type them exactly as shown; a wrong one stops WeaponSkins from loading:
 `ar` `bg` `cs` `da` `de` `el` `en` `es` `es-419` `fi` `fr` `hu` `id` `it` `ja` `ko` `nl` `no` `pl` `pt` `pt-BR` `ro` `ru` `sv` `th` `tr` `uk` `vn` `zh-CN` `zh-TW`
 
 ### VIP-only features
 
-To limit a feature to players with a permission, put the permission next to it — for example, `KnifeSkins = "vip"` makes knives VIP-only. Empty (`""`) means everyone can use it.
+Each feature under `ItemPermissions` has two settings. `"Enabled": false` turns it off for everyone. `"Permission"` limits it to players with that permission — for example, this makes knives VIP-only:
+
+```jsonc
+"KnifeSkins": {
+  "Enabled": true,
+  "Permission": "vip"
+},
+```
+
+An empty permission (`""`) means everyone can use it.
 
 Players get permissions in SwiftlyS2's `addons/swiftlys2/configs/permissions.jsonc`, by adding their SteamID64 under `"Players"`, e.g. `"76561198000000000": ["vip"]`.
 
-Without the permission, the menu entry is greyed out, and the player's saved items of that kind stop showing until they get it back — for graffiti, `!spray` stops working and the game's graffiti key sprays their own graffiti again; for pins, the scoreboard shows their own pin again from their next spawn. Agents and music kits are the exception: those keep showing. `Patches` greys out **Agent Properties**.
+Without the permission, the menu entry is greyed out (or hidden, with `"HideWhenDisabled": true`), and the player's saved items of that kind stop showing until they get it back — for graffiti, `!spray` stops working and the game's graffiti key sprays their own graffiti again; for pins, the scoreboard shows their own pin again from their next spawn. Agents and music kits are the exception: those keep showing. `Patches` greys out or hides **Agent Properties**. `"Enabled": false` works as if no player had the permission.
 
-`Nametag`, `Wear`, `Seed`, `StatTrak` and `Souvenir` do the same for those settings on the **Weapon Properties**, **Knife Properties** and **Glove Properties** pages. Without the permission, the setting is greyed out and the player's items show what a newly chosen skin starts with: no name tag, wear `0`, pattern `0`, no StatTrak™ or Souvenir — and their StatTrak™ kills aren't counted meanwhile. Their saved values come back with the permission.
+`Nametag`, `Wear`, `Seed`, `StatTrak` and `Souvenir` do the same for those settings on the **Weapon Properties**, **Knife Properties** and **Glove Properties** pages. Without the permission, the setting is greyed out or hidden, and the player's items show what a newly chosen skin starts with: no name tag, wear `0`, pattern `0`, no StatTrak™ or Souvenir — and their StatTrak™ kills aren't counted meanwhile. Their saved values come back with the permission.
 
 ## 🩺 Troubleshooting
 
@@ -241,7 +254,7 @@ Without the permission, the menu entry is greyed out, and the player's saved ite
 | WeaponSkins stopped loading after you changed `ItemLanguages` | A language code is wrong — copy it exactly from the list in Settings |
 | A properties page says *Nothing applied yet* | Choose a skin, knife or glove first. T and CT are separate |
 | Menus show only 5 items per page | That's SwiftlyS2's menu limit: raise `MaxVisibleLines` in `addons/swiftlys2/configs/menus/menus.jsonc` |
-| Skins changed on another server or a website don't show | Set `SyncFromDatabaseWhenPlayerJoin = true`, or type `!wp` |
+| Skins changed on another server or a website don't show | Set `"SyncFromDatabaseWhenPlayerJoin": true`, or type `!wp` |
 | `!wp` says storage isn't ready | Set `StorageBackend` to `"inherit"` or `"sqlite"` — `"external"` only works with a plugin that provides storage |
 | `Failed to load signature GiveNamedItem!` in the console | Old files are left over: delete `plugins/WeaponSkins/` and unzip the new version again |
 
@@ -271,9 +284,11 @@ _weaponSkins?.UpdateWeaponSkin(steamId, Team.T, 7, skin => skin.Paintkit = 44, p
 | `Set*Skins`, `Update*Skin`, `Reset*Skin` | Change or remove them; `permanent: true` also saves to storage. Item permissions still apply |
 | `Items`, `WeaponToPaintkits`, `StickerCollections`, `Keychains`, `Agents`, `MusicKits`, `Graffiti`, `GraffitiTints`, `Patches`, `PatchCollections`, `Pins` | The parsed item catalog |
 | `GetImageKey(kind, name)` | The game's inventory image for an item — `kind` is `agent`, `music`, `sticker`, `capsule`, `keychain`, `keychaincollection`, `graffiti`, `graffititournament` (whose `name` is the event id), `patch`, `patchcapsule` or `pin` — as a path under `panorama/images/econ/` without extension, or `null` when the game ships none. Graffiti art is untinted: the game washes it in the tint's `HexColor` (Panorama `wash-color`) |
-| `SetExternalStorageProvider` | Provide the storage for `StorageBackend = "external"`. Its graffiti, agent patch and pin members are optional: without them, those aren't saved |
+| `SetExternalStorageProvider` | Provide the storage for `"StorageBackend": "external"`. Its graffiti, agent patch and pin members are optional: without them, those aren't saved |
 
-Menu rows carry the item they stand for as their component `Tag` — an `AgentDefinition`, `MusicKitDefinition`, `GraffitiDefinition`, `GraffitiTintDefinition`, `StickerDefinition`, `StickerCollectionDefinition`, `PatchDefinition`, `PatchCollectionDefinition`, `PinDefinition` or `KeychainDefinition`, a charm collection's name (`string`), a weapon category's key (`string`: `rifles`, `pistols`, `smgs`, `shotguns`, `snipers`, `heavy` or `other`), a graffiti tournament's event id (`int`), a sticker or patch slot (`int`, from 0), or an econ index (`ushort` for weapons, knives and gloves, `int` for paint kits) — so a custom menu renderer can draw images and selection state from the API. A row that opens a page carries that page's menu id as its component id: the main menu's entries, and the weapon categories, whose pages are `weaponskins.weapons.<key>`.
+Menu rows carry the item they stand for as their component `Tag` — an `AgentDefinition`, `MusicKitDefinition`, `GraffitiDefinition`, `GraffitiTintDefinition`, `StickerDefinition`, `StickerCollectionDefinition`, `PatchDefinition`, `PatchCollectionDefinition`, `PinDefinition` or `KeychainDefinition`, a charm collection's name (`string`), a weapon category's key (`string`: `rifles`, `pistols`, `smgs`, `shotguns`, `snipers`, `heavy` or `other`), a graffiti tournament's event id (`int`), a sticker or patch slot (`int`, from 0), a team (`Team.T` or `Team.CT`), or an econ index (`ushort` for weapons, knives and gloves, `int` for paint kits) — so a custom menu renderer can draw images and selection state from the API. A row that opens a page carries that page's menu id as its component id: the main menu's entries, and the weapon categories, whose pages are `weaponskins.weapons.<key>`.
+
+A player on neither T nor CT gets `weaponskins.team` first, whose two rows carry the team they choose. `weaponskins.main` always opens as a root menu, with the `Team` it was opened for as its own menu `Tag`: its pages edit that team while the player is on neither side, and the player's own team otherwise.
 
 ## 🛠️ Building
 

@@ -19,6 +19,25 @@ file; their notes are on the [releases page](https://github.com/samyycX/WeaponSk
 
 ---
 
+## [0.11.0] - 2026-11-23
+
+- Players who open `!ws` while spectating, or before joining a team, first choose whether
+  to edit their T or CT loadout. Before, the skins, knives, gloves, agents and patches
+  they picked there never showed up in game.
+- Settings move from `config.toml` to `config.jsonc`, in the same folder. On the first
+  start, WeaponSkins copies your settings into `config.jsonc` and renames `config.toml` to
+  `config.toml.old`. To go back to an older version, rename it back to `config.toml`.
+- Each feature under `ItemPermissions` now has `Enabled` and `Permission`, and
+  `"Enabled": false` turns it off for everyone. Your existing permissions carry over.
+- To hide the menu options a player can't use, instead of greying them out, set
+  `"HideWhenDisabled": true` in `config.jsonc`.
+- A new `config.jsonc` has a comment above every setting. Settings added in later versions
+  are added to your file when WeaponSkins starts, each with its comment.
+- If you edited the translation files, add the new `menu.team.*` keys to them.
+- For plugin developers: a player on neither T nor CT gets the `weaponskins.team` menu
+  first, whose rows carry `Team.T` or `Team.CT` as their `Tag`. `weaponskins.main` always
+  opens as a root menu and carries the `Team` it was opened for as its menu `Tag`.
+
 ## [0.10.0] - 2026-11-21
 
 - StatTrak™ and Souvenir can be made VIP-only: add `StatTrak` or `Souvenir` under
